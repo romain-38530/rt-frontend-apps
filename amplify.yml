@@ -18,6 +18,10 @@ applications:
             # Install all dependencies from root
             - pnpm install
 
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
             # Navigate back to app
             - cd apps/backoffice-admin
 
@@ -64,6 +68,8 @@ applications:
             - cd ../..
             - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/marketing-site
 
         build:
