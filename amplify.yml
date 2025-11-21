@@ -29,6 +29,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -97,6 +99,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -137,6 +141,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -177,6 +183,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -217,6 +225,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -257,6 +267,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
@@ -297,6 +309,8 @@ applications:
           commands:
             # Build the app with Next.js static export
             - pnpm run build
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
