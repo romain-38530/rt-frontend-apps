@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+package-lock.json
 
 # Next.js
 .next/
@@ -10,7 +11,9 @@ out/
 # Build outputs
 dist/
 build/
+deploy/
 *.tsbuildinfo
+next-env.d.ts
 
 # Logs
 logs
@@ -29,6 +32,7 @@ yarn-debug.log*
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
