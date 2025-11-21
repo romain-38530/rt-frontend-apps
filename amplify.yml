@@ -73,20 +73,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-industry
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-industry/* deploy/
+            - cp -r .next/standalone/apps/web-industry/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
@@ -100,20 +102,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-transporter
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-transporter/* deploy/
+            - cp -r .next/standalone/apps/web-transporter/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
@@ -127,20 +131,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-recipient
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-recipient/* deploy/
+            - cp -r .next/standalone/apps/web-recipient/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
@@ -154,20 +160,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-supplier
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-supplier/* deploy/
+            - cp -r .next/standalone/apps/web-supplier/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
@@ -181,20 +189,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-forwarder
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-forwarder/* deploy/
+            - cp -r .next/standalone/apps/web-forwarder/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
@@ -208,20 +218,22 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm@8.15.4
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
             - pnpm install
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
             - cd apps/web-logistician
 
         build:
           commands:
             - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/web-logistician/* deploy/
+            - cp -r .next/standalone/apps/web-logistician/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
 
       artifacts:
-        baseDirectory: out
+        baseDirectory: deploy
         files:
           - '**/*'
 
