@@ -67,3 +67,165 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+
+  - appRoot: apps/web-industry
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-industry
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+
+  - appRoot: apps/web-transporter
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-transporter
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+
+  - appRoot: apps/web-recipient
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-recipient
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+
+  - appRoot: apps/web-supplier
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-supplier
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+
+  - appRoot: apps/web-forwarder
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-forwarder
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+
+  - appRoot: apps/web-logistician
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd apps/web-logistician
+
+        build:
+          commands:
+            - pnpm run build
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
