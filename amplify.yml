@@ -67,29 +67,39 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-industry
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-industry
 
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-industry/* deploy/
-            - cp -r .next/standalone/apps/web-industry/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
@@ -97,26 +107,58 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-transporter
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-transporter
 
         build:
           commands:
+            # Build the app with Next.js standalone mode
             - pnpm run build
+
+            # Create deploy directory with complete standalone structure
             - mkdir -p deploy
+
+            # Copy standalone files (server.js and minimal dependencies)
             - cp -r .next/standalone/apps/web-transporter/* deploy/
+
+            # Copy .next directory from standalone
             - cp -r .next/standalone/apps/web-transporter/.next deploy/
+
+            # Copy static assets (CSS, JS bundles)
             - cp -r .next/static deploy/.next/static
+
+            # Copy public directory if exists
             - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
+
+            # Copy server trace files needed by AWS Amplify
+            - cp .next/*.nft.json deploy/.next/ || true
+            - cp .next/trace deploy/.next/ || true
+
+            # Copy required-server-files.json
+            - cp .next/required-server-files.json deploy/.next/ || echo "{}" > deploy/.next/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -127,29 +169,39 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-recipient
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-recipient
 
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-recipient/* deploy/
-            - cp -r .next/standalone/apps/web-recipient/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
@@ -157,26 +209,58 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-supplier
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-supplier
 
         build:
           commands:
+            # Build the app with Next.js standalone mode
             - pnpm run build
+
+            # Create deploy directory with complete standalone structure
             - mkdir -p deploy
+
+            # Copy standalone files (server.js and minimal dependencies)
             - cp -r .next/standalone/apps/web-supplier/* deploy/
+
+            # Copy .next directory from standalone
             - cp -r .next/standalone/apps/web-supplier/.next deploy/
+
+            # Copy static assets (CSS, JS bundles)
             - cp -r .next/static deploy/.next/static
+
+            # Copy public directory if exists
             - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
+
+            # Copy server trace files needed by AWS Amplify
+            - cp .next/*.nft.json deploy/.next/ || true
+            - cp .next/trace deploy/.next/ || true
+
+            # Copy required-server-files.json
+            - cp .next/required-server-files.json deploy/.next/ || echo "{}" > deploy/.next/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -187,29 +271,39 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-forwarder
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-forwarder
 
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-forwarder/* deploy/
-            - cp -r .next/standalone/apps/web-forwarder/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
@@ -217,29 +311,39 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-logistician
     frontend:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-logistician
 
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-logistician/* deploy/
-            - cp -r .next/standalone/apps/web-logistician/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
@@ -247,3 +351,4 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*
