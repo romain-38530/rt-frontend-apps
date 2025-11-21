@@ -67,7 +67,7 @@ else
 fi
 
 # Vérifier la configuration AWS
-if ! aws sts get-caller-identity --region eu-west-3 &> /dev/null; then
+if ! aws sts get-caller-identity --region eu-central-1 &> /dev/null; then
     print_warning "AWS CLI n'est pas configuré"
     echo ""
     print_prompt "Voulez-vous configurer AWS CLI maintenant? (y/n)"
@@ -79,7 +79,7 @@ if ! aws sts get-caller-identity --region eu-west-3 &> /dev/null; then
         aws configure
 
         # Vérifier à nouveau
-        if aws sts get-caller-identity --region eu-west-3 &> /dev/null; then
+        if aws sts get-caller-identity --region eu-central-1 &> /dev/null; then
             print_success "AWS CLI configuré avec succès!"
         else
             print_error "La configuration AWS a échoué"
@@ -91,8 +91,8 @@ if ! aws sts get-caller-identity --region eu-west-3 &> /dev/null; then
         exit 1
     fi
 else
-    AWS_ACCOUNT=$(aws sts get-caller-identity --region eu-west-3 --query 'Account' --output text)
-    AWS_USER=$(aws sts get-caller-identity --region eu-west-3 --query 'Arn' --output text)
+    AWS_ACCOUNT=$(aws sts get-caller-identity --region eu-central-1 --query 'Account' --output text)
+    AWS_USER=$(aws sts get-caller-identity --region eu-central-1 --query 'Arn' --output text)
     print_success "AWS CLI configuré"
     print_info "Compte AWS: $AWS_ACCOUNT"
     print_info "Utilisateur: $AWS_USER"

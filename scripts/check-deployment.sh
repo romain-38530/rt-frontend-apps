@@ -16,7 +16,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-REGION="eu-west-3"
+REGION="eu-central-1"
 
 print_info() { echo -e "${BLUE}ℹ ${1}${NC}"; }
 print_success() { echo -e "${GREEN}✓ ${1}${NC}"; }

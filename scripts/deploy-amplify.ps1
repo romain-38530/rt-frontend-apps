@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$REGION = "eu-west-3"
+$REGION = "eu-central-1"
 $GITHUB_REPO = "julienSpitaleri/rt-frontend-apps"
 $BRANCH = "main"
 

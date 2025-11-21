@@ -17,7 +17,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REGION="eu-west-3"
+REGION="eu-central-1"
 GITHUB_REPO="julienSpitaleri/rt-frontend-apps"
 BRANCH="main"
 

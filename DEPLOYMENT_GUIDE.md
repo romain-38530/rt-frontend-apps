@@ -19,7 +19,7 @@ Guide complet pour déployer les applications frontend sur AWS Amplify.
 
 1. **Accéder à AWS Amplify**
    - AWS Console → Services → AWS Amplify
-   - Région: `eu-west-3` (Paris)
+   - Région: `eu-central-1` (Francfort)
 
 2. **Nouvelle App**
    - Cliquer sur "New app" → "Host web app"

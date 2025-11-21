@@ -41,7 +41,7 @@ Ces scripts automatisent le déploiement de toutes les applications frontend sur
 2. **Credentials AWS** avec permissions Amplify
    - Access Key ID
    - Secret Access Key
-   - Région : `eu-west-3` (Paris)
+   - Région : `eu-central-1` (Francfort)
 
 3. **Git** installé
    ```bash
@@ -80,7 +80,7 @@ aws configure
 # Entrer:
 # - AWS Access Key ID
 # - AWS Secret Access Key
-# - Default region: eu-west-3
+# - Default region: eu-central-1
 # - Default output format: json
 ```
 
@@ -229,7 +229,7 @@ export GITHUB_TOKEN="ghp_your_token_here"
 ./scripts/deploy-amplify.sh all
 
 # 4. Surveiller les builds (dans la console AWS)
-# https://console.aws.amazon.com/amplify/home?region=eu-west-3
+# https://console.aws.amazon.com/amplify/home?region=eu-central-1
 
 # 5. Vérifier le déploiement
 ./scripts/check-deployment.sh all
@@ -314,7 +314,7 @@ Format : `"app-name"="domain|app-root-path"`
 | `GITHUB_TOKEN` | Token GitHub avec scope `read:packages` | Oui |
 | `AWS_ACCESS_KEY_ID` | AWS Access Key (via aws configure) | Oui |
 | `AWS_SECRET_ACCESS_KEY` | AWS Secret Key (via aws configure) | Oui |
-| `AWS_DEFAULT_REGION` | Région AWS (eu-west-3) | Oui |
+| `AWS_DEFAULT_REGION` | Région AWS (eu-central-1) | Oui |
 
 **Variables injectées dans les apps:**
 
@@ -415,7 +415,7 @@ Si vous voulez vraiment recréer l'app :
 ```bash
 # Supprimer l'app dans AWS Console
 # Ou via CLI
-aws amplify delete-app --app-id YOUR_APP_ID --region eu-west-3
+aws amplify delete-app --app-id YOUR_APP_ID --region eu-central-1
 
 # Redéployer
 ./scripts/deploy-amplify.sh backoffice-admin
@@ -490,24 +490,24 @@ cd apps
 ### Via AWS Console
 
 1. **Amplify Console**
-   - https://console.aws.amazon.com/amplify/home?region=eu-west-3
+   - https://console.aws.amazon.com/amplify/home?region=eu-central-1
    - Vue d'ensemble : Status, URL, derniers builds
 
 2. **CloudWatch Logs**
-   - https://console.aws.amazon.com/cloudwatch/home?region=eu-west-3#logsV2:log-groups
+   - https://console.aws.amazon.com/cloudwatch/home?region=eu-central-1#logsV2:log-groups
    - Rechercher : `/aws/amplify/`
 
 ### Via CLI
 
 ```bash
 # Lister toutes les apps
-aws amplify list-apps --region eu-west-3
+aws amplify list-apps --region eu-central-1
 
 # Détails d'une app
-aws amplify get-app --app-id YOUR_APP_ID --region eu-west-3
+aws amplify get-app --app-id YOUR_APP_ID --region eu-central-1
 
 # Lister les builds
-aws amplify list-jobs --app-id YOUR_APP_ID --branch-name main --region eu-west-3
+aws amplify list-jobs --app-id YOUR_APP_ID --branch-name main --region eu-central-1
 ```
 
 ---

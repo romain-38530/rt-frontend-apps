@@ -149,7 +149,7 @@ Exemples :
 ### Via AWS Console
 
 1. **Ouvrir AWS Amplify Console**
-   - https://console.aws.amazon.com/amplify/home?region=eu-west-3
+   - https://console.aws.amazon.com/amplify/home?region=eu-central-1
 
 2. **Pour chaque app:**
    - Cliquer sur l'app
@@ -180,11 +180,11 @@ Exemples :
 ### Surveiller les Builds
 
 **AWS Amplify Console:**
-- https://console.aws.amazon.com/amplify/home?region=eu-west-3
+- https://console.aws.amazon.com/amplify/home?region=eu-central-1
 - Cliquer sur l'app → Build history
 
 **CloudWatch Logs:**
-- https://console.aws.amazon.com/cloudwatch/home?region=eu-west-3#logsV2:log-groups
+- https://console.aws.amazon.com/cloudwatch/home?region=eu-central-1#logsV2:log-groups
 - Chercher : `/aws/amplify/`
 
 ---
