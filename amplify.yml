@@ -16,7 +16,7 @@ applications:
             - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
 
             # Install all dependencies from root
-            - pnpm install --frozen-lockfile
+            - pnpm install
 
             # Navigate back to app
             - cd apps/backoffice-admin
@@ -63,7 +63,7 @@ applications:
             - npm install -g pnpm@8.15.4
             - cd ../..
             - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
-            - pnpm install --frozen-lockfile
+            - pnpm install
             - cd apps/marketing-site
 
         build:
