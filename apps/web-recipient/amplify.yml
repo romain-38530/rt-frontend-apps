@@ -1,0 +1,45 @@
+version: 1
+applications:
+  - appRoot: apps/web-recipient
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
+            - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
+            - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
+            - cd apps/web-recipient
+
+        build:
+          commands:
+            # Build the app with Next.js static export
+            - pnpm run build
+            # Remove .next directory to prevent Amplify from detecting as SSR app
+            - rm -rf .next
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
+
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.pnpm-store/**/*
