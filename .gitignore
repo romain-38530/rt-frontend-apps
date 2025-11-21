@@ -52,3 +52,7 @@ public/sw.js
 public/workbox-*.js
 public/sw.js.map
 public/workbox-*.js.map
+
+# Deployment scripts generated files
+.amplify-apps.txt
+.deployment-info.txt

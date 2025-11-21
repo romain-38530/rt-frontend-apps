@@ -1,0 +1,39 @@
+{
+  "common": {
+    "NEXT_PUBLIC_API_URL": "https://api.rt-technologie.com/api/v1",
+    "NEXT_PUBLIC_SUPPORT_URL": "https://www.rt-technologie.com/support"
+  },
+  "backoffice-admin": {
+    "NEXT_PUBLIC_AUTHZ_URL": "https://api.rt-technologie.com/api/v1/auth",
+    "NEXT_PUBLIC_PALETTE_API_URL": "https://api.rt-technologie.com/api/v1/palettes",
+    "NEXT_PUBLIC_STORAGE_MARKET_API_URL": "https://api.rt-technologie.com/api/v1/storage",
+    "NEXT_PUBLIC_PLANNING_API": "https://api.rt-technologie.com/api/v1/planning",
+    "NEXT_PUBLIC_ECMR_API": "https://api.rt-technologie.com/api/v1/ecmr",
+    "NEXT_PUBLIC_ORDERS_API": "https://api.rt-technologie.com/api/v1/orders",
+    "NEXT_PUBLIC_CHATBOT_API_URL": "https://api.rt-technologie.com/api/v1/chatbot",
+    "NEXT_PUBLIC_CHATBOT_WS_URL": "wss://api.rt-technologie.com/chatbot/ws",
+    "NEXT_PUBLIC_ADMIN_EMAIL": "admin@rt-technologie.com"
+  },
+  "marketing-site": {
+    "NEXT_PUBLIC_API_URL": "https://api.rt-technologie.com/api/v1",
+    "NEXT_PUBLIC_SITE_URL": "https://www.rt-technologie.com"
+  },
+  "web-industry": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "industry"
+  },
+  "web-transporter": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "transporter"
+  },
+  "web-recipient": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "recipient"
+  },
+  "web-supplier": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "supplier"
+  },
+  "web-forwarder": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "forwarder"
+  },
+  "web-logistician": {
+    "NEXT_PUBLIC_PORTAL_TYPE": "logistician"
+  }
+}
