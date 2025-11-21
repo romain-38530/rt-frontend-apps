@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 REGION="eu-central-1"
-GITHUB_REPO="julienSpitaleri/rt-frontend-apps"
+GITHUB_REPO="romain-38530/rt-frontend-apps"
 BRANCH="main"
 
 # =============================================================================

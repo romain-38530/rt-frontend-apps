@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 
 # Configuration
 $REGION = "eu-central-1"
-$GITHUB_REPO = "julienSpitaleri/rt-frontend-apps"
+$GITHUB_REPO = "romain-38530/rt-frontend-apps"
 $BRANCH = "main"
 
 # Couleurs pour la console
