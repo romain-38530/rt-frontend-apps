@@ -12,16 +12,8 @@ applications:
         build:
           commands:
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-recipient/* deploy/
-            - cp -r .next/standalone/apps/web-recipient/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - ls -la deploy/
-            - ls -la deploy/.next/
-            - test -f deploy/.next/required-server-files.json && echo "required-server-files.json present" || echo "ERROR required-server-files.json missing"
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
       cache:
