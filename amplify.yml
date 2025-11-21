@@ -27,29 +27,11 @@ applications:
 
         build:
           commands:
-            # Build the app with Next.js standalone output
+            # Build the app with Next.js static export
             - pnpm run build
 
-            # Create deployment directory
-            - mkdir -p deploy
-
-            # Copy standalone output
-            - cp -r .next/standalone/apps/backoffice-admin/* deploy/
-            - cp -r .next/standalone/apps/backoffice-admin/.next deploy/
-
-            # Copy static files
-            - cp -r .next/static deploy/.next/static
-
-            # Copy public folder if exists
-            - cp -r public deploy/public || true
-
-            # Verify required files
-            - ls -la deploy/
-            - ls -la deploy/.next/
-            - test -f deploy/.next/required-server-files.json && echo "✓ required-server-files.json present" || echo "✗ ERROR required-server-files.json missing"
-
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
@@ -75,15 +57,9 @@ applications:
         build:
           commands:
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/marketing-site/* deploy/
-            - cp -r .next/standalone/apps/marketing-site/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - ls -la deploy/
 
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 

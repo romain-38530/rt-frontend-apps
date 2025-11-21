@@ -2,7 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
+  output: 'export',
+
+  images: {
+    unoptimized: true,
+  },
 
   // Désactiver ESLint pendant le build pour déployer rapidement
   eslint: {
@@ -14,16 +18,8 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020',
   },
 
-  // Redirections
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/onboarding',
-        permanent: false,
-      },
-    ];
-  },
+  // Note: redirects() not supported with static export
+  // Implement client-side redirects in _app.js or page components if needed
 };
 
 module.exports = nextConfig;

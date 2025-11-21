@@ -3,8 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
 
-  // Mode standalone OBLIGATOIRE pour AWS Amplify (génère required-server-files.json)
-  output: 'standalone',
+  // Export statique pour AWS Amplify Hosting (CDN uniquement)
+  output: 'export',
+
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
 
   // Désactiver ESLint pendant le build pour déployer rapidement
   eslint: {
