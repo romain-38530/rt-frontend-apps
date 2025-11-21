@@ -1,0 +1,22 @@
+# robots.txt pour RT Technologie
+# https://rt-technologie.fr/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /sign-contract/
+Disallow: /onboarding/success
+Disallow: /onboarding/activated
+
+# Sitemap
+Sitemap: https://rt-technologie.fr/sitemap.xml
+
+# Délai d'exploration (optionnel)
+Crawl-delay: 1
+
+# Bloquer les bots problématiques (optionnel)
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10

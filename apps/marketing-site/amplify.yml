@@ -1,0 +1,35 @@
+version: 1
+applications:
+  - appRoot: apps/marketing-site
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Install pnpm
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to workspace root
+            - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install dependencies
+            - pnpm install --frozen-lockfile
+
+        build:
+          commands:
+            # Build marketing-site and its dependencies
+            - pnpm --filter @rt/marketing-site build
+
+      artifacts:
+        baseDirectory: apps/marketing-site/.next
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - node_modules/**/*
+          - apps/marketing-site/node_modules/**/*
+          - apps/marketing-site/.next/cache/**/*
+          - .pnpm-store/**/*

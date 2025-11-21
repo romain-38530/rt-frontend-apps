@@ -1,34 +1,30 @@
 version: 1
-
 applications:
   - appRoot: apps/backoffice-admin
     frontend:
       phases:
         preBuild:
           commands:
-            # Install pnpm
-            - npm install -g pnpm@8.15.4
-
-            # Configure GitHub Packages authentication
+            - npm install -g pnpm
             - cd ../..
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
-
-            # Install dependencies from workspace root
-            - pnpm install --frozen-lockfile
-
+            - pnpm install
+            - cd apps/backoffice-admin
         build:
           commands:
-            # Build backoffice-admin and its dependencies
-            - pnpm --filter @rt/backoffice-admin build
-
+            - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/backoffice-admin/* deploy/
+            - cp -r .next/standalone/apps/backoffice-admin/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
+            - ls -la deploy/
+            - ls -la deploy/.next/
+            - test -f deploy/.next/required-server-files.json && echo "required-server-files.json present" || echo "ERROR required-server-files.json missing"
       artifacts:
-        baseDirectory: apps/backoffice-admin/.next
+        baseDirectory: deploy
         files:
           - '**/*'
-
       cache:
         paths:
-          - node_modules/**/*
-          - apps/backoffice-admin/node_modules/**/*
-          - apps/backoffice-admin/.next/cache/**/*
-          - .pnpm-store/**/*
+          - ../../node_modules/**/*
+          - .next/cache/**/*
