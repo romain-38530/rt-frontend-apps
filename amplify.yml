@@ -1,0 +1,33 @@
+version: 1
+
+# Global configuration for all apps
+# Each app can override in its own amplify.yml if needed
+
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Install pnpm
+        - npm install -g pnpm@8.15.4
+
+        # Configure GitHub Packages authentication
+        - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+        # Install dependencies
+        - pnpm install --frozen-lockfile
+
+    build:
+      commands:
+        # Build the app (uses AMPLIFY_APP_ROOT)
+        - pnpm --filter "*" build
+
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+      - .pnpm-store/**/*

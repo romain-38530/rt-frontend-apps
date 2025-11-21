@@ -1,0 +1,34 @@
+version: 1
+
+applications:
+  - appRoot: apps/backoffice-admin
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Install pnpm
+            - npm install -g pnpm@8.15.4
+
+            # Configure GitHub Packages authentication
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install dependencies from workspace root
+            - pnpm install --frozen-lockfile
+
+        build:
+          commands:
+            # Build backoffice-admin and its dependencies
+            - pnpm --filter @rt/backoffice-admin build
+
+      artifacts:
+        baseDirectory: apps/backoffice-admin/.next
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - node_modules/**/*
+          - apps/backoffice-admin/node_modules/**/*
+          - apps/backoffice-admin/.next/cache/**/*
+          - .pnpm-store/**/*
