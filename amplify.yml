@@ -86,6 +86,7 @@ applications:
             - cp -r .next/standalone/apps/web-industry/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -115,6 +116,7 @@ applications:
             - cp -r .next/standalone/apps/web-transporter/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -144,6 +146,7 @@ applications:
             - cp -r .next/standalone/apps/web-recipient/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -173,6 +176,7 @@ applications:
             - cp -r .next/standalone/apps/web-supplier/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -202,6 +206,7 @@ applications:
             - cp -r .next/standalone/apps/web-forwarder/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
@@ -231,6 +236,7 @@ applications:
             - cp -r .next/standalone/apps/web-logistician/.next deploy/
             - cp -r .next/static deploy/.next/static
             - cp -r public deploy/public || true
+            - cp .next/required-server-files.json deploy/ || echo "{}" > deploy/required-server-files.json
 
       artifacts:
         baseDirectory: deploy
