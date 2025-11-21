@@ -5,26 +5,37 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install -g pnpm
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
+
+            # Navigate to root
             - cd ../..
+
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+
+            # Install all dependencies from root
             - pnpm install
+
+            # Build shared packages
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+
+            # Navigate back to app
             - cd apps/web-industry
+
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
-            - mkdir -p deploy
-            - cp -r .next/standalone/apps/web-industry/* deploy/
-            - cp -r .next/standalone/apps/web-industry/.next deploy/
-            - cp -r .next/static deploy/.next/static
-            - cp -r public deploy/public || true
-            - ls -la deploy/
-            - ls -la deploy/.next/
-            - test -f deploy/.next/required-server-files.json && echo "required-server-files.json present" || echo "ERROR required-server-files.json missing"
+
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
+
       cache:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
+          - ../../.pnpm-store/**/*

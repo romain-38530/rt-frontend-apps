@@ -2,7 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
+
+  // Export statique pour AWS Amplify Hosting (CDN uniquement)
+  output: 'export',
+
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
 
   eslint: {
     ignoreDuringBuilds: true,

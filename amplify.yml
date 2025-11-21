@@ -114,62 +114,29 @@ applications:
       phases:
         preBuild:
           commands:
-            # Install pnpm globally
-            - npm install -g pnpm@8.15.4
-
-            # Navigate to root
+            - npm install -g pnpm
             - cd ../..
-
-            # Configure GitHub Packages authentication
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
-
-            # Install all dependencies from root
             - pnpm install
-
-            # Build shared packages
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
-
-            # Navigate back to app
             - cd apps/web-transporter
-
         build:
           commands:
-            # Build the app with Next.js standalone mode
             - pnpm run build
-
-            # Create deploy directory with complete standalone structure
             - mkdir -p deploy
-
-            # Copy standalone files (server.js and minimal dependencies)
             - cp -r .next/standalone/apps/web-transporter/* deploy/
-
-            # Copy .next directory from standalone
             - cp -r .next/standalone/apps/web-transporter/.next deploy/
-
-            # Copy static assets (CSS, JS bundles)
             - cp -r .next/static deploy/.next/static
-
-            # Copy public directory if exists
             - cp -r public deploy/public || true
-
-            # Copy server trace files needed by AWS Amplify
-            - cp .next/*.nft.json deploy/.next/ || true
-            - cp .next/trace deploy/.next/ || true
-
-            # Copy required-server-files.json
-            - cp .next/required-server-files.json deploy/.next/ || echo "{}" > deploy/.next/required-server-files.json
-
+            - ls -la deploy/
+            - ls -la deploy/.next/
+            - test -f deploy/.next/required-server-files.json && echo "required-server-files.json present" || echo "ERROR required-server-files.json missing"
       artifacts:
         baseDirectory: deploy
         files:
           - '**/*'
-
       cache:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
-          - ../../.pnpm-store/**/*
 
   - appRoot: apps/web-recipient
     frontend:
@@ -237,33 +204,11 @@ applications:
 
         build:
           commands:
-            # Build the app with Next.js standalone mode
+            # Build the app with Next.js static export
             - pnpm run build
 
-            # Create deploy directory with complete standalone structure
-            - mkdir -p deploy
-
-            # Copy standalone files (server.js and minimal dependencies)
-            - cp -r .next/standalone/apps/web-supplier/* deploy/
-
-            # Copy .next directory from standalone
-            - cp -r .next/standalone/apps/web-supplier/.next deploy/
-
-            # Copy static assets (CSS, JS bundles)
-            - cp -r .next/static deploy/.next/static
-
-            # Copy public directory if exists
-            - cp -r public deploy/public || true
-
-            # Copy server trace files needed by AWS Amplify
-            - cp .next/*.nft.json deploy/.next/ || true
-            - cp .next/trace deploy/.next/ || true
-
-            # Copy required-server-files.json
-            - cp .next/required-server-files.json deploy/.next/ || echo "{}" > deploy/.next/required-server-files.json
-
       artifacts:
-        baseDirectory: deploy
+        baseDirectory: out
         files:
           - '**/*'
 
