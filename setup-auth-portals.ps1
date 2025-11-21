@@ -1,3 +1,117 @@
+# Script pour configurer l'authentification sur tous les portails
+
+$portals = @(
+    @{name="recipient"; title="Recipient Portal"; icon="📦"; gradient="#11998e 0%, #38ef7d 100%"; primaryColor="#11998e"; hoverColor="#0d7a73"},
+    @{name="supplier"; title="Supplier Portal"; icon="🏪"; gradient="#f093fb 0%, #f5576c 100%"; primaryColor="#f093fb"; hoverColor="#d076db"},
+    @{name="forwarder"; title="Forwarder Portal"; icon="🌐"; gradient="#4facfe 0%, #00f2fe 100%"; primaryColor="#4facfe"; hoverColor="#3a8bce"},
+    @{name="logistician"; title="Logistician Portal"; icon="📊"; gradient="#fa709a 0%, #fee140 100%"; primaryColor="#fa709a"; hoverColor="#d95e82"}
+)
+
+foreach ($portal in $portals) {
+    $app = "web-$($portal.name)"
+    Write-Host "Configuration de $app..." -ForegroundColor Cyan
+
+    # index.tsx avec auth
+    $indexContent = @"
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import { isAuthenticated, getUser, logout } from '../lib/auth';
+
+export default function HomePage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+    setUser(getUser());
+    setLoading(false);
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, $($portal.gradient))',
+        color: 'white'
+      }}>
+        <p>Chargement...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>$($portal.title) - RT Technologie</title>
+      </Head>
+
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, $($portal.gradient))',
+        color: 'white',
+        fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          padding: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'rgba(0,0,0,0.1)'
+        }}>
+          <div>
+            <p style={{ margin: 0, opacity: 0.9 }}>
+              Connecté en tant que: <strong>{user?.email}</strong>
+            </p>
+          </div>
+          <button
+            onClick={logout}
+            style={{
+              padding: '10px 20px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            Se déconnecter
+          </button>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 'calc(100vh - 80px)',
+          padding: '20px'
+        }}>
+          <h1 style={{ fontSize: '3rem', marginBottom: '1rem', textAlign: 'center' }}>
+            $($portal.icon) $($portal.title)
+          </h1>
+          <p style={{ fontSize: '1.5rem', opacity: 0.9, textAlign: 'center' }}>
+            RT Technologie - Portail $($portal.name)
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+"@
+
+    $indexContent | Out-File -FilePath "apps\$app\pages\index.tsx" -Encoding UTF8
+
+    # login.tsx
+    $loginContent = @"
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -15,7 +129,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/login`, {
+      const response = await fetch(`\`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,11 +143,8 @@ export default function Login() {
         throw new Error(data.message || 'Identifiants invalides');
       }
 
-      // Stocker le token
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Rediriger vers la page principale
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
@@ -42,7 +153,6 @@ export default function Login() {
     }
   };
 
-  // Connexion de test (à supprimer en production)
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
     localStorage.setItem('user', JSON.stringify({ email: 'test@rt-technologie.com', role: 'admin' }));
@@ -52,7 +162,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Connexion - Industry Portal</title>
+        <title>Connexion - $($portal.title)</title>
       </Head>
 
       <div style={{
@@ -60,7 +170,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, $($portal.gradient))',
         padding: '20px'
       }}>
         <div style={{
@@ -78,7 +188,7 @@ export default function Login() {
             color: '#1a202c',
             textAlign: 'center'
           }}>
-            Industry Portal
+            $($portal.title)
           </h1>
 
           <p style={{
@@ -113,7 +223,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '$($portal.primaryColor)'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -141,7 +251,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '$($portal.primaryColor)'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -165,7 +275,7 @@ export default function Login() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: loading ? '#a0aec0' : '#667eea',
+                background: loading ? '#a0aec0' : '$($portal.primaryColor)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -174,14 +284,13 @@ export default function Login() {
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#5a67d8')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#667eea')}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '$($portal.hoverColor)')}
+              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '$($portal.primaryColor)')}
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
 
-          {/* Bouton de test - À SUPPRIMER EN PRODUCTION */}
           <div style={{
             marginTop: '20px',
             paddingTop: '20px',
@@ -217,3 +326,11 @@ export default function Login() {
     </>
   );
 }
+"@
+
+    $loginContent | Out-File -FilePath "apps\$app\pages\login.tsx" -Encoding UTF8
+
+    Write-Host "✓ $app configuré" -ForegroundColor Green
+}
+
+Write-Host "`nTous les portails ont été configurés avec l'authentification MongoDB!" -ForegroundColor Yellow

@@ -52,7 +52,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Connexion - Industry Portal</title>
+        <title>Connexion - Transporter Portal</title>
       </Head>
 
       <div style={{
@@ -60,7 +60,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #22c1c3 0%, #fdbb2d 100%)',
         padding: '20px'
       }}>
         <div style={{
@@ -78,7 +78,7 @@ export default function Login() {
             color: '#1a202c',
             textAlign: 'center'
           }}>
-            Industry Portal
+            Transporter Portal
           </h1>
 
           <p style={{
@@ -113,7 +113,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '#22c1c3'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -141,7 +141,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '#22c1c3'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -165,7 +165,7 @@ export default function Login() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: loading ? '#a0aec0' : '#667eea',
+                background: loading ? '#a0aec0' : '#22c1c3',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -174,8 +174,8 @@ export default function Login() {
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#5a67d8')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#667eea')}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#1ba5a6')}
+              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#22c1c3')}
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>

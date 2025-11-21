@@ -29,11 +29,8 @@ export default function Login() {
         throw new Error(data.message || 'Identifiants invalides');
       }
 
-      // Stocker le token
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Rediriger vers la page principale
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
@@ -42,7 +39,6 @@ export default function Login() {
     }
   };
 
-  // Connexion de test (à supprimer en production)
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
     localStorage.setItem('user', JSON.stringify({ email: 'test@rt-technologie.com', role: 'admin' }));
@@ -52,7 +48,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Connexion - Industry Portal</title>
+        <title>Connexion - Recipient Portal</title>
       </Head>
 
       <div style={{
@@ -60,7 +56,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
         padding: '20px'
       }}>
         <div style={{
@@ -78,7 +74,7 @@ export default function Login() {
             color: '#1a202c',
             textAlign: 'center'
           }}>
-            Industry Portal
+            Recipient Portal
           </h1>
 
           <p style={{
@@ -113,7 +109,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '#11998e'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -141,7 +137,7 @@ export default function Login() {
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = '#11998e'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
@@ -165,7 +161,7 @@ export default function Login() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: loading ? '#a0aec0' : '#667eea',
+                background: loading ? '#a0aec0' : '#11998e',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -174,14 +170,13 @@ export default function Login() {
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#5a67d8')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#667eea')}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#0d7a73')}
+              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#11998e')}
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
 
-          {/* Bouton de test - À SUPPRIMER EN PRODUCTION */}
           <div style={{
             marginTop: '20px',
             paddingTop: '20px',
@@ -201,7 +196,7 @@ export default function Login() {
                 cursor: 'pointer'
               }}
             >
-              🧪 Connexion de test (démo)
+              Connexion de test (démo)
             </button>
             <p style={{
               fontSize: '12px',
