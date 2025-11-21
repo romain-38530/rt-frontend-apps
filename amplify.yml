@@ -1,33 +1,87 @@
 version: 1
 
-# Global configuration for all apps
-# Each app can override in its own amplify.yml if needed
+applications:
+  - appRoot: apps/backoffice-admin
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Install pnpm globally
+            - npm install -g pnpm@8.15.4
 
-frontend:
-  phases:
-    preBuild:
-      commands:
-        # Install pnpm
-        - npm install -g pnpm@8.15.4
+            # Navigate to root
+            - cd ../..
 
-        # Configure GitHub Packages authentication
-        - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            # Configure GitHub Packages authentication
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
 
-        # Install dependencies
-        - pnpm install --frozen-lockfile
+            # Install all dependencies from root
+            - pnpm install --frozen-lockfile
 
-    build:
-      commands:
-        # Build the app (uses AMPLIFY_APP_ROOT)
-        - pnpm --filter "*" build
+            # Navigate back to app
+            - cd apps/backoffice-admin
 
-  artifacts:
-    baseDirectory: .next
-    files:
-      - '**/*'
+        build:
+          commands:
+            # Build the app with Next.js standalone output
+            - pnpm run build
 
-  cache:
-    paths:
-      - node_modules/**/*
-      - .next/cache/**/*
-      - .pnpm-store/**/*
+            # Create deployment directory
+            - mkdir -p deploy
+
+            # Copy standalone output
+            - cp -r .next/standalone/apps/backoffice-admin/* deploy/
+            - cp -r .next/standalone/apps/backoffice-admin/.next deploy/
+
+            # Copy static files
+            - cp -r .next/static deploy/.next/static
+
+            # Copy public folder if exists
+            - cp -r public deploy/public || true
+
+            # Verify required files
+            - ls -la deploy/
+            - ls -la deploy/.next/
+            - test -f deploy/.next/required-server-files.json && echo "✓ required-server-files.json present" || echo "✗ ERROR required-server-files.json missing"
+
+      artifacts:
+        baseDirectory: deploy
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.pnpm-store/**/*
+
+  - appRoot: apps/marketing-site
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
+            - pnpm install --frozen-lockfile
+            - cd apps/marketing-site
+
+        build:
+          commands:
+            - pnpm run build
+            - mkdir -p deploy
+            - cp -r .next/standalone/apps/marketing-site/* deploy/
+            - cp -r .next/standalone/apps/marketing-site/.next deploy/
+            - cp -r .next/static deploy/.next/static
+            - cp -r public deploy/public || true
+            - ls -la deploy/
+
+      artifacts:
+        baseDirectory: deploy
+        files:
+          - '**/*'
+
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
