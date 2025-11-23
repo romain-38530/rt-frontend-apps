@@ -56,28 +56,67 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: '🌍',
-      title: 'Gestion internationale',
-      desc: 'Orchestrez vos opérations de transit international',
-      locked: subscription?.tier === 'free'
+      icon: '📦',
+      title: 'Gestion des commandes',
+      desc: 'Suivez et gérez toutes vos commandes en temps réel',
+      locked: false,
+      route: '/orders'
+    },
+    {
+      icon: '📅',
+      title: 'Planning & Itinéraires',
+      desc: 'Planifiez vos opérations et optimisez vos itinéraires',
+      locked: subscription?.tier === 'free',
+      route: '/planning'
+    },
+    {
+      icon: '📍',
+      title: 'Suivi en temps réel',
+      desc: 'Traçabilité complète de vos expéditions',
+      locked: false,
+      route: '/tracking'
     },
     {
       icon: '📄',
-      title: 'Documentation douanière',
-      desc: 'Gestion complète des documents douaniers',
-      locked: false
+      title: 'e-CMR Digital',
+      desc: 'Gestion électronique des lettres de voiture',
+      locked: false,
+      route: '/ecmr'
     },
     {
-      icon: '🚢',
-      title: 'Multi-modal',
-      desc: 'Gérez tous vos modes de transport',
-      locked: subscription?.tier === 'free'
+      icon: '🏗️',
+      title: 'Gestion Palettes',
+      desc: 'Suivez vos palettes et optimisez leur gestion',
+      locked: false,
+      route: '/palettes'
     },
     {
-      icon: '💼',
-      title: 'Gestion des dossiers',
-      desc: 'Centralisation de tous vos dossiers clients',
-      locked: subscription?.tier !== 'enterprise'
+      icon: '🔔',
+      title: 'Notifications',
+      desc: 'Alertes temps réel sur vos opérations critiques',
+      locked: false,
+      route: '/notifications'
+    },
+    {
+      icon: '🤖',
+      title: 'Assistant Chatbot',
+      desc: 'Support IA 24/7 pour vos questions',
+      locked: false,
+      route: '/chatbot'
+    },
+    {
+      icon: '📦',
+      title: 'Storage Market',
+      desc: 'Trouvez et réservez des espaces de stockage',
+      locked: subscription?.tier === 'free',
+      route: '/storage'
+    },
+    {
+      icon: '📚',
+      title: 'Formation',
+      desc: 'Accédez aux modules de formation pour vos équipes',
+      locked: subscription?.tier === 'free',
+      route: '/training'
     }
   ];
 
@@ -261,25 +300,57 @@ export default function HomePage() {
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', fontWeight: '700' }}>
                   {item.title}
                 </h3>
-                <p style={{ opacity: 0.9, fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ opacity: 0.9, fontSize: '14px', lineHeight: '1.6', marginBottom: '16px' }}>
                   {item.desc}
                 </p>
-                {item.locked && (
+                {item.locked ? (
                   <button
                     onClick={() => router.push('/subscription')}
                     style={{
-                      marginTop: '16px',
-                      padding: '8px 16px',
+                      marginTop: '8px',
+                      padding: '10px 20px',
                       background: 'rgba(255,255,255,0.9)',
-                      color: '#19547b',
+                      color: '#4A90E2',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '13px'
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      width: '100%',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'white'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.9)'}
+                  >
+                    🔓 Débloquer
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => router.push(item.route)}
+                    style={{
+                      marginTop: '8px',
+                      padding: '10px 20px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      width: '100%',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
                     }}
                   >
-                    Débloquer
+                    ▶ Accéder
                   </button>
                 )}
               </div>

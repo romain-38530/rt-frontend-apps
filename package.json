@@ -16,6 +16,8 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "bcryptjs": "^3.0.3",
+    "mongodb": "^7.0.0",
     "turbo": "^2.0.0",
     "typescript": "^5.3.3"
   },

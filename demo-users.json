@@ -1,0 +1,172 @@
+[
+  {
+    "email": "industry@demo.symphoni-a.com",
+    "role": "manufacturer",
+    "portal": "web-industry",
+    "firstName": "Jean",
+    "lastName": "Industriel",
+    "company": "Industries Demo SA",
+    "phone": "+33 1 23 45 67 89",
+    "subscription": {
+      "tier": "pro",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "production",
+        "orders",
+        "planning"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:08.356Z",
+    "updatedAt": "2025-11-23T21:26:08.356Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$9SBMtl2MH9m/tWCDpJB1tuxd3nog8v3uwHPm1ZSv5jrq6w/dVUnNy"
+  },
+  {
+    "email": "supplier@demo.symphoni-a.com",
+    "role": "supplier",
+    "portal": "web-supplier",
+    "firstName": "Marie",
+    "lastName": "Fournisseur",
+    "company": "Fournisseurs Demo SARL",
+    "phone": "+33 1 23 45 67 90",
+    "subscription": {
+      "tier": "pro",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "catalog",
+        "inventory",
+        "orders"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:08.689Z",
+    "updatedAt": "2025-11-23T21:26:08.689Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$OYm9BEvu1.f1KaVaVKzc1.WJmp6SgyjxdhmxrTyRBtpbCviK/OYcm"
+  },
+  {
+    "email": "transporter@demo.symphoni-a.com",
+    "role": "transporter",
+    "portal": "web-transporter",
+    "firstName": "Pierre",
+    "lastName": "Transporteur",
+    "company": "Transports Demo Express",
+    "phone": "+33 1 23 45 67 91",
+    "subscription": {
+      "tier": "enterprise",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "tracking",
+        "ecmr",
+        "vigilance",
+        "planning"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:09.072Z",
+    "updatedAt": "2025-11-23T21:26:09.072Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$S1uiSxtf.RVqQeo6avPp9OpmIAUHjMoFpnUd/y4tbIKxZa1.qykRu"
+  },
+  {
+    "email": "forwarder@demo.symphoni-a.com",
+    "role": "forwarder",
+    "portal": "web-forwarder",
+    "firstName": "Sophie",
+    "lastName": "Transitaire",
+    "company": "Transitaires Demo International",
+    "phone": "+33 1 23 45 67 92",
+    "subscription": {
+      "tier": "pro",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "orders",
+        "planning",
+        "palettes"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:09.402Z",
+    "updatedAt": "2025-11-23T21:26:09.402Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$Z1n/pMNbJnYob8jNkinf7.nLBOwIZcrT6EjaZ/sfnGkdgE4aH0Kda"
+  },
+  {
+    "email": "logistician@demo.symphoni-a.com",
+    "role": "logistician",
+    "portal": "web-logistician",
+    "firstName": "Thomas",
+    "lastName": "Logisticien",
+    "company": "Logistique Demo Pro",
+    "phone": "+33 1 23 45 67 93",
+    "subscription": {
+      "tier": "enterprise",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "dashboard",
+        "analytics",
+        "optimization",
+        "tms-sync"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:09.565Z",
+    "updatedAt": "2025-11-23T21:26:09.565Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$h8seOV1uFnGguYOJrp3daOUcDE9JsW60gAA0H1yeMetqPhxTZ0JR6"
+  },
+  {
+    "email": "recipient@demo.symphoni-a.com",
+    "role": "recipient",
+    "portal": "web-recipient",
+    "firstName": "Emma",
+    "lastName": "Destinataire",
+    "company": "Destinataires Demo",
+    "phone": "+33 1 23 45 67 94",
+    "subscription": {
+      "tier": "free",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "notifications"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:09.723Z",
+    "updatedAt": "2025-11-23T21:26:09.723Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$5Io9fMkYS94wtqFnsI8ftO5ahonqJcIH945wk4UgFO1kRGP5sGnzu"
+  },
+  {
+    "email": "admin@demo.symphoni-a.com",
+    "role": "admin",
+    "portal": "backoffice-admin",
+    "firstName": "Admin",
+    "lastName": "SYMPHONI.A",
+    "company": "SYMPHONI.A",
+    "phone": "+33 1 23 45 67 95",
+    "isAdmin": true,
+    "permissions": [
+      "*"
+    ],
+    "subscription": {
+      "tier": "enterprise",
+      "status": "active",
+      "startDate": "2025-11-23T21:26:07.896Z",
+      "features": [
+        "all"
+      ]
+    },
+    "createdAt": "2025-11-23T21:26:09.879Z",
+    "updatedAt": "2025-11-23T21:26:09.879Z",
+    "emailVerified": true,
+    "status": "active",
+    "password": "$2b$10$nprwRhksv1w9Q3c4u4iS.uucI3nhnTamgpSABmeF6x5/27.BEv8x2"
+  }
+]
