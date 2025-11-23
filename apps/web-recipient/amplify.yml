@@ -17,7 +17,7 @@ applications:
             # Install all dependencies from root
             - pnpm install
 
-            # Build shared packages
+            # Build shared packages (updated for ui-components)
             - cd packages/contracts && pnpm run build && cd ../..
             - cd packages/utils && pnpm run build && cd ../..
             - cd packages/ui-components && pnpm run build && cd ../..
