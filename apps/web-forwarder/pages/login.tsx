@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useLanguage } from '../hooks/useLanguage';
+import { languages, languageNames } from '../lib/translations';
 
 export default function Login() {
   const router = useRouter();
+  const { language, changeLanguage, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,15 +49,6 @@ export default function Login() {
     router.push('/');
   };
 
-  const features = [
-    { icon: '🌐', title: 'Multi-transport', desc: 'Coordonnez tous vos modes de transport' },
-    { icon: '🤝', title: 'Coordination globale', desc: 'Orchestrez vos opérations à l\'international' },
-    { icon: '📋', title: 'Gestion douanes', desc: 'Simplifiez vos démarches douanières' },
-    { icon: '📦', title: 'Consolidation fret', desc: 'Optimisez le groupage de vos marchandises' },
-    { icon: '🔍', title: 'Tracking multi-modal', desc: 'Suivez vos envois sur tous les modes' },
-    { icon: '💵', title: 'Tarification auto', desc: 'Calcul automatique des tarifs de transport' }
-  ];
-
   return (
     <>
       <Head>
@@ -79,6 +74,75 @@ export default function Login() {
           zIndex: 0
         }} />
 
+        {/* Language selector - top right */}
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 10
+        }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowLangMenu(!showLangMenu)}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                padding: '10px 16px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🌍 {languageNames[language]}
+              <span style={{ fontSize: '10px' }}>▼</span>
+            </button>
+
+            {showLangMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '50px',
+                right: 0,
+                background: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                overflow: 'hidden',
+                minWidth: '150px'
+              }}>
+                {languages.map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => {
+                      changeLanguage(lang);
+                      setShowLangMenu(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: language === lang ? '#f0f0f0' : 'white',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: language === lang ? '600' : '400',
+                      color: '#333'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = language === lang ? '#f0f0f0' : 'white'}
+                  >
+                    {languageNames[lang]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div style={{
           maxWidth: '1600px',
           margin: '0 auto',
@@ -98,7 +162,7 @@ export default function Login() {
             margin: '0 auto',
             width: '100%'
           }}>
-            {features.slice(0, 3).map((feature, i) => (
+            {t.features.slice(0, 3).map((feature, i) => (
               <div key={i} style={{
                 background: 'rgba(255,255,255,0.15)',
                 backdropFilter: 'blur(10px)',
@@ -136,7 +200,7 @@ export default function Login() {
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h1 style={{ fontSize: '48px', fontWeight: '800', margin: 0, color: '#333' }}>SYMPHONI.A</h1>
-              <p style={{ fontSize: '18px', fontStyle: 'italic', margin: 0, opacity: 0.7, color: '#666' }}>L'IA qui orchestre vos flux transport.</p>
+              <p style={{ fontSize: '18px', fontStyle: 'italic', margin: 0, opacity: 0.7, color: '#666' }}>{t.tagline}</p>
             </div>
           </div>
 
@@ -146,7 +210,7 @@ export default function Login() {
             marginBottom: '30px',
             fontWeight: '600'
           }}>
-            Forwarder Portal
+            {t.portal}
           </p>
 
           <form onSubmit={handleLogin}>
@@ -157,7 +221,7 @@ export default function Login() {
                 color: '#4a5568',
                 fontWeight: '500'
               }}>
-                Email
+                {t.email}
               </label>
               <input
                 type="email"
@@ -185,7 +249,7 @@ export default function Login() {
                 color: '#4a5568',
                 fontWeight: '500'
               }}>
-                Mot de passe
+                {t.password}
               </label>
               <input
                 type="password"
@@ -237,7 +301,7 @@ export default function Login() {
               onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#3a8bce')}
               onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#4facfe')}
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? t.logging : t.login}
             </button>
           </form>
 
@@ -260,7 +324,7 @@ export default function Login() {
                 cursor: 'pointer'
               }}
             >
-              Connexion de test (démo)
+              {t.testLogin}
             </button>
             <p style={{
               fontSize: '12px',
@@ -268,7 +332,7 @@ export default function Login() {
               textAlign: 'center',
               marginTop: '8px'
             }}>
-              Pour tester sans API
+              {t.testLoginDesc}
             </p>
           </div>
         </div>
@@ -282,7 +346,7 @@ export default function Login() {
             margin: '0 auto',
             width: '100%'
           }}>
-            {features.slice(3, 6).map((feature, i) => (
+            {t.features.slice(3, 6).map((feature, i) => (
               <div key={i + 3} style={{
                 background: 'rgba(255,255,255,0.15)',
                 backdropFilter: 'blur(10px)',
