@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 *.log
+eb-setenv.txt
+.elasticbeanstalk/app_versions/
