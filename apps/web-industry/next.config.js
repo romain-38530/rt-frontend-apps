@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
 
+  // Transpile workspace packages
+  transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
+
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
   output: 'export',
 

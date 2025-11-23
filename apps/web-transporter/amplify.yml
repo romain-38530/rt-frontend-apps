@@ -8,18 +8,11 @@ applications:
             # Install pnpm globally
             - npm install -g pnpm@8.15.4
 
-            # Navigate to root
+            # Navigate to root and install all dependencies
             - cd ../..
-
-            # Install all dependencies from root
             - pnpm install
 
-            # Build shared packages (updated for ui-components)
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
-            - cd packages/ui-components && pnpm run build && cd ../..
-
-            # Navigate back to app
+            # Navigate to app (Next.js will transpile workspace packages)
             - cd apps/web-transporter
 
         build:

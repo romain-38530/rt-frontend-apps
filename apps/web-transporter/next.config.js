@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Transpile workspace packages
+  transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
+
   reactStrictMode: true,
   swcMinify: true,
 
