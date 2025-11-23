@@ -46,12 +46,12 @@ export default function Login() {
   };
 
   const features = [
-    { icon: '📦', title: 'Warehouse management', desc: 'Gérez vos entrepôts et zones de stockage' },
-    { icon: '📝', title: 'Order processing', desc: 'Traitement automatisé des commandes' },
-    { icon: '📊', title: 'Stock optimization', desc: 'Optimisation intelligente des stocks' },
-    { icon: '🚚', title: 'Distribution planning', desc: 'Planification et routage des livraisons' },
-    { icon: '📈', title: 'KPI dashboard', desc: 'Tableaux de bord et indicateurs clés' },
-    { icon: '🎯', title: 'Resource allocation', desc: 'Allocation optimale des ressources' }
+    { icon: '📦', title: 'Gestion entrepôts', desc: 'Gérez vos entrepôts et zones de stockage' },
+    { icon: '📝', title: 'Traitement commandes', desc: 'Traitement automatisé des commandes' },
+    { icon: '📊', title: 'Optimisation stocks', desc: 'Optimisation intelligente des stocks' },
+    { icon: '🚚', title: 'Planification distribution', desc: 'Planification et routage des livraisons' },
+    { icon: '📈', title: 'Tableau de bord KPI', desc: 'Tableaux de bord et indicateurs clés' },
+    { icon: '🎯', title: 'Allocation ressources', desc: 'Allocation optimale des ressources' }
   ];
 
   return (
@@ -63,7 +63,7 @@ export default function Login() {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        background: 'url(https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=80) center/cover',
+        background: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80) center/cover',
         padding: '40px 20px',
         position: 'relative',
         overflow: 'hidden'
