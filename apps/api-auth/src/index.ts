@@ -18,6 +18,21 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.get('/', (req, res) => {
+  res.json({
+    name: 'RT Technologie Authentication API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me'
+      }
+    }
+  });
+});
+
 app.use('/api/auth', authRoutes);
 
 // Health check
