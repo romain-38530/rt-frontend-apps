@@ -44,13 +44,13 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_FR',
     url: '/',
-    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
     siteName: 'SYMPHONI.A',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
   },
   icons: {
