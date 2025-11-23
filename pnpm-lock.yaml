@@ -347,7 +347,7 @@ importers:
 
   apps/web-forwarder:
     dependencies:
-      '@rt/ui-components':
+      '@repo/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
       next:
@@ -375,12 +375,12 @@ importers:
 
   apps/web-industry:
     dependencies:
+      '@repo/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       '@rt/contracts':
         specifier: ^1.0.0
         version: link:../../packages/contracts
-      '@rt/ui-components':
-        specifier: workspace:*
-        version: link:../../packages/ui-components
       '@rt/utils':
         specifier: ^1.0.0
         version: link:../../packages/utils
@@ -433,7 +433,7 @@ importers:
 
   apps/web-logistician:
     dependencies:
-      '@rt/ui-components':
+      '@repo/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
       next:
@@ -461,7 +461,7 @@ importers:
 
   apps/web-recipient:
     dependencies:
-      '@rt/ui-components':
+      '@repo/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
       next:
@@ -489,7 +489,7 @@ importers:
 
   apps/web-supplier:
     dependencies:
-      '@rt/ui-components':
+      '@repo/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
       next:
@@ -517,7 +517,7 @@ importers:
 
   apps/web-transporter:
     dependencies:
-      '@rt/ui-components':
+      '@repo/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
       next:
