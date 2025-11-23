@@ -347,6 +347,9 @@ importers:
 
   apps/web-forwarder:
     dependencies:
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       next:
         specifier: 14.2.5
         version: 14.2.5(react-dom@18.2.0)(react@18.2.0)
@@ -375,6 +378,9 @@ importers:
       '@rt/contracts':
         specifier: ^1.0.0
         version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       '@rt/utils':
         specifier: ^1.0.0
         version: link:../../packages/utils
@@ -427,6 +433,9 @@ importers:
 
   apps/web-logistician:
     dependencies:
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       next:
         specifier: 14.2.5
         version: 14.2.5(react-dom@18.2.0)(react@18.2.0)
@@ -452,6 +461,9 @@ importers:
 
   apps/web-recipient:
     dependencies:
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       next:
         specifier: 14.2.5
         version: 14.2.5(react-dom@18.2.0)(react@18.2.0)
@@ -477,6 +489,9 @@ importers:
 
   apps/web-supplier:
     dependencies:
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       next:
         specifier: 14.2.5
         version: 14.2.5(react-dom@18.2.0)(react@18.2.0)
@@ -502,6 +517,9 @@ importers:
 
   apps/web-transporter:
     dependencies:
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
       next:
         specifier: 14.2.5
         version: 14.2.5(react-dom@18.2.0)(react@18.2.0)

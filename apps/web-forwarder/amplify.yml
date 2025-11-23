@@ -20,6 +20,7 @@ applications:
             # Build shared packages
             - cd packages/contracts && pnpm run build && cd ../..
             - cd packages/utils && pnpm run build && cd ../..
+            - cd packages/ui-components && pnpm run build && cd ../..
 
             # Navigate back to app
             - cd apps/web-forwarder
