@@ -58,6 +58,192 @@ importers:
         specifier: ^4.7.0
         version: 4.20.6
 
+  apps/api-chatbot:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
+  apps/api-ecmr:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
+  apps/api-orders:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
+  apps/api-palettes:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
+  apps/api-planning:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
+  apps/api-storage:
+    dependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.3.1
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      mongoose:
+        specifier: ^8.0.0
+        version: 8.20.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+    devDependencies:
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
   apps/backoffice-admin:
     dependencies:
       '@rt/contracts':
