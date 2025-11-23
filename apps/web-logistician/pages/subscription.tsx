@@ -88,10 +88,20 @@ export default function SubscriptionPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        background: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80) center/cover',
+        position: 'relative',
         color: 'white'
       }}>
-        <p>Chargement...</p>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0
+        }} />
+        <p style={{ position: 'relative', zIndex: 1 }}>Chargement...</p>
       </div>
     );
   }
@@ -104,17 +114,31 @@ export default function SubscriptionPage() {
 
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)',
+        background: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80) center/cover',
+        position: 'relative',
         fontFamily: 'system-ui, sans-serif'
       }}>
+        {/* Dark overlay */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0
+        }} />
         {/* Header */}
         <div style={{
-          background: 'white',
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(10px)',
           boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
           padding: '20px 40px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'relative',
+          zIndex: 1
         }}>
           <div>
             <h1 style={{
@@ -156,7 +180,7 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Content */}
-        <div style={{ padding: '60px 20px' }}>
+        <div style={{ padding: '60px 20px', position: 'relative', zIndex: 1 }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             {/* Title */}
             <div style={{ textAlign: 'center', marginBottom: '60px' }}>
