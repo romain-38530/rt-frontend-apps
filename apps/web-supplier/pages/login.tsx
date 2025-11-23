@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { Logo } from '@repo/ui-components';
 
 export default function Login() {
   const router = useRouter();
@@ -41,14 +42,14 @@ export default function Login() {
 
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
-    localStorage.setItem('user', JSON.stringify({ email: 'test@rt-technologie.com', role: 'admin' }));
+    localStorage.setItem('user', JSON.stringify({ email: 'test@symphoni-a.com', role: 'admin' }));
     router.push('/');
   };
 
   return (
     <>
       <Head>
-        <title>Connexion - Supplier Portal</title>
+        <title>Connexion - SYMPHONI.A Supplier</title>
       </Head>
 
       <div style={{
@@ -67,22 +68,21 @@ export default function Login() {
           width: '100%',
           maxWidth: '400px'
         }}>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            marginBottom: '10px',
-            color: '#1a202c',
-            textAlign: 'center'
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '20px'
           }}>
-            Supplier Portal
-          </h1>
+            <Logo size="md" showTagline={true} variant="dark" />
+          </div>
 
           <p style={{
             color: '#718096',
             textAlign: 'center',
-            marginBottom: '30px'
+            marginBottom: '30px',
+            fontWeight: '600'
           }}>
-            Connectez-vous pour accéder au portail
+            Supplier Portal
           </p>
 
           <form onSubmit={handleLogin}>

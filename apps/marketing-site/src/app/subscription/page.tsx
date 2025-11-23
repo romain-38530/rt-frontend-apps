@@ -97,9 +97,9 @@ export default function SubscriptionPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                RT Technologie
+                SYMPHONI.A
               </h1>
-              <p className="text-xs text-gray-500">Plateforme logistique</p>
+              <p className="text-xs text-gray-500">L'IA qui orchestre vos flux transport.</p>
             </div>
           </div>
           <a
@@ -284,7 +284,7 @@ export default function SubscriptionPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <p>&copy; 2024 RT Technologie. Tous droits réservés.</p>
+          <p>&copy; 2024 SYMPHONI.A. Tous droits réservés.</p>
         </div>
       </footer>
     </div>

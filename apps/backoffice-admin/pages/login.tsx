@@ -30,8 +30,8 @@ export default function Login() {
     <div style={{ maxWidth: '420px', margin: '3rem auto' }}>
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title" style={{ fontSize: '1.5rem' }}>Connexion Admin</h2>
-          <p className="card-subtitle">Accédez au backoffice d'administration</p>
+          <h2 className="card-title" style={{ fontSize: '1.5rem' }}>SYMPHONI.A - Administration</h2>
+          <p className="card-subtitle">L'IA qui orchestre vos flux transport.</p>
         </div>
 
         {error && (

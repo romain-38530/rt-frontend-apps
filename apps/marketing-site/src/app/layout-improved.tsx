@@ -4,14 +4,14 @@ import './globals.css';
 // Metadata SEO optimisée
 export const metadata: Metadata = {
   title: {
-    default: 'RT Technologie - Solution TMS Cloud pour le Transport et la Logistique',
-    template: '%s | RT Technologie'
+    default: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    template: '%s | SYMPHONI.A'
   },
-  description: 'RT Technologie propose une solution TMS cloud innovante pour optimiser la gestion du transport et de la logistique. Inscription en ligne simple et rapide. Essai gratuit disponible.',
-  keywords: ['TMS', 'Transport Management System', 'Logistique', 'Transport', 'Cloud', 'Gestion transport', 'RT Technologie', 'Solution SaaS'],
-  authors: [{ name: 'RT Technologie' }],
-  creator: 'RT Technologie',
-  publisher: 'RT Technologie',
+  description: 'SYMPHONI.A propose une solution TMS cloud innovante pour optimiser la gestion du transport et de la logistique. Inscription en ligne simple et rapide. Essai gratuit disponible.',
+  keywords: ['TMS', 'Transport Management System', 'Logistique', 'Transport', 'Cloud', 'Gestion transport', 'SYMPHONI.A', 'Solution SaaS'],
+  authors: [{ name: 'SYMPHONI.A' }],
+  creator: 'SYMPHONI.A',
+  publisher: 'SYMPHONI.A',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://rt-technologie.fr'),
   alternates: {
     canonical: '/',
@@ -20,10 +20,10 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'RT Technologie - Solution TMS Cloud',
+    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
     description: 'Solution TMS cloud pour optimiser votre gestion du transport et de la logistique',
     url: 'https://rt-technologie.fr',
-    siteName: 'RT Technologie',
+    siteName: 'SYMPHONI.A',
     locale: 'fr_FR',
     type: 'website',
     images: [
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'RT Technologie - Solution TMS Cloud',
+        alt: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RT Technologie - Solution TMS Cloud',
+    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
     description: 'Solution TMS cloud pour optimiser votre gestion du transport',
     images: ['/twitter-image.png'],
   },
@@ -83,7 +83,7 @@ export const viewport: Viewport = {
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'RT Technologie',
+  name: 'SYMPHONI.A',
   url: 'https://rt-technologie.fr',
   logo: 'https://rt-technologie.fr/logo.png',
   description: 'Solution TMS cloud pour la gestion du transport et de la logistique',

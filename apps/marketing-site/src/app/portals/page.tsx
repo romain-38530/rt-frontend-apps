@@ -111,14 +111,11 @@ export default function PortalsPage() {
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-xl font-bold">RT</span>
-            </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                RT Technologie
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                SYMPHONI.A
               </h1>
-              <p className="text-xs text-gray-500">Plateforme logistique</p>
+              <p className="text-xs text-gray-500 italic">L'IA qui orchestre vos flux transport.</p>
             </div>
           </div>
           <a
@@ -136,7 +133,7 @@ export default function PortalsPage() {
           <h2 className="text-5xl font-extrabold text-gray-900 mb-6">
             Accédez à vos{' '}
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Portails RT
+              Portails SYMPHONI.A
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -221,7 +218,7 @@ export default function PortalsPage() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-8 px-6">
         <div className="max-w-7xl mx-auto text-center text-gray-600">
-          <p>&copy; 2024 RT Technologie. Tous droits réservés.</p>
+          <p>&copy; 2024 SYMPHONI.A. Tous droits réservés.</p>
         </div>
       </footer>
     </div>

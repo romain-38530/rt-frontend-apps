@@ -14,6 +14,9 @@ export type { PortalCardProps } from './components/PortalCard';
 export { Header } from './components/Header';
 export type { HeaderProps } from './components/Header';
 
+export { Logo } from './components/Logo';
+export type { LogoProps } from './components/Logo';
+
 // Types
 export type { SubscriptionTier, SubscriptionPlan, UserSubscription } from './types/subscription';
 export { SUBSCRIPTION_PLANS } from './types/subscription';

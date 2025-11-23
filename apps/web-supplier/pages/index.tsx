@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { Logo } from '@repo/ui-components';
 
 export default function HomePage() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>Supplier Portal - RT Technologie</title>
+        <title>SYMPHONI.A - Supplier Portal</title>
       </Head>
 
       <div style={{
@@ -93,13 +94,18 @@ export default function HomePage() {
           backdropFilter: 'blur(10px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <h1 style={{
-              fontSize: '24px',
-              fontWeight: '800',
-              margin: 0
+            <Logo size="md" showTagline={true} variant="light" />
+            <div style={{
+              padding: '6px 16px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              border: '1px solid rgba(255,255,255,0.3)'
             }}>
-              🏪 Supplier Portal
-            </h1>
+              🏪 Supplier
+            </div>
             <div style={{
               padding: '6px 16px',
               background: 'rgba(255,255,255,0.2)',

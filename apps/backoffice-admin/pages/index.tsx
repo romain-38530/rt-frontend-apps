@@ -33,8 +33,8 @@ export default function Home() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-gradient-to-r from-primary-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
-        <h1 className="text-3xl font-bold mb-2">Bienvenue sur RT Technologie Admin</h1>
-        <p className="text-lg opacity-90">Plateforme unifiee de gestion - Suivez vos performances en temps reel</p>
+        <h1 className="text-3xl font-bold mb-2">SYMPHONI.A - Administration</h1>
+        <p className="text-lg opacity-90">L'IA qui orchestre vos flux transport. - Suivez vos performances en temps reel</p>
         <div className="flex gap-4 mt-6">
           <a href="/orgs" className="bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all hover:shadow-lg">Gerer les organisations</a>
           <a href="/health" className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:bg-opacity-10 transition-all">Voir l'etat des services</a>

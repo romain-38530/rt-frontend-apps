@@ -4,10 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://rttechnologie.com'),
   title: {
-    default: 'RT Technologie - Plateforme TMS Intelligente pour la Logistique',
-    template: '%s | RT Technologie'
+    default: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    template: '%s | SYMPHONI.A'
   },
-  description: 'Digitalisez votre logistique avec RT Technologie. Plateforme TMS complète pour industriels, transporteurs, logisticiens, fournisseurs et transitaires. Inscription en 5 minutes.',
+  description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète pour industriels, transporteurs, logisticiens, fournisseurs et transitaires. Inscription en 5 minutes.',
   keywords: [
     'TMS',
     'Transport Management System',
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     'signature électronique',
     'onboarding automatisé'
   ],
-  authors: [{ name: 'RT Technologie' }],
-  creator: 'RT Technologie',
-  publisher: 'RT Technologie',
+  authors: [{ name: 'SYMPHONI.A' }],
+  creator: 'SYMPHONI.A',
+  publisher: 'SYMPHONI.A',
   robots: {
     index: true,
     follow: true,
@@ -44,14 +44,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_FR',
     url: '/',
-    title: 'RT Technologie - Plateforme TMS Intelligente',
-    description: 'Digitalisez votre logistique avec RT Technologie. Solution complète pour tous les acteurs de la supply chain.',
-    siteName: 'RT Technologie',
+    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
+    siteName: 'SYMPHONI.A',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RT Technologie - Plateforme TMS Intelligente',
-    description: 'Digitalisez votre logistique avec RT Technologie. Solution complète pour tous les acteurs de la supply chain.',
+    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
   },
   icons: {
     icon: '/favicon.ico',

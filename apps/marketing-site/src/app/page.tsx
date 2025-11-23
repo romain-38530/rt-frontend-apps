@@ -46,7 +46,7 @@ export default function HomePage() {
                       <div className="w-3 h-3 bg-yellow-500 rounded-full" />
                       <div className="w-3 h-3 bg-green-500 rounded-full" />
                     </div>
-                    <span className="text-xs text-gray-500">Inscription RT Technologie</span>
+                    <span className="text-xs text-gray-500">Inscription SYMPHONI.A</span>
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -181,7 +181,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Pourquoi RT Technologie ?
+              Pourquoi SYMPHONI.A ?
             </h2>
             <p className="text-xl text-gray-600">
               La solution TMS qui simplifie vraiment votre quotidien
@@ -556,7 +556,7 @@ export default function HomePage() {
             Prêt à digitaliser votre logistique ?
           </h2>
           <p className="text-xl text-indigo-100 mb-8 leading-relaxed">
-            Rejoignez les 500+ entreprises qui font confiance à RT Technologie.
+            Rejoignez les 500+ entreprises qui font confiance à SYMPHONI.A.
             Inscription en 5 minutes, activation immédiate, support inclus.
           </p>
           <button
@@ -601,7 +601,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">RT Technologie</h3>
+              <h3 className="text-white font-bold text-lg mb-4">SYMPHONI.A</h3>
               <p className="text-sm leading-relaxed">
                 La plateforme TMS intelligente pour optimiser vos opérations de transport et logistique.
               </p>
@@ -635,7 +635,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-12 pt-8 text-center text-sm">
-            <p>© 2025 RT Technologie. Tous droits réservés.</p>
+            <p>© 2025 SYMPHONI.A. Tous droits réservés.</p>
           </div>
         </div>
       </footer>

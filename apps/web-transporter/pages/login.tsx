@@ -45,14 +45,14 @@ export default function Login() {
   // Connexion de test (à supprimer en production)
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
-    localStorage.setItem('user', JSON.stringify({ email: 'test@rt-technologie.com', role: 'admin' }));
+    localStorage.setItem('user', JSON.stringify({ email: 'test@symphoni-a.com', role: 'admin' }));
     router.push('/');
   };
 
   return (
     <>
       <Head>
-        <title>Connexion - Transporter Portal</title>
+        <title>Connexion - SYMPHONI.A Transporter</title>
       </Head>
 
       <div style={{
@@ -78,7 +78,7 @@ export default function Login() {
             color: '#1a202c',
             textAlign: 'center'
           }}>
-            Transporter Portal
+            SYMPHONI.A - Transporter
           </h1>
 
           <p style={{
@@ -86,7 +86,7 @@ export default function Login() {
             textAlign: 'center',
             marginBottom: '30px'
           }}>
-            Connectez-vous pour accéder au portail
+            L'IA qui orchestre vos flux transport.
           </p>
 
           <form onSubmit={handleLogin}>

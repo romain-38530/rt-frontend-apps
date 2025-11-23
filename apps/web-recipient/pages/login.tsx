@@ -41,14 +41,14 @@ export default function Login() {
 
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
-    localStorage.setItem('user', JSON.stringify({ email: 'test@rt-technologie.com', role: 'admin' }));
+    localStorage.setItem('user', JSON.stringify({ email: 'test@symphoni-a.com', role: 'admin' }));
     router.push('/');
   };
 
   return (
     <>
       <Head>
-        <title>Connexion - Recipient Portal</title>
+        <title>Connexion - SYMPHONI.A Recipient</title>
       </Head>
 
       <div style={{
@@ -74,7 +74,7 @@ export default function Login() {
             color: '#1a202c',
             textAlign: 'center'
           }}>
-            Recipient Portal
+            SYMPHONI.A - Recipient
           </h1>
 
           <p style={{
@@ -82,7 +82,7 @@ export default function Login() {
             textAlign: 'center',
             marginBottom: '30px'
           }}>
-            Connectez-vous pour accéder au portail
+            L'IA qui orchestre vos flux transport.
           </p>
 
           <form onSubmit={handleLogin}>

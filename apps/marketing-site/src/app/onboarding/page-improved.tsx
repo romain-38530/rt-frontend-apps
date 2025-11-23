@@ -130,7 +130,7 @@ export default function OnboardingPage() {
         {/* En-tête avec amélioration accessibilité */}
         <header className="text-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Inscription RT Technologie
+            Inscription SYMPHONI.A
           </h1>
           <p className="text-base sm:text-lg text-gray-600">
             Créez votre compte en quelques minutes
@@ -629,7 +629,7 @@ export default function OnboardingPage() {
                     aria-required="true"
                   />
                   <label htmlFor="terms-accept" className="ml-3 text-sm text-gray-600">
-                    J'accepte les conditions générales de vente et autorise RT Technologie
+                    J'accepte les conditions générales de vente et autorise SYMPHONI.A
                     à générer et m'envoyer le contrat d'abonnement pour signature électronique.
                   </label>
                 </div>

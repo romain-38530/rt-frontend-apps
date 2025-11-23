@@ -128,7 +128,7 @@ export default function OnboardingPage() {
         {/* En-tête */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Bienvenue chez RT Technologie
+            Bienvenue chez SYMPHONI.A
           </h1>
           <p className="text-xl text-gray-600 mb-2">
             Créez votre compte professionnel en 5 minutes chrono
@@ -557,7 +557,7 @@ export default function OnboardingPage() {
                 <label className="flex items-start">
                   <input type="checkbox" className="mt-1 mr-3" required />
                   <span className="text-sm text-gray-600">
-                    J'accepte les conditions générales de vente et autorise RT Technologie
+                    J'accepte les conditions générales de vente et autorise SYMPHONI.A
                     à générer et m'envoyer le contrat d'abonnement pour signature électronique.
                   </span>
                 </label>
