@@ -11,9 +11,6 @@ applications:
             # Navigate to root
             - cd ../..
 
-            # Configure GitHub Packages authentication
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
-
             # Install all dependencies from root
             - pnpm install
 
