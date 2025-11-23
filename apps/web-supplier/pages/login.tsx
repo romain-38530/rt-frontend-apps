@@ -72,7 +72,10 @@ export default function Login() {
             justifyContent: 'center',
             marginBottom: '20px'
           }}>
-            <Logo size="md" showTagline={true} variant="dark" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h1 style={{ fontSize: '48px', fontWeight: '800', margin: 0, color: '#333' }}>SYMPHONI.A</h1>
+              <p style={{ fontSize: '18px', fontStyle: 'italic', margin: 0, opacity: 0.7, color: '#666' }}>L'IA qui orchestre vos flux transport.</p>
+            </div>
           </div>
 
           <p style={{
