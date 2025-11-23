@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://rttechnologie.com'),
   title: {
-    default: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    default: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     template: '%s | SYMPHONI.A'
   },
   description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète pour industriels, transporteurs, logisticiens, fournisseurs et transitaires. Inscription en 5 minutes.',
