@@ -45,6 +45,15 @@ export default function Login() {
     router.push('/');
   };
 
+  const features = [
+    { icon: '🌐', title: 'Multi-transport', desc: 'Coordonnez tous vos modes de transport' },
+    { icon: '🤝', title: 'Coordination globale', desc: 'Orchestrez vos opérations à l\'international' },
+    { icon: '📋', title: 'Gestion douanes', desc: 'Simplifiez vos démarches douanières' },
+    { icon: '📦', title: 'Consolidation fret', desc: 'Optimisez le groupage de vos marchandises' },
+    { icon: '🔍', title: 'Tracking multi-modal', desc: 'Suivez vos envois sur tous les modes' },
+    { icon: '💵', title: 'Tarification auto', desc: 'Calcul automatique des tarifs de transport' }
+  ];
+
   return (
     <>
       <Head>
@@ -54,35 +63,94 @@ export default function Login() {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        padding: '20px'
+        padding: '40px 20px',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
+        {/* Decorative circles */}
         <div style={{
-          background: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          padding: '40px',
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '300px',
+          height: '300px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '50%',
+          filter: 'blur(40px)'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '-150px',
+          right: '-150px',
+          width: '400px',
+          height: '400px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '50%',
+          filter: 'blur(60px)'
+        }} />
+
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
           width: '100%',
-          maxWidth: '400px'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '30px',
+          alignItems: 'center',
+          position: 'relative',
+          zIndex: 1
         }}>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            marginBottom: '10px',
-            color: '#1a202c',
-            textAlign: 'center'
+          {/* Features Cards - Left & Right */}
+          {features.map((feature, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '24px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              display: i === 2 || i === 3 ? 'none' : 'block' // Hide middle cards on mobile
+            }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>{feature.icon}</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', margin: 0 }}>
+                {feature.title}
+              </h3>
+              <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+                {feature.desc}
+              </p>
+            </div>
+          ))}
+
+          {/* Login Form - Center */}
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            padding: '40px',
+            width: '100%',
+            maxWidth: '400px',
+            margin: '0 auto',
+            gridColumn: features.length > 3 ? 'span 1' : 'auto'
           }}>
-            SYMPHONI.A - Forwarder
-          </h1>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '20px'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h1 style={{ fontSize: '48px', fontWeight: '800', margin: 0, color: '#333' }}>SYMPHONI.A</h1>
+              <p style={{ fontSize: '18px', fontStyle: 'italic', margin: 0, opacity: 0.7, color: '#666' }}>L'IA qui orchestre vos flux transport.</p>
+            </div>
+          </div>
 
           <p style={{
             color: '#718096',
             textAlign: 'center',
-            marginBottom: '30px'
+            marginBottom: '30px',
+            fontWeight: '600'
           }}>
-            L'IA qui orchestre vos flux transport.
+            Forwarder Portal
           </p>
 
           <form onSubmit={handleLogin}>
@@ -209,6 +277,7 @@ export default function Login() {
           </div>
         </div>
       </div>
+    </div>
     </>
   );
 }
