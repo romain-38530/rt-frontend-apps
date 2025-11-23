@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
-import { Logo } from '@repo/ui-components';
 
 export default function HomePage() {
   const router = useRouter();
@@ -94,7 +93,10 @@ export default function HomePage() {
           backdropFilter: 'blur(10px)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Logo size="md" showTagline={true} variant="light" />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>SYMPHONI.A</h1>
+              <p style={{ fontSize: '12px', fontStyle: 'italic', margin: 0, opacity: 0.9 }}>L'IA qui orchestre vos flux transport.</p>
+            </div>
             <div style={{
               padding: '6px 16px',
               background: 'rgba(255,255,255,0.2)',

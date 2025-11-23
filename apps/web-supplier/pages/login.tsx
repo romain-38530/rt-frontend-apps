@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { Logo } from '@repo/ui-components';
 
 export default function Login() {
   const router = useRouter();

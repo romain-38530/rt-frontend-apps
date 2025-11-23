@@ -8,7 +8,6 @@ applications:
             - npm install -g pnpm@8.15.4
             - cd ../..
             - pnpm install
-            - cd packages/ui-components && pnpm run build && cd ../..
             - cd apps/web-industry
         build:
           commands:

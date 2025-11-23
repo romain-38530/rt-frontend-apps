@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@rt/contracts": "^1.0.0",
-    "@repo/ui-components": "workspace:*",
     "@rt/utils": "^1.0.0",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.2",
