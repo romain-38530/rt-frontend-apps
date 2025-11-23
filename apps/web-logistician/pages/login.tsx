@@ -58,7 +58,7 @@ export default function Login() {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        background: 'url(https://images.unsplash.com/photo-1484589065579-248aad0d8b13?w=1920&q=80) center/cover',
+        background: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80) center/cover',
         padding: '40px 20px',
         position: 'relative',
         overflow: 'hidden'

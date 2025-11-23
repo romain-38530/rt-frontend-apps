@@ -36,10 +36,20 @@ export default function HomePage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        background: 'url(https://images.unsplash.com/photo-1553413077-190dd305871c?w=1920&q=80) center/cover',
+        position: 'relative',
         color: 'white'
       }}>
-        <p>Chargement...</p>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0
+        }} />
+        <p style={{ position: 'relative', zIndex: 1 }}>Chargement...</p>
       </div>
     );
   }
@@ -79,10 +89,21 @@ export default function HomePage() {
 
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        background: 'url(https://images.unsplash.com/photo-1553413077-190dd305871c?w=1920&q=80) center/cover',
+        position: 'relative',
         color: 'white',
         fontFamily: 'system-ui, sans-serif'
       }}>
+        {/* Dark overlay */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0
+        }} />
         {/* Header */}
         <div style={{
           padding: '20px 40px',
@@ -90,7 +111,9 @@ export default function HomePage() {
           justifyContent: 'space-between',
           alignItems: 'center',
           background: 'rgba(0,0,0,0.1)',
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(10px)',
+          position: 'relative',
+          zIndex: 1
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -165,7 +188,9 @@ export default function HomePage() {
         <div style={{
           padding: '60px 40px',
           maxWidth: '1400px',
-          margin: '0 auto'
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1
         }}>
           {/* Welcome Section */}
           <div style={{
