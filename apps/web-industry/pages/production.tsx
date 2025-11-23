@@ -5,26 +5,19 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function ProductionPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL;
+
+  const [production, setProduction] = useState([
+    { ligne: 'Ligne A', produit: 'Produit X', objectif: 1000, realise: 850, taux: 85 },
+    { ligne: 'Ligne B', produit: 'Produit Y', objectif: 500, realise: 520, taux: 104 },
+    { ligne: 'Ligne C', produit: 'Produit Z', objectif: 750, realise: 680, taux: 91 },
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      alert(`Service Production & Planning en cours d'implémentation...\n\nAPI: ${apiUrl}`);
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -72,8 +65,11 @@ export default function ProductionPage() {
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -84,10 +80,11 @@ export default function ProductionPage() {
           </div>
           <div style={{
             padding: '8px 20px',
-            background: 'rgba(4A90E2, 0.2)',
+            background: 'rgba(255,255,255,0.2)',
             borderRadius: '20px',
             fontSize: '13px',
-            fontWeight: '700'
+            fontWeight: '700',
+            border: '1px solid rgba(255,255,255,0.3)'
           }}>
             🏭 Industry
           </div>
@@ -95,57 +92,45 @@ export default function ProductionPage() {
 
         {/* Content */}
         <div style={{
-          padding: '60px 40px',
+          padding: '40px',
           position: 'relative',
           zIndex: 1,
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto'
         }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '80px', marginBottom: '24px' }}>🏭</div>
-            <h2 style={{ fontSize: '36px', marginBottom: '16px', fontWeight: '800' }}>
-              Production & Planning
-            </h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '32px' }}>
-              Service connecté à l'API backend
-            </p>
 
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '32px',
-              fontFamily: 'monospace',
-              fontSize: '14px'
-            }}>
-              API: {apiUrl || 'Non configurée'}
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {production.map((ligne, i) => (
+                <div key={i} style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr 1fr',
+                  gap: '20px',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>{ligne.ligne}</div>
+                    <div style={{ fontSize: '14px', opacity: 0.7 }}>{ligne.produit}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '800' }}>{ligne.objectif}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Objectif</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: ligne.taux >= 100 ? '#00D084' : '#FFA500' }}>{ligne.realise}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Réalisé</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '28px', fontWeight: '800', color: ligne.taux >= 100 ? '#00D084' : ligne.taux >= 80 ? '#FFA500' : '#FF4444' }}>{ligne.taux}%</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Taux</div>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <button
-              onClick={handleAction}
-              disabled={loading}
-              style={{
-                padding: '16px 48px',
-                background: loading ? '#666' : 'linear-gradient(135deg, #4A90E2 0%, #667eea 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}
-            >
-              {loading ? 'Chargement...' : 'Lancer le service'}
-            </button>
-          </div>
         </div>
       </div>
     </>

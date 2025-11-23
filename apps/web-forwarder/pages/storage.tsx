@@ -5,26 +5,19 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function StoragePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL;
+
+  const [spaces, setSpaces] = useState([
+    { id: 'STO-001', location: 'Paris - Zone Nord', size: '500 m²', price: '2 500 €/mois', available: true },
+    { id: 'STO-002', location: 'Lyon - Zone Est', size: '1000 m²', price: '4 200 €/mois', available: true },
+    { id: 'STO-003', location: 'Marseille - Port', size: '750 m²', price: '3 100 €/mois', available: false },
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      alert(`Service Storage Market en cours d'implémentation...\n\nAPI: ${apiUrl}`);
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -72,8 +65,11 @@ export default function StoragePage() {
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -84,10 +80,11 @@ export default function StoragePage() {
           </div>
           <div style={{
             padding: '8px 20px',
-            background: 'rgba(4ECDC4, 0.2)',
+            background: 'rgba(255,255,255,0.2)',
             borderRadius: '20px',
             fontSize: '13px',
-            fontWeight: '700'
+            fontWeight: '700',
+            border: '1px solid rgba(255,255,255,0.3)'
           }}>
             🌍 Forwarder
           </div>
@@ -95,57 +92,55 @@ export default function StoragePage() {
 
         {/* Content */}
         <div style={{
-          padding: '60px 40px',
+          padding: '40px',
           position: 'relative',
           zIndex: 1,
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto'
         }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '80px', marginBottom: '24px' }}>📦</div>
-            <h2 style={{ fontSize: '36px', marginBottom: '16px', fontWeight: '800' }}>
-              Storage Market
-            </h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '32px' }}>
-              Service connecté à l'API backend
-            </p>
 
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '32px',
-              fontFamily: 'monospace',
-              fontSize: '14px'
-            }}>
-              API: {apiUrl || 'Non configurée'}
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {spaces.map(space => (
+                <div key={space.id} style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                  gap: '20px',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{space.location}</div>
+                    <div style={{ fontSize: '14px', opacity: 0.7 }}>Réf: {space.id}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '800' }}>{space.size}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Surface</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: '#00D084' }}>{space.price}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <button style={{
+                      padding: '10px 20px',
+                      background: space.available ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: space.available ? 'pointer' : 'not-allowed',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      opacity: space.available ? 1 : 0.5
+                    }}>
+                      {space.available ? 'Réserver' : 'Indisponible'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <button
-              onClick={handleAction}
-              disabled={loading}
-              style={{
-                padding: '16px 48px',
-                background: loading ? '#666' : 'linear-gradient(135deg, #4ECDC4 0%, #667eea 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}
-            >
-              {loading ? 'Chargement...' : 'Lancer le service'}
-            </button>
-          </div>
         </div>
       </div>
     </>

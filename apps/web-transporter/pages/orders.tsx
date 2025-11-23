@@ -5,26 +5,31 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function OrdersPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL;
+
+  const [orders, setOrders] = useState([
+    { id: 'CMD-001', client: 'Client A', statut: 'En cours', date: '2025-11-20', montant: '1 250 €' },
+    { id: 'CMD-002', client: 'Client B', statut: 'Livrée', date: '2025-11-19', montant: '3 400 €' },
+    { id: 'CMD-003', client: 'Client C', statut: 'En préparation', date: '2025-11-18', montant: '750 €' },
+  ]);
+  const [filter, setFilter] = useState('all');
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'En cours': return '#FFA500';
+      case 'Livrée': return '#00D084';
+      case 'En préparation': return '#667eea';
+      default: return '#666';
+    }
+  };
+
+  const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.statut === filter);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      alert(`Service Gestion des commandes en cours d'implémentation...\n\nAPI: ${apiUrl}`);
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -72,8 +77,11 @@ export default function OrdersPage() {
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -84,10 +92,11 @@ export default function OrdersPage() {
           </div>
           <div style={{
             padding: '8px 20px',
-            background: 'rgba(FF6B6B, 0.2)',
+            background: 'rgba(255,255,255,0.2)',
             borderRadius: '20px',
             fontSize: '13px',
-            fontWeight: '700'
+            fontWeight: '700',
+            border: '1px solid rgba(255,255,255,0.3)'
           }}>
             🚚 Transporter
           </div>
@@ -95,57 +104,74 @@ export default function OrdersPage() {
 
         {/* Content */}
         <div style={{
-          padding: '60px 40px',
+          padding: '40px',
           position: 'relative',
           zIndex: 1,
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto'
         }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '80px', marginBottom: '24px' }}>📦</div>
-            <h2 style={{ fontSize: '36px', marginBottom: '16px', fontWeight: '800' }}>
-              Gestion des commandes
-            </h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '32px' }}>
-              Service connecté à l'API backend
-            </p>
 
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '32px',
-              fontFamily: 'monospace',
-              fontSize: '14px'
-            }}>
-              API: {apiUrl || 'Non configurée'}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+              {['all', 'En cours', 'Livrée', 'En préparation'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  style={{
+                    padding: '8px 16px',
+                    background: filter === f ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: filter === f ? '700' : '600'
+                  }}
+                >
+                  {f === 'all' ? 'Toutes' : f}
+                </button>
+              ))}
             </div>
 
-            <button
-              onClick={handleAction}
-              disabled={loading}
-              style={{
-                padding: '16px 48px',
-                background: loading ? '#666' : 'linear-gradient(135deg, #FF6B6B 0%, #667eea 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}
-            >
-              {loading ? 'Chargement...' : 'Lancer le service'}
-            </button>
-          </div>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {filteredOrders.map(order => (
+                <div key={order.id} style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr 1fr',
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Référence</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700' }}>{order.id}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Client</div>
+                    <div style={{ fontSize: '16px', fontWeight: '600' }}>{order.client}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Statut</div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: getStatusColor(order.statut),
+                      padding: '4px 12px',
+                      background: `${getStatusColor(order.statut)}22`,
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}>{order.statut}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Montant</div>
+                    <div style={{ fontSize: '18px', fontWeight: '800' }}>{order.montant}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
         </div>
       </div>
     </>

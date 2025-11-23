@@ -5,26 +5,25 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function AffretiaPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_AFFRET_IA_API_URL;
+
+  const [optimization, setOptimization] = useState({
+    routes: 45,
+    savings: '€ 12 500',
+    co2Reduction: '2.3 tonnes',
+    efficiency: '+18%'
+  });
+  const [suggestions, setSuggestions] = useState([
+    'Regrouper les livraisons Paris Nord et Paris Sud',
+    'Optimiser le chargement du véhicule V-042',
+    'Utiliser un itinéraire alternatif pour éviter les embouteillages'
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      alert(`Service Affret.IA en cours d'implémentation...\n\nAPI: ${apiUrl}`);
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -72,8 +71,11 @@ export default function AffretiaPage() {
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -84,10 +86,11 @@ export default function AffretiaPage() {
           </div>
           <div style={{
             padding: '8px 20px',
-            background: 'rgba(4A90E2, 0.2)',
+            background: 'rgba(255,255,255,0.2)',
             borderRadius: '20px',
             fontSize: '13px',
-            fontWeight: '700'
+            fontWeight: '700',
+            border: '1px solid rgba(255,255,255,0.3)'
           }}>
             🏭 Industry
           </div>
@@ -95,57 +98,80 @@ export default function AffretiaPage() {
 
         {/* Content */}
         <div style={{
-          padding: '60px 40px',
+          padding: '40px',
           position: 'relative',
           zIndex: 1,
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto'
         }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '80px', marginBottom: '24px' }}>🧠</div>
-            <h2 style={{ fontSize: '36px', marginBottom: '16px', fontWeight: '800' }}>
-              Affret.IA
-            </h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '32px' }}>
-              Service connecté à l'API backend
-            </p>
 
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '32px',
-              fontFamily: 'monospace',
-              fontSize: '14px'
-            }}>
-              API: {apiUrl || 'Non configurée'}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px' }}>{optimization.routes}</div>
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>Routes optimisées</div>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#00D084' }}>{optimization.savings}</div>
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>Économies réalisées</div>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#00D084' }}>{optimization.co2Reduction}</div>
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>CO₂ évité</div>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#667eea' }}>{optimization.efficiency}</div>
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>Efficacité améliorée</div>
+              </div>
             </div>
 
-            <button
-              onClick={handleAction}
-              disabled={loading}
-              style={{
-                padding: '16px 48px',
-                background: loading ? '#666' : 'linear-gradient(135deg, #4A90E2 0%, #667eea 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}
-            >
-              {loading ? 'Chargement...' : 'Lancer le service'}
-            </button>
-          </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '24px',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px' }}>💡 Suggestions d'optimisation</div>
+              {suggestions.map((sug, i) => (
+                <div key={i} style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  marginBottom: '12px',
+                  fontSize: '15px'
+                }}>
+                  {sug}
+                </div>
+              ))}
+            </div>
         </div>
       </div>
     </>

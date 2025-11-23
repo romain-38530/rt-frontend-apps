@@ -5,26 +5,20 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const [kpis, setKpis] = useState({
+    orders: { value: 1247, trend: '+12%', color: '#00D084' },
+    revenue: { value: '€ 245K', trend: '+8%', color: '#00D084' },
+    deliveries: { value: 892, trend: '+5%', color: '#00D084' },
+    satisfaction: { value: '96%', trend: '+2%', color: '#00D084' }
+  });
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      alert(`Service Tableau de bord KPI en cours d'implémentation...\n\nAPI: ${apiUrl}`);
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -72,8 +66,11 @@ export default function DashboardPage() {
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -84,10 +81,11 @@ export default function DashboardPage() {
           </div>
           <div style={{
             padding: '8px 20px',
-            background: 'rgba(4A90E2, 0.2)',
+            background: 'rgba(255,255,255,0.2)',
             borderRadius: '20px',
             fontSize: '13px',
-            fontWeight: '700'
+            fontWeight: '700',
+            border: '1px solid rgba(255,255,255,0.3)'
           }}>
             🏭 Industry
           </div>
@@ -95,57 +93,41 @@ export default function DashboardPage() {
 
         {/* Content */}
         <div style={{
-          padding: '60px 40px',
+          padding: '40px',
           position: 'relative',
           zIndex: 1,
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto'
         }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '80px', marginBottom: '24px' }}>📊</div>
-            <h2 style={{ fontSize: '36px', marginBottom: '16px', fontWeight: '800' }}>
-              Tableau de bord KPI
-            </h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '32px' }}>
-              Service connecté à l'API backend
-            </p>
 
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '16px',
-              borderRadius: '12px',
-              marginBottom: '32px',
-              fontFamily: 'monospace',
-              fontSize: '14px'
-            }}>
-              API: {apiUrl || 'Non configurée'}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+              {Object.entries(kpis).map(([key, kpi]) => (
+                <div key={key} style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '12px', color: kpi.color }}>{kpi.value}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.7, textTransform: 'capitalize', marginBottom: '8px' }}>{key}</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#00D084' }}>{kpi.trend}</div>
+                </div>
+              ))}
             </div>
 
-            <button
-              onClick={handleAction}
-              disabled={loading}
-              style={{
-                padding: '16px 48px',
-                background: loading ? '#666' : 'linear-gradient(135deg, #4A90E2 0%, #667eea 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}
-            >
-              {loading ? 'Chargement...' : 'Lancer le service'}
-            </button>
-          </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '32px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '80px', marginBottom: '16px' }}>📊</div>
+              <div style={{ fontSize: '18px', opacity: 0.8 }}>Graphiques et analyses détaillées à venir</div>
+            </div>
         </div>
       </div>
     </>
