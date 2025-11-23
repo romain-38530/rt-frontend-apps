@@ -67,31 +67,20 @@ export default function Login() {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        background: 'linear-gradient(135deg, #22c1c3 0%, #fdbb2d 100%)',
+        background: 'url(https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=80) center/cover',
         padding: '40px 20px',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Decorative circles */}
+        {/* Dark overlay */}
         <div style={{
           position: 'absolute',
-          top: '-100px',
-          left: '-100px',
-          width: '300px',
-          height: '300px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '50%',
-          filter: 'blur(40px)'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-150px',
-          right: '-150px',
-          width: '400px',
-          height: '400px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '50%',
-          filter: 'blur(60px)'
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0
         }} />
 
         <div style={{
