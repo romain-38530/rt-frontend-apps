@@ -95,47 +95,54 @@ export default function Login() {
         }} />
 
         <div style={{
-          maxWidth: '1400px',
+          maxWidth: '1600px',
           margin: '0 auto',
           width: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          display: 'flex',
+          flexDirection: 'column',
           gap: '30px',
-          alignItems: 'center',
           position: 'relative',
           zIndex: 1
         }}>
-          {/* Features Cards - Left & Right */}
-          {features.map((feature, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              padding: '24px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: 'white',
-              display: i === 2 || i === 3 ? 'none' : 'block' // Hide middle cards on mobile
-            }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>{feature.icon}</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', margin: 0 }}>
-                {feature.title}
-              </h3>
-              <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
-                {feature.desc}
-              </p>
-            </div>
-          ))}
+          {/* Ligne supérieure: 3 cartes */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '20px',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            width: '100%'
+          }}>
+            {features.slice(0, 3).map((feature, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>{feature.icon}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', margin: 0 }}>
+                  {feature.title}
+                </h3>
+                <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
+          </div>
 
-          {/* Login Form - Center */}
+          {/* Ligne centrale: Login Form */}
           <div style={{
             background: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-            padding: '40px',
+            borderRadius: '20px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            padding: '50px',
             width: '100%',
-            maxWidth: '400px',
-            margin: '0 auto',
-            gridColumn: features.length > 3 ? 'span 1' : 'auto'
+            maxWidth: '480px',
+            margin: '0 auto'
           }}>
           <div style={{
             display: 'flex',
@@ -280,8 +287,38 @@ export default function Login() {
             </p>
           </div>
         </div>
+
+          {/* Ligne inférieure: 3 cartes */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '20px',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            width: '100%'
+          }}>
+            {features.slice(3, 6).map((feature, i) => (
+              <div key={i + 3} style={{
+                background: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>{feature.icon}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', margin: 0 }}>
+                  {feature.title}
+                </h3>
+                <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
     </>
   );
 }
