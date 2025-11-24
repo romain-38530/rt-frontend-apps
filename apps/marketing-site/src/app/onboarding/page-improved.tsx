@@ -55,10 +55,8 @@ export default function OnboardingPage() {
 
       const data = await response.json();
 
-      // Le service VAT retourne un format différent
-      const isSuccess = data.success || data.valid;
-
-      if (isSuccess) {
+      // Only proceed if VAT number is actually valid (not just if API call succeeded)
+      if (data.valid === true) {
         // Pré-remplir les données entreprise
         const responseData = data.data || data;
 
