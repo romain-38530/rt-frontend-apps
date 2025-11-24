@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Force Node.js runtime instead of Edge runtime
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * Proxy API route for VAT validation
  * Proxies requests to the authz API backend to avoid mixed content blocking
@@ -17,19 +21,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Backend API URL from environment variable
-    const backendUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL;
+    // Backend API URL - hardcoded for reliability since env vars may not be accessible in Edge runtime
+    const backendUrl = 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com';
 
-    if (!backendUrl) {
-      console.error('Backend API URL not configured');
-      return NextResponse.json(
-        { success: false, error: 'Backend API not configured' },
-        { status: 500 }
-      );
-    }
+    console.log('[VAT Proxy] Forwarding request to:', backendUrl);
 
     // Proxy the request to the backend
-    const response = await fetch(`${backendUrl}/api/vat/validate`, {
+    const backendResponse = await fetch(`${backendUrl}/api/vat/validate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -37,12 +35,14 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ vatNumber }),
     });
 
-    const data = await response.json();
+    console.log('[VAT Proxy] Backend response status:', backendResponse.status);
+
+    const data = await backendResponse.json();
 
     // Return the backend response
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(data, { status: backendResponse.status });
   } catch (error) {
-    console.error('VAT validation proxy error:', error);
+    console.error('[VAT Proxy] Error:', error);
     return NextResponse.json(
       {
         success: false,

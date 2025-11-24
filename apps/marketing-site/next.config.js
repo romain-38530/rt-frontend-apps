@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export',
+  // Removed 'output: export' to enable API routes (required for /api/vat/validate proxy)
 
   images: {
     unoptimized: true,
