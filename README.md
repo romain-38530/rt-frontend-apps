@@ -394,6 +394,102 @@ pnpm test:coverage
 - [AWS Amplify Documentation](https://docs.amplify.aws/)
 - [RT Contracts API](../rt-shared-contracts/packages/contracts/README.md)
 
+## 🔌 Backend Services API
+
+RT Technologie provides 2 production backend services accessible via HTTPS CloudFront:
+
+### 1. Authz Service (Validation TVA + Prix)
+
+**URL**: `https://d2i50a1vlg138w.cloudfront.net`
+**Status**: 🟢 100% Opérationnel
+
+**Fonctionnalités**:
+- ✅ Validation TVA avec fallback multi-API (VIES → AbstractAPI → APILayer)
+- ✅ Pré-remplissage automatique des données entreprise
+- ✅ Calcul automatique des prix TTC/HT (27 pays UE + UK)
+- ✅ Cache intelligent (1h)
+- ✅ Monitoring et traçabilité
+
+**Endpoints**:
+```bash
+GET  /health                      # Health check
+POST /api/vat/validate            # Validation TVA complète
+POST /api/vat/validate-format     # Validation format uniquement
+POST /api/vat/calculate-price     # Calcul prix avec TVA
+```
+
+### 2. Subscriptions & Contracts Service
+
+**URL**: `https://dgze8l03lwl5h.cloudfront.net`
+**Status**: 🟡 Opérationnel (MongoDB à configurer)
+
+**Fonctionnalités**:
+- ✅ Gestion des plans d'abonnement (CRUD)
+- ✅ Gestion des abonnements (création, renouvellement, annulation)
+- ✅ Gestion des contrats (création, signature électronique)
+- ⏳ MongoDB Atlas à configurer
+
+**Endpoints**:
+```bash
+GET  /health                      # Health check
+GET  /api/plans                   # Liste des plans
+POST /api/subscriptions           # Créer un abonnement
+POST /api/contracts               # Créer un contrat
+```
+
+### Documentation API Complète
+
+Pour l'intégration frontend complète, consultez:
+- **[docs/PRODUCTION_SERVICES.md](./docs/PRODUCTION_SERVICES.md)** - Services en production
+- **[docs/API_INTEGRATION.md](./docs/API_INTEGRATION.md)** - Guide complet d'intégration
+- **[docs/API_QUICK_REF.md](./docs/API_QUICK_REF.md)** - Référence rapide
+
+### Fichiers TypeScript Prêts à l'Emploi
+
+```
+apps/marketing-site/src/
+├── types/api.ts              # Types TypeScript complets
+├── lib/api-utils.ts          # Fonctions + Hooks React
+└── hooks/useVATValidation.ts # Hook VAT validation
+```
+
+### Utilisation Rapide
+
+```typescript
+import { validateVAT, calculatePriceWithVAT } from '@/lib/api-utils';
+
+// Validation TVA avec données entreprise
+const result = await validateVAT('FR12345678901');
+if (result.valid) {
+  console.log(result.companyName);   // Nom entreprise
+  console.log(result.companyAddress); // Adresse
+  console.log(result.source);        // VIES, AbstractAPI, ou APILayer
+}
+
+// Calcul prix avec TVA
+const price = await calculatePriceWithVAT(100, 'FR');
+console.log(price.priceInclVat); // 120 (100€ + 20% TVA FR)
+```
+
+### Variables d'Environnement Backend
+
+```bash
+# Ajoutées dans AWS Amplify pour chaque app
+NEXT_PUBLIC_API_URL=https://d2i50a1vlg138w.cloudfront.net
+NEXT_PUBLIC_VAT_API_URL=https://d2i50a1vlg138w.cloudfront.net
+NEXT_PUBLIC_SUBSCRIPTIONS_API_URL=https://dgze8l03lwl5h.cloudfront.net
+```
+
+### Tests
+
+```bash
+# Test validation TVA en production
+powershell -ExecutionPolicy Bypass -File test-vat-production.ps1
+
+# Test manuel
+curl https://d2i50a1vlg138w.cloudfront.net/health
+```
+
 ## 📄 License
 
 Proprietary - RT Technologie © 2025
