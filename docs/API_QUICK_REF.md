@@ -1,0 +1,227 @@
+# 📋 Référence Rapide - API Backend RT
+
+## 🔐 Service Authz-EB (Validation TVA + Prix)
+
+### Base URL
+```
+https://d2i50a1vlg138w.cloudfront.net
+```
+
+### Variables d'Environnement
+```env
+NEXT_PUBLIC_AUTHZ_API_URL=https://d2i50a1vlg138w.cloudfront.net
+```
+
+---
+
+## 🎯 Endpoints Disponibles
+
+### 1️⃣ Validation Format TVA
+```typescript
+POST /api/vat/validate-format
+{ "vatNumber": "FR12345678901" }
+
+→ { "success": true, "valid": true, "countryCode": "FR", "vatNumber": "12345678901" }
+```
+
+### 2️⃣ Validation TVA Complète (avec infos entreprise)
+```typescript
+POST /api/vat/validate
+{ "vatNumber": "FR12345678901" }
+
+→ {
+  "success": true,
+  "valid": true,
+  "countryCode": "FR",
+  "vatNumber": "12345678901",
+  "companyName": "ACME CORP",
+  "companyAddress": "123 RUE DE LA PAIX",
+  "source": "VIES"  // "VIES" | "AbstractAPI" | "APILayer"
+}
+```
+
+### 3️⃣ Calcul Prix TTC
+```typescript
+POST /api/vat/calculate-price
+{ "amount": 100, "countryCode": "FR" }
+
+→ {
+  "success": true,
+  "countryCode": "FR",
+  "countryName": "France",
+  "priceExclVat": 100,
+  "priceInclVat": 120,
+  "vatRate": 20
+}
+```
+
+---
+
+## 💻 Code TypeScript
+
+### Configuration
+```typescript
+// src/config/api.config.ts
+export const API_CONFIG = {
+  authz: {
+    baseUrl: 'https://d2i50a1vlg138w.cloudfront.net',
+    timeout: 10000,
+  },
+};
+```
+
+### Fonction Validation TVA
+```typescript
+// src/lib/vat.ts
+export async function validateVAT(vatNumber: string) {
+  const response = await fetch(
+    `${API_CONFIG.authz.baseUrl}/api/vat/validate`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vatNumber }),
+    }
+  );
+  return response.json();
+}
+```
+
+### Fonction Calcul Prix
+```typescript
+export async function calculatePrice(amount: number, countryCode: string) {
+  const response = await fetch(
+    `${API_CONFIG.authz.baseUrl}/api/vat/calculate-price`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, countryCode }),
+    }
+  );
+  return response.json();
+}
+```
+
+---
+
+## 🎨 Composant React
+
+```tsx
+'use client';
+import { useState } from 'react';
+
+export function VATForm() {
+  const [vat, setVat] = useState('');
+  const [result, setResult] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const res = await fetch(
+      'https://d2i50a1vlg138w.cloudfront.net/api/vat/validate',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vatNumber: vat }),
+      }
+    );
+    setResult(await res.json());
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={vat}
+        onChange={(e) => setVat(e.target.value)}
+        placeholder="FR12345678901"
+      />
+      <button type="submit">Valider</button>
+      {result?.valid && (
+        <div>
+          ✅ {result.companyName} - {result.companyAddress}
+        </div>
+      )}
+    </form>
+  );
+}
+```
+
+---
+
+## 🌍 Codes Pays UE
+
+```typescript
+const EU_COUNTRIES = [
+  'AT', // Autriche (20%)
+  'BE', // Belgique (21%)
+  'BG', // Bulgarie (20%)
+  'CY', // Chypre (19%)
+  'CZ', // République Tchèque (21%)
+  'DE', // Allemagne (19%)
+  'DK', // Danemark (25%)
+  'EE', // Estonie (20%)
+  'EL', // Grèce (24%)
+  'ES', // Espagne (21%)
+  'FI', // Finlande (24%)
+  'FR', // France (20%)
+  'HR', // Croatie (25%)
+  'HU', // Hongrie (27%)
+  'IE', // Irlande (23%)
+  'IT', // Italie (22%)
+  'LT', // Lituanie (21%)
+  'LU', // Luxembourg (17%)
+  'LV', // Lettonie (21%)
+  'MT', // Malte (18%)
+  'NL', // Pays-Bas (21%)
+  'PL', // Pologne (23%)
+  'PT', // Portugal (23%)
+  'RO', // Roumanie (19%)
+  'SE', // Suède (25%)
+  'SI', // Slovénie (22%)
+  'SK', // Slovaquie (20%)
+];
+```
+
+---
+
+## ⚡ Tests Rapides
+
+```bash
+# Health check
+curl https://d2i50a1vlg138w.cloudfront.net/health
+
+# Validation TVA
+curl -X POST https://d2i50a1vlg138w.cloudfront.net/api/vat/validate \
+  -H "Content-Type: application/json" \
+  -d '{"vatNumber":"FR12345678901"}'
+
+# Calcul prix
+curl -X POST https://d2i50a1vlg138w.cloudfront.net/api/vat/calculate-price \
+  -H "Content-Type: application/json" \
+  -d '{"amount":100,"countryCode":"FR"}'
+```
+
+---
+
+## 🔄 Système de Fallback
+
+L'API essaie automatiquement 3 sources dans l'ordre:
+
+1. **VIES** (gratuite, officielle UE) ← Priorité
+2. **AbstractAPI** (payante)
+3. **APILayer** (payante)
+
+Le champ `source` dans la réponse indique quelle API a répondu.
+
+---
+
+## 📚 Documentation Complète
+
+Voir: `FRONTEND_INTEGRATION.md` pour la documentation complète avec:
+- Types TypeScript détaillés
+- Gestion d'erreurs
+- Composants React complets
+- Tests unitaires
+- Monitoring
+
+---
+
+**Version:** 2.2.0 | **Status:** 🟢 Production
