@@ -45,8 +45,9 @@ export default function OnboardingPage() {
     setError('');
 
     try {
-      // Use local proxy API route to avoid mixed content blocking (HTTPS -> HTTP)
-      const response = await fetch('/api/vat/validate', {
+      // Call VAT API directly (now HTTPS via CloudFront)
+      const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+      const response = await fetch(`${vatApiUrl}/api/vat/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vatNumber: formData.vatNumber })

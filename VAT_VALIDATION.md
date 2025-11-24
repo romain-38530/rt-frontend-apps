@@ -199,24 +199,27 @@ NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-XXXXXXXX.eu-centra
 
 **marketing-site/.env.production:**
 ```bash
-NEXT_PUBLIC_VAT_API_URL=http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com
+NEXT_PUBLIC_VAT_API_URL=https://d2i50a1vlg138w.cloudfront.net
+NEXT_PUBLIC_API_URL=https://d2i50a1vlg138w.cloudfront.net
 ```
 
 ### Code mis à jour
 
-✅ `apps/marketing-site/src/app/api/vat/validate/route.ts` - Proxy API pour éviter mixed content blocking
-✅ `apps/marketing-site/src/app/onboarding/page.tsx` - Utilise le proxy local `/api/vat/validate`
-✅ `apps/marketing-site/src/app/onboarding/page-improved.tsx` - Utilise le proxy local `/api/vat/validate`
+✅ `apps/marketing-site/src/app/onboarding/page.tsx` - Appelle directement HTTPS CloudFront
+✅ `apps/marketing-site/src/app/onboarding/page-improved.tsx` - Appelle directement HTTPS CloudFront
+✅ `.env.production` - URLs mises à jour avec CloudFront HTTPS
+✅ AWS Amplify - Variables d'environnement configurées avec CloudFront
 
 ### Solution Mixed Content Blocking
 
-Le site marketing est servi en HTTPS, mais le backend authz API est HTTP seulement.
+Le site marketing est servi en HTTPS, mais le backend authz API était HTTP seulement.
 Les navigateurs bloquent les requêtes HTTP depuis les pages HTTPS (mixed content blocking).
 
-**Solution implémentée:** Proxy API Next.js
-- Frontend fait une requête HTTPS vers `/api/vat/validate` (même origine)
-- Le proxy Next.js fait la requête HTTP vers le backend (server-side, pas de restrictions)
-- Pas besoin de configurer HTTPS sur le backend
+**Solution implémentée:** Backend HTTPS via AWS CloudFront
+- Backend authz API accessible via CloudFront: `https://d2i50a1vlg138w.cloudfront.net`
+- Certificat SSL géré par AWS (gratuit)
+- CORS correctement configuré pour Amplify et autres domaines
+- Frontend appelle directement le backend en HTTPS (pas de proxy nécessaire)
 
 ## 🚀 Déploiement Réalisé
 
@@ -224,13 +227,19 @@ Les navigateurs bloquent les requêtes HTTP depuis les pages HTTPS (mixed conten
 
 Le service de validation TVA a été **intégré dans l'authz API existant** au lieu d'être déployé comme service séparé.
 
-**URL du service:**
+**URL du service (HTTPS via CloudFront):**
+```
+https://d2i50a1vlg138w.cloudfront.net
+```
+
+**Backend Elastic Beanstalk (HTTP):**
 ```
 http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com
 ```
 
 **Version:** 2.0.0
 **Status:** ✅ Green (100% opérationnel)
+**CloudFront Distribution:** E8GKHGYOIP84
 
 ### 📡 Endpoints disponibles
 

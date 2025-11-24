@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // Removed 'output: export' to enable API routes (required for /api/vat/validate proxy)
+  output: 'export', // Static export restored - backend now uses HTTPS via CloudFront
 
   images: {
     unoptimized: true,
