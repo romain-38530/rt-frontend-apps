@@ -45,8 +45,13 @@ export default function OnboardingPage() {
     setError('');
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
-      const response = await fetch(`${apiUrl}/api/onboarding/verify-vat`, {
+      // Utilise le service VAT dédié si disponible, sinon fallback sur l'API générique
+      const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+      const endpoint = process.env.NEXT_PUBLIC_VAT_API_URL
+        ? `${vatApiUrl}/api/vat/validate`
+        : `${vatApiUrl}/api/onboarding/verify-vat`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -54,22 +59,28 @@ export default function OnboardingPage() {
 
       const data = await response.json();
 
-      if (data.success) {
+      // Le service VAT retourne un format différent
+      const isSuccess = data.success || data.valid;
+
+      if (isSuccess) {
         // Pré-remplir les données entreprise
+        // Support des deux formats de réponse (API générique et service VAT dédié)
+        const responseData = data.data || data;
+
         setFormData(prev => ({
           ...prev,
-          companyName: data.data.companyName || '',
-          legalForm: data.data.legalForm || '',
-          capital: data.data.capital || '',
-          address: data.data.companyAddress || '',
-          city: data.data.registrationCity || '',
-          siret: data.data.siret || '',
-          siren: data.data.siren || ''
+          companyName: responseData.companyName || responseData.name || '',
+          legalForm: responseData.legalForm || '',
+          capital: responseData.capital || '',
+          address: responseData.companyAddress || responseData.address || '',
+          city: responseData.registrationCity || '',
+          siret: responseData.siret || '',
+          siren: responseData.siren || ''
         }));
 
         setStep(2);
       } else {
-        setError(data.error || 'Numéro de TVA invalide');
+        setError(data.error || data.message || 'Numéro de TVA invalide');
       }
     } catch (err) {
       setError('Erreur de connexion au serveur');

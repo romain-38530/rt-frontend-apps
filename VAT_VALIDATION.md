@@ -188,16 +188,72 @@ NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-XXXXXXXX.eu-centra
 
 ## 📝 État Actuel
 
-❌ **Service NON déployé**
-❌ **Promesse marketing non tenue**
-❌ **Onboarding automatisé non fonctionnel**
+✅ **Service développé** - Disponible dans rt-backend-services
+⚠️ **Service NON déployé** - Pas encore sur AWS Elastic Beanstalk
+✅ **Frontend configuré** - Prêt à se connecter au service une fois déployé
+
+## 🔧 Configuration Frontend (COMPLÉTÉE)
+
+### Variables d'environnement ajoutées
+
+**marketing-site/.env.production:**
+```bash
+NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.PLACEHOLDER.eu-central-1.elasticbeanstalk.com
+```
+
+### Code mis à jour
+
+✅ `apps/marketing-site/src/app/onboarding/page.tsx` - Utilise NEXT_PUBLIC_VAT_API_URL
+✅ `apps/marketing-site/src/app/onboarding/page-improved.tsx` - Utilise NEXT_PUBLIC_VAT_API_URL
+
+### Logique de fallback
+
+Le code frontend supporte automatiquement:
+1. **Service VAT dédié** (si NEXT_PUBLIC_VAT_API_URL est défini)
+   - Endpoint: `/api/vat/validate`
+   - Format de réponse: `{ valid: true, name: "...", address: "..." }`
+2. **API générique** (fallback)
+   - Endpoint: `/api/onboarding/verify-vat`
+   - Format de réponse: `{ success: true, data: { companyName: "..." } }`
+
+## 🚀 Prochaines Étapes
+
+### 1. Déployer le service VAT sur AWS Elastic Beanstalk
+
+```bash
+# Depuis rt-backend-services
+cd vat-validation-service  # ou le nom du dossier approprié
+eb init -p node.js-20 --region eu-central-1
+eb create rt-vat-validation-api-prod
+```
+
+### 2. Récupérer l'URL du service déployé
+
+```bash
+eb status | grep CNAME
+# Exemple: rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
+```
+
+### 3. Mettre à jour les variables d'environnement
+
+**Dans AWS Amplify (marketing-site):**
+```bash
+aws amplify update-app --app-id <APP_ID> \
+  --environment-variables NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
+```
+
+**Dans le fichier .env.production:**
+```bash
+# Remplacer PLACEHOLDER par l'ID réel
+NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
+```
 
 ## 🔴 Priorité
 
-**HAUTE** - Fonctionnalité promise dans le marketing
+**HAUTE** - Frontend configuré, attente déploiement backend
 
 ---
 
-**Status:** 📋 Spécifications complètes
-**Effort:** ~3-5 jours de développement
-**Prochaine étape:** Créer le repository backend et implémenter
+**Status:** ⚙️ Frontend prêt, backend à déployer
+**Effort restant:** ~1-2 heures pour déploiement AWS
+**Prochaine étape:** Déployer le service depuis rt-backend-services sur AWS EB
