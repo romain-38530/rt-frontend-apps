@@ -10,7 +10,7 @@
 | Service | URL | Status | MongoDB | Version |
 |---------|-----|--------|---------|---------|
 | **authz-eb** | [d2i50a1vlg138w...](https://d2i50a1vlg138w.cloudfront.net) | 🟢 100% | N/A | v2.2.0 |
-| **subscriptions** | [dgze8l03lwl5h...](https://dgze8l03lwl5h.cloudfront.net) | 🟢 100% | ✅ Actif | v1.0.0 |
+| **subscriptions + e-CMR** | [dgze8l03lwl5h...](https://dgze8l03lwl5h.cloudfront.net) | 🟢 100% | ✅ Actif | v2.2.3 |
 
 ---
 
@@ -25,13 +25,14 @@
 ✅ Price Calculation: 100€ → 120€ TTC (FR 20%)
 ```
 
-### Service subscriptions-contracts
+### Service subscriptions-contracts + e-CMR
 ```
 ✅ Health Check: healthy
 ✅ MongoDB: active (connected: true)
-✅ Version: 1.0.0
-✅ Endpoints: 12 disponibles
-✅ Collections: plans, subscriptions, contracts
+✅ Version: 2.2.3
+✅ Endpoints: 23 disponibles (12 subscriptions + 11 e-CMR)
+✅ Collections: plans, subscriptions, contracts, ecmr
+✅ e-CMR: Conforme Protocole e-CMR 2008
 ```
 
 ---
@@ -53,6 +54,15 @@
 - ✅ Génération factures
 - ✅ MongoDB Atlas configuré et actif
 
+### e-CMR Service (v2.2.3 - NEW!)
+- ✅ Création de lettres de voiture électroniques (e-CMR)
+- ✅ Workflow complet : DRAFT → VALIDATED → IN_TRANSIT → DELIVERED → ARCHIVED
+- ✅ 4 signatures électroniques (expéditeur, transporteur x2, destinataire)
+- ✅ Tracking GPS en temps réel
+- ✅ Gestion des réserves et remarques
+- ✅ Conformité Protocole e-CMR 2008
+- ✅ 11 endpoints opérationnels
+
 ---
 
 ## 📋 Tests Validés
@@ -68,16 +78,25 @@ curl -X POST https://d2i50a1vlg138w.cloudfront.net/api/vat/validate \
 # ✅ Valid: true, Company: NV Anheuser-Busch InBev, Source: VIES
 ```
 
-### subscriptions-contracts
+### subscriptions-contracts + e-CMR
 ```bash
 curl https://dgze8l03lwl5h.cloudfront.net/health
 # ✅ Status: healthy, MongoDB: active
 
 curl https://dgze8l03lwl5h.cloudfront.net/
-# ✅ Version: 1.0.0, Endpoints: 12
+# ✅ Version: 2.2.3, Endpoints: 23
 
 curl https://dgze8l03lwl5h.cloudfront.net/api/plans
 # ✅ Plans: 0 (liste vide, prête à recevoir des données)
+
+# Tests e-CMR
+curl https://dgze8l03lwl5h.cloudfront.net/api/ecmr
+# ✅ {"success":true,"data":[...],"count":1,"total":1}
+
+curl -X POST https://dgze8l03lwl5h.cloudfront.net/api/ecmr \
+  -H "Content-Type: application/json" \
+  -d '{"transportOrderId":"order-123","sender":{...}}'
+# ✅ e-CMR créé: ECMR-1764020548229-3609
 ```
 
 ---
@@ -94,18 +113,54 @@ NEXT_PUBLIC_SUBSCRIPTIONS_API_URL=https://dgze8l03lwl5h.cloudfront.net
 ### Fichiers TypeScript Disponibles
 ```
 apps/marketing-site/src/
-├── types/api.ts              # Types complets (400+ lignes)
-├── lib/api-utils.ts          # Fonctions + Hooks (600+ lignes)
-└── hooks/useVATValidation.ts # Hook React VAT
+├── types/
+│   ├── api.ts                    # Types VAT/Pricing (400+ lignes)
+│   └── account.ts                # Types Account System (282 lignes)
+├── lib/api-utils.ts              # Fonctions + Hooks (600+ lignes)
+├── hooks/
+│   ├── useVATValidation.ts       # Hook VAT validation
+│   ├── useAccountTypes.ts        # Hook Account types
+│   └── useAccountUpgrade.ts      # Hook Account upgrade
+└── app/account/
+    ├── select-type/page.tsx      # Sélection type de compte
+    ├── upgrade/page.tsx          # Évolution de compte
+    └── dashboard/page.tsx        # Dashboard utilisateur
+
+Documentation e-CMR disponible :
+└── docs/ECMR_DEPLOYMENT.md       # Guide complet e-CMR v2.2.3
 ```
 
 ### Utilisation
 ```typescript
+// VAT Validation
 import { validateVAT } from '@/lib/api-utils';
 
 const result = await validateVAT('FR12345678901');
 console.log(result.companyName); // Nom entreprise
 console.log(result.source);      // VIES, AbstractAPI, ou APILayer
+
+// e-CMR Management
+const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL;
+
+// Créer un e-CMR
+const ecmr = await fetch(`${API_URL}/api/ecmr`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    transportOrderId: 'order-123',
+    sender: { name: 'ACME', address: '...', contact: '...', phone: '...' },
+    consignee: { name: 'Client', address: '...', contact: '...', phone: '...' },
+    carrier: { name: 'Transport', address: '...', vehiclePlate: 'AB-123-CD' },
+    goods: [{ description: 'Palettes', quantity: 10, weight: 500 }]
+  })
+});
+
+// Signer un e-CMR
+const signed = await fetch(`${API_URL}/api/ecmr/${id}/sign/sender`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ signatureData: 'base64...' })
+});
 ```
 
 ---
@@ -115,19 +170,21 @@ console.log(result.source);      // VIES, AbstractAPI, ou APILayer
 ```
 Frontend HTTPS (Next.js)
     ↓
-AWS Amplify (Build #53)
+AWS Amplify (Build #54+)
     ↓
-┌───────────────────┬───────────────────┐
-↓                   ↓                   ↓
+┌───────────────────┬─────────────────────────┐
+↓                   ↓                         ↓
 CloudFront          CloudFront
 E8GKHGYOIP84        E1H1CDV902R49R
     ↓                   ↓
 Elastic Beanstalk   Elastic Beanstalk
-authz-eb v2.2.0     subscriptions v1.0
+authz-eb v2.2.0     subscriptions v2.2.3
     ↓                   ↓
-APIs Validation     MongoDB Atlas
-VIES → Abstract     (Active)
-→ APILayer
+APIs Validation     MongoDB Atlas (Active)
+VIES → Abstract     ├── plans
+→ APILayer          ├── subscriptions
+                    ├── contracts
+                    └── ecmr (NEW!)
 ```
 
 ---
@@ -135,13 +192,25 @@ VIES → Abstract     (Active)
 ## 📚 Documentation Disponible
 
 ### Frontend (`rt-frontend-apps/`)
+
+**Services Backend**:
 - ✅ [docs/PRODUCTION_SERVICES.md](./docs/PRODUCTION_SERVICES.md) - Services détaillés
 - ✅ [docs/API_INTEGRATION.md](./docs/API_INTEGRATION.md) - Guide complet
 - ✅ [docs/API_QUICK_REF.md](./docs/API_QUICK_REF.md) - Référence rapide
+- ✅ [docs/ECMR_DEPLOYMENT.md](./docs/ECMR_DEPLOYMENT.md) - 🆕 e-CMR v2.2.3 Guide
+- ✅ [README.md](./README.md) - Section Backend Services
+
+**Account Types System**:
+- ✅ [docs/BACKEND_README.md](./docs/BACKEND_README.md) - Guide développeur backend
+- ✅ [docs/BACKEND_QUICK_START.md](./docs/BACKEND_QUICK_START.md) - Quick start 5 étapes
+- ✅ [docs/BACKEND_ACCOUNT_TYPES.md](./docs/BACKEND_ACCOUNT_TYPES.md) - Guide complet
+- ✅ [docs/ACCOUNT_TYPES_FLOW.md](./docs/ACCOUNT_TYPES_FLOW.md) - Diagrammes & flows
+- ✅ [docs/ACCOUNT_TYPES_IMPLEMENTATION_STATUS.md](./docs/ACCOUNT_TYPES_IMPLEMENTATION_STATUS.md) - Status
+
+**Général**:
 - ✅ [docs/README.md](./docs/README.md) - Vue d'ensemble
 - ✅ [FINAL_SUMMARY.md](./FINAL_SUMMARY.md) - Récapitulatif projet
 - ✅ [DEPLOYMENT_SUMMARY.md](./DEPLOYMENT_SUMMARY.md) - Résumé déploiement
-- ✅ [README.md](./README.md) - Section Backend Services
 
 ### Scripts de Test
 - ✅ `test-vat-production.ps1` - Tests VAT automatisés
@@ -191,25 +260,28 @@ VIES → Abstract     (Active)
 
 **Backend**:
 - 🟢 authz-eb v2.2.0 - 100% opérationnel avec fallback multi-API
-- 🟢 subscriptions-contracts v1.0.0 - 100% opérationnel avec MongoDB actif
+- 🟢 subscriptions-contracts v2.2.3 - 100% opérationnel avec MongoDB actif
+- 🟢 e-CMR System - 🆕 Opérationnel (11 endpoints, conforme Protocole 2008)
 - 🟢 HTTPS CloudFront - Les 2 services en HTTPS
-- 🟢 MongoDB Atlas - Configuré et connecté
+- 🟢 MongoDB Atlas - 4 collections (plans, subscriptions, contracts, ecmr)
 
 **Frontend**:
-- 🟢 Build #53 déployé avec intégration complète
-- 🟢 Types TypeScript (1000+ lignes)
-- 🟢 Hooks React opérationnels
+- 🟢 Build #54+ déployé avec intégration complète
+- 🟢 Types TypeScript (2000+ lignes)
+- 🟢 Account Types System - Frontend 100% implémenté
+- 🟢 Hooks React opérationnels (useAccountTypes, useAccountUpgrade, etc.)
 - 🟢 Validation stricte active
 
 **Documentation**:
-- 🟢 10+ fichiers de documentation
-- 🟢 Guide complet d'intégration
+- 🟢 15+ fichiers de documentation
+- 🟢 Guide complet d'intégration backend + frontend
 - 🟢 Tests automatisés validés
 - 🟢 Exemples de code TypeScript
+- 🟢 Documentation e-CMR complète
 
 ---
 
-**🚀 Les 2 services backend RT sont 100% opérationnels en production avec HTTPS, MongoDB configuré, et prêts pour l'intégration frontend !**
+**🚀 Les 2 services backend RT sont 100% opérationnels en production avec HTTPS, MongoDB (4 collections), e-CMR, et prêts pour l'intégration frontend !**
 
 **Date mise à jour**: 2025-11-24
 **Status**: ✅ PRODUCTION READY - 100% OPERATIONAL
