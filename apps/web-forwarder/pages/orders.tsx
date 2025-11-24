@@ -150,11 +150,11 @@ export default function OrdersPage() {
                     <div style={{ fontSize: '16px', fontWeight: '700' }}>{order.id}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Client</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Client</div>
                     <div style={{ fontSize: '16px', fontWeight: '600' }}>{order.client}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Statut</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Statut</div>
                     <div style={{
                       fontSize: '14px',
                       fontWeight: '700',
@@ -166,7 +166,7 @@ export default function OrdersPage() {
                     }}>{order.statut}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Montant</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Montant</div>
                     <div style={{ fontSize: '18px', fontWeight: '800' }}>{order.montant}</div>
                   </div>
                 </div>
