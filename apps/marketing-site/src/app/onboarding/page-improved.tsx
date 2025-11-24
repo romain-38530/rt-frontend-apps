@@ -45,13 +45,8 @@ export default function OnboardingPage() {
     setError('');
 
     try {
-      // Utilise le service VAT dédié si disponible, sinon fallback sur l'API générique
-      const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
-      const endpoint = process.env.NEXT_PUBLIC_VAT_API_URL
-        ? `${vatApiUrl}/api/vat/validate`
-        : `${vatApiUrl}/api/onboarding/verify-vat`;
-
-      const response = await fetch(endpoint, {
+      // Use local proxy API route to avoid mixed content blocking (HTTPS -> HTTP)
+      const response = await fetch('/api/vat/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -64,7 +59,6 @@ export default function OnboardingPage() {
 
       if (isSuccess) {
         // Pré-remplir les données entreprise
-        // Support des deux formats de réponse (API générique et service VAT dédié)
         const responseData = data.data || data;
 
         setFormData(prev => ({

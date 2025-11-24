@@ -204,18 +204,19 @@ NEXT_PUBLIC_VAT_API_URL=http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elast
 
 ### Code mis à jour
 
-✅ `apps/marketing-site/src/app/onboarding/page.tsx` - Utilise NEXT_PUBLIC_VAT_API_URL
-✅ `apps/marketing-site/src/app/onboarding/page-improved.tsx` - Utilise NEXT_PUBLIC_VAT_API_URL
+✅ `apps/marketing-site/src/app/api/vat/validate/route.ts` - Proxy API pour éviter mixed content blocking
+✅ `apps/marketing-site/src/app/onboarding/page.tsx` - Utilise le proxy local `/api/vat/validate`
+✅ `apps/marketing-site/src/app/onboarding/page-improved.tsx` - Utilise le proxy local `/api/vat/validate`
 
-### Logique de fallback
+### Solution Mixed Content Blocking
 
-Le code frontend supporte automatiquement:
-1. **Service VAT dédié** (si NEXT_PUBLIC_VAT_API_URL est défini)
-   - Endpoint: `/api/vat/validate`
-   - Format de réponse: `{ valid: true, name: "...", address: "..." }`
-2. **API générique** (fallback)
-   - Endpoint: `/api/onboarding/verify-vat`
-   - Format de réponse: `{ success: true, data: { companyName: "..." } }`
+Le site marketing est servi en HTTPS, mais le backend authz API est HTTP seulement.
+Les navigateurs bloquent les requêtes HTTP depuis les pages HTTPS (mixed content blocking).
+
+**Solution implémentée:** Proxy API Next.js
+- Frontend fait une requête HTTPS vers `/api/vat/validate` (même origine)
+- Le proxy Next.js fait la requête HTTP vers le backend (server-side, pas de restrictions)
+- Pas besoin de configurer HTTPS sur le backend
 
 ## 🚀 Déploiement Réalisé
 
