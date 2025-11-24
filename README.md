@@ -421,13 +421,13 @@ POST /api/vat/calculate-price     # Calcul prix avec TVA
 ### 2. Subscriptions & Contracts Service
 
 **URL**: `https://dgze8l03lwl5h.cloudfront.net`
-**Status**: 🟡 Opérationnel (MongoDB à configurer)
+**Status**: 🟢 100% Opérationnel
 
 **Fonctionnalités**:
 - ✅ Gestion des plans d'abonnement (CRUD)
 - ✅ Gestion des abonnements (création, renouvellement, annulation)
 - ✅ Gestion des contrats (création, signature électronique)
-- ⏳ MongoDB Atlas à configurer
+- ✅ MongoDB Atlas configuré et actif
 
 **Endpoints**:
 ```bash
