@@ -188,9 +188,10 @@ NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-XXXXXXXX.eu-centra
 
 ## 📝 État Actuel
 
-✅ **Service développé** - Disponible dans rt-backend-services
-⚠️ **Service NON déployé** - Pas encore sur AWS Elastic Beanstalk
-✅ **Frontend configuré** - Prêt à se connecter au service une fois déployé
+✅ **Service développé et déployé** - Intégré dans authz API v2.0.0
+✅ **Déployé sur AWS Elastic Beanstalk** - rt-authz-api-prod
+✅ **Frontend configuré** - Connecté au service authz API
+✅ **Tests validés** - Format et VIES API fonctionnels
 
 ## 🔧 Configuration Frontend (COMPLÉTÉE)
 
@@ -198,7 +199,7 @@ NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-XXXXXXXX.eu-centra
 
 **marketing-site/.env.production:**
 ```bash
-NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.PLACEHOLDER.eu-central-1.elasticbeanstalk.com
+NEXT_PUBLIC_VAT_API_URL=http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com
 ```
 
 ### Code mis à jour
@@ -216,44 +217,77 @@ Le code frontend supporte automatiquement:
    - Endpoint: `/api/onboarding/verify-vat`
    - Format de réponse: `{ success: true, data: { companyName: "..." } }`
 
-## 🚀 Prochaines Étapes
+## 🚀 Déploiement Réalisé
 
-### 1. Déployer le service VAT sur AWS Elastic Beanstalk
+### ✅ Service intégré dans authz API v2.0.0
 
-```bash
-# Depuis rt-backend-services
-cd vat-validation-service  # ou le nom du dossier approprié
-eb init -p node.js-20 --region eu-central-1
-eb create rt-vat-validation-api-prod
+Le service de validation TVA a été **intégré dans l'authz API existant** au lieu d'être déployé comme service séparé.
+
+**URL du service:**
+```
+http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com
 ```
 
-### 2. Récupérer l'URL du service déployé
+**Version:** 2.0.0
+**Status:** ✅ Green (100% opérationnel)
 
+### 📡 Endpoints disponibles
+
+#### 1. Validation de format (rapide, sans appel externe)
 ```bash
-eb status | grep CNAME
-# Exemple: rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
+POST /api/vat/validate-format
+Body: { "vatNumber": "FR12345678901" }
+
+# Réponse:
+{
+  "success": true,
+  "valid": true,
+  "countryCode": "FR",
+  "vatNumber": "12345678901",
+  "fullVatNumber": "FR12345678901"
+}
 ```
 
-### 3. Mettre à jour les variables d'environnement
+#### 2. Validation complète VIES (appel API EU)
+```bash
+POST /api/vat/validate
+Body: { "vatNumber": "FR12345678901" }
 
-**Dans AWS Amplify (marketing-site):**
+# Réponse:
+{
+  "success": true,
+  "valid": true/false,
+  "countryCode": "FR",
+  "vatNumber": "12345678901",
+  "requestDate": "2025-11-24T07:27:33.778Z",
+  "companyName": "NOM ENTREPRISE",
+  "companyAddress": "ADRESSE COMPLETE"
+}
+```
+
+### 🌍 Pays supportés
+27 pays de l'Union Européenne: AT, BE, BG, CY, CZ, DE, DK, EE, EL, ES, FI, FR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK
+
+### 🔧 Configuration AWS Amplify (à faire)
+
+**Trouver l'App ID du marketing-site:**
+```bash
+aws amplify list-apps --region eu-central-1 | grep -i marketing
+```
+
+**Configurer la variable d'environnement:**
 ```bash
 aws amplify update-app --app-id <APP_ID> \
-  --environment-variables NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
+  --environment-variables NEXT_PUBLIC_VAT_API_URL=http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com \
+  --region eu-central-1
 ```
 
-**Dans le fichier .env.production:**
-```bash
-# Remplacer PLACEHOLDER par l'ID réel
-NEXT_PUBLIC_VAT_API_URL=http://rt-vat-validation-api-prod.eba-abc123.eu-central-1.elasticbeanstalk.com
-```
+## ✅ Priorité
 
-## 🔴 Priorité
-
-**HAUTE** - Frontend configuré, attente déploiement backend
+**COMPLÉTÉ** - Service déployé et fonctionnel
 
 ---
 
-**Status:** ⚙️ Frontend prêt, backend à déployer
-**Effort restant:** ~1-2 heures pour déploiement AWS
-**Prochaine étape:** Déployer le service depuis rt-backend-services sur AWS EB
+**Status:** 🎉 Service opérationnel (authz API v2.0.0)
+**Effort restant:** ~5 minutes pour configurer AWS Amplify
+**Prochaine étape:** Configurer NEXT_PUBLIC_VAT_API_URL dans AWS Amplify pour marketing-site
