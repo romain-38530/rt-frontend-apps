@@ -446,15 +446,15 @@ const getServiceRender = (service) => {
                     <div style={{ fontSize: '16px', fontWeight: '700' }}>{pal.id}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Type</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Type</div>
                     <div style={{ fontSize: '16px', fontWeight: '600' }}>{pal.type}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Quantité</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Quantité</div>
                     <div style={{ fontSize: '20px', fontWeight: '800' }}>{pal.qty}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', opacity: 0.7', marginBottom: '4px' }}>Statut</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Statut</div>
                     <div style={{
                       fontSize: '14px',
                       fontWeight: '700',
