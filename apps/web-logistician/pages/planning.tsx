@@ -9,9 +9,7 @@ export default function PlanningPage() {
 
   const [events, setEvents] = useState([
     { time: '08:00', title: 'Livraison Paris Nord', type: 'delivery' },
-    { time: '10:30', title: 'Collecte Ent
-
-repôt A', type: 'pickup' },
+    { time: '10:30', title: 'Collecte Entrepôt A', type: 'pickup' },
     { time: '14:00', title: 'Maintenance véhicule', type: 'maintenance' },
   ]);
 
