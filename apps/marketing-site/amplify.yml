@@ -5,41 +5,19 @@ applications:
       phases:
         preBuild:
           commands:
-            # Install pnpm globally
-            - npm install -g pnpm@8.15.4
-
-            # Navigate to root
             - cd ../..
-
-            # Configure GitHub Packages authentication
-            - echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> .npmrc
-
-            # Install all dependencies from root
-            - pnpm install
-
-            # Build shared packages
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
-
-            # Navigate back to app
-            - cd apps/marketing-site
-
+            - npm install -g pnpm@8.15.4
+            - pnpm install --frozen-lockfile
         build:
           commands:
-            # Build the app with Next.js static export
+            - cd apps/marketing-site
             - pnpm run build
-            # Remove .next directory to prevent Amplify from detecting as SSR app
-            - rm -rf .next
-            # Create required-server-files.json for AWS Amplify
-            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
-
       artifacts:
-        baseDirectory: out
+        baseDirectory: apps/marketing-site/out
         files:
           - '**/*'
-
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
-          - ../../.pnpm-store/**/*
+          - node_modules/**/*
+          - apps/marketing-site/node_modules/**/*
+          - apps/marketing-site/.next/cache/**/*
