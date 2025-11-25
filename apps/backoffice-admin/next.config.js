@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -31,5 +33,27 @@ const nextConfig = {
     NEXT_PUBLIC_VIGILANCE_API_URL: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'http://localhost:3040',
     NEXT_PUBLIC_AUTHZ_URL: process.env.NEXT_PUBLIC_AUTHZ_URL || 'http://localhost:3007',
   },
+
+  // Configuration webpack pour transpiler TypeScript externe
+  webpack: (config, { isServer }) => {
+    // Transpiler les fichiers TypeScript du dossier src/ root
+    config.module.rules.push({
+      test: /\.(ts|tsx)$/,
+      include: [path.resolve(__dirname, '../../src')],
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            '@babel/preset-env',
+            '@babel/preset-typescript',
+            ['@babel/preset-react', { runtime: 'automatic' }],
+          ],
+        },
+      },
+    });
+
+    return config;
+  },
 };
+
 module.exports = nextConfig;
