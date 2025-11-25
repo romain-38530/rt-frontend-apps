@@ -93,21 +93,21 @@ export default function OnboardingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyData: {
-            companyName: formData.companyName,
-            legalForm: formData.legalForm,
-            capital: formData.capital,
-            companyAddress: formData.address,
-            registrationCity: formData.city,
-            siret: formData.siret,
-            siren: formData.siren,
-            vatNumber: formData.vatNumber,
-            email: formData.representativeEmail
-          },
+          email: formData.representativeEmail,
+          companyName: formData.companyName,
+          legalForm: formData.legalForm,
+          capital: formData.capital,
+          companyAddress: formData.address,
+          registrationCity: formData.city,
+          siret: formData.siret,
+          siren: formData.siren,
+          vatNumber: formData.vatNumber,
+          representativeName: formData.representativeName,
+          representativeTitle: formData.representativeTitle,
+          representativePhone: formData.representativePhone,
           subscriptionType: formData.subscriptionType,
           duration: formData.duration,
           options: formData.options,
-          representative: `${formData.representativeName} - ${formData.representativeTitle}`,
           paymentMethod: formData.paymentMethod
         })
       });
