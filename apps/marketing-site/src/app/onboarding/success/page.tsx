@@ -8,9 +8,8 @@ import Link from 'next/link';
 function OnboardingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const contractId = searchParams.get('contractId');
+  const requestId = searchParams.get('requestId');
   const email = searchParams.get('email');
-  const accountType = searchParams.get('accountType');
 
   useEffect(() => {
     // Confetti effect (optionnel)
@@ -29,15 +28,15 @@ function OnboardingSuccessContent() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50 flex items-center justify-center px-6 py-12">
       <div className="max-w-2xl w-full">
         {/* Success Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-12 text-center relative overflow-hidden">
           {/* Decorative elements */}
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600" />
 
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-200 rounded-full opacity-20 blur-3xl" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-200 rounded-full opacity-20 blur-3xl" />
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-orange-200 rounded-full opacity-20 blur-3xl" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-red-200 rounded-full opacity-20 blur-3xl" />
 
           <div className="relative">
             {/* Icon */}
@@ -54,15 +53,15 @@ function OnboardingSuccessContent() {
             </p>
 
             {/* Info Box */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 mb-8">
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 mb-8">
               <div className="flex items-center gap-3 justify-center mb-4">
-                <Mail className="text-indigo-600" size={24} />
+                <Mail className="text-orange-600" size={24} />
                 <h3 className="text-lg font-bold text-gray-900">Vérifiez votre email</h3>
               </div>
               <p className="text-gray-700 mb-4">
                 Un email de confirmation a été envoyé à :
               </p>
-              <p className="text-indigo-600 font-bold text-lg">
+              <p className="text-orange-600 font-bold text-lg">
                 {email || 'votre adresse email'}
               </p>
             </div>
@@ -72,7 +71,7 @@ function OnboardingSuccessContent() {
               <h3 className="text-lg font-bold text-gray-900 mb-4">Prochaines étapes :</h3>
               <ol className="space-y-4">
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     1
                   </span>
                   <span className="text-gray-700">
@@ -80,7 +79,7 @@ function OnboardingSuccessContent() {
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     2
                   </span>
                   <span className="text-gray-700">
@@ -88,7 +87,7 @@ function OnboardingSuccessContent() {
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     3
                   </span>
                   <span className="text-gray-700">
@@ -98,11 +97,11 @@ function OnboardingSuccessContent() {
               </ol>
             </div>
 
-            {/* Contract ID */}
-            {contractId && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8">
+            {/* Request ID */}
+            {requestId && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-8">
                 <p className="text-sm text-gray-700">
-                  <strong>ID de contrat :</strong> {contractId}
+                  <strong>ID de demande :</strong> {requestId}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
                   Conservez cet identifiant pour toute correspondance avec notre support
@@ -114,7 +113,7 @@ function OnboardingSuccessContent() {
             <div className="space-y-4">
               <Link
                 href="/login"
-                className="block w-full px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="block w-full px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 Se connecter
                 <ArrowRight size={20} />
@@ -133,7 +132,7 @@ function OnboardingSuccessContent() {
         {/* Help */}
         <div className="mt-8 text-center">
           <p className="text-gray-600 mb-2">Vous n'avez pas reçu l'email ?</p>
-          <button className="text-indigo-600 hover:text-indigo-700 font-semibold">
+          <button className="text-orange-600 hover:text-orange-700 font-semibold">
             Renvoyer l'email de confirmation
           </button>
         </div>
@@ -142,7 +141,7 @@ function OnboardingSuccessContent() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
             Besoin d'aide ?{' '}
-            <Link href="/contact" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+            <Link href="/contact" className="text-orange-600 hover:text-orange-700 font-semibold">
               Contactez notre support
             </Link>
           </p>
@@ -155,8 +154,8 @@ function OnboardingSuccessContent() {
 export default function OnboardingSuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
       </div>
     }>
       <OnboardingSuccessContent />

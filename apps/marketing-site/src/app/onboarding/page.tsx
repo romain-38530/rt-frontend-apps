@@ -89,35 +89,34 @@ export default function OnboardingPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+
+      // Format de l'adresse complète
+      const fullAddress = formData.city
+        ? `${formData.address}, ${formData.city}`
+        : formData.address;
+
       const response = await fetch(`${apiUrl}/api/onboarding/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.representativeEmail,
           companyName: formData.companyName,
-          legalForm: formData.legalForm,
-          capital: formData.capital,
-          companyAddress: formData.address,
-          registrationCity: formData.city,
-          siret: formData.siret,
-          siren: formData.siren,
-          vatNumber: formData.vatNumber,
-          representativeName: formData.representativeName,
-          representativeTitle: formData.representativeTitle,
-          representativePhone: formData.representativePhone,
-          subscriptionType: formData.subscriptionType,
-          duration: formData.duration,
-          options: formData.options,
-          paymentMethod: formData.paymentMethod
+          siret: formData.siret || undefined,
+          vatNumber: formData.vatNumber || undefined,
+          phone: formData.representativePhone || undefined,
+          address: fullAddress || undefined,
+          subscriptionType: formData.subscriptionType || 'basic',
+          source: 'WEB'
         })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        router.push(`/onboarding/success?contractId=${data.contractId}`);
+        router.push(`/onboarding/success?requestId=${data.requestId}&email=${encodeURIComponent(data.email)}`);
       } else {
-        setError(data.error || 'Erreur lors de la soumission');
+        const errorMessage = data.error?.message || data.error || 'Erreur lors de la soumission';
+        setError(errorMessage);
       }
     } catch (err) {
       setError('Erreur de connexion au serveur');
