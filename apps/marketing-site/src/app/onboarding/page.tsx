@@ -127,12 +127,15 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* En-tête */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Bienvenue chez SYMPHONI.A
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-3">
+            Bienvenue chez{' '}
+            <span className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+              SYMPHONI.A
+            </span>
           </h1>
           <p className="text-xl text-gray-600 mb-2">
             Créez votre compte professionnel en 5 minutes chrono
@@ -149,16 +152,16 @@ export default function OnboardingPage() {
               <div key={s} className="flex-1">
                 <div className="flex items-center">
                   <div className={`
-                    w-10 h-10 rounded-full flex items-center justify-center font-bold
-                    ${step >= s ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}
+                    w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md
+                    ${step >= s ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white' : 'bg-gray-200 text-gray-600'}
                   `}>
                     {s}
                   </div>
                   {s < 5 && (
-                    <div className={`flex-1 h-1 mx-2 ${step > s ? 'bg-indigo-600' : 'bg-gray-200'}`} />
+                    <div className={`flex-1 h-1 mx-2 ${step > s ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-gray-200'}`} />
                   )}
                 </div>
-                <div className="text-xs mt-2 text-center">
+                <div className="text-xs mt-2 text-center font-medium">
                   {['TVA', 'Entreprise', 'Contact', 'Abonnement', 'Paiement'][s - 1]}
                 </div>
               </div>
@@ -178,9 +181,9 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div>
               <h2 className="text-2xl font-bold mb-4">Vérification de votre entreprise</h2>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                <p className="text-indigo-900 font-medium mb-2">Comment ça marche ?</p>
-                <p className="text-indigo-700 text-sm leading-relaxed">
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-4 mb-6">
+                <p className="text-orange-900 font-bold mb-2">Comment ça marche ?</p>
+                <p className="text-orange-800 text-sm leading-relaxed">
                   Nous vérifions instantanément votre numéro de TVA via les API officielles européennes (VIES) et INSEE.
                   Vos données d'entreprise (raison sociale, SIRET, adresse) seront automatiquement récupérées et pré-remplies.
                   Aucune saisie manuelle nécessaire !
@@ -197,7 +200,7 @@ export default function OnboardingPage() {
                     placeholder="FR12345678901"
                     value={formData.vatNumber}
                     onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                   <p className="mt-2 text-sm text-gray-500">
                     Format : Code pays + numéro (ex: FR41948816988)
@@ -207,7 +210,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={verifyVAT}
                   disabled={!formData.vatNumber || loading}
-                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Vérification en cours...' : 'Vérifier et continuer'}
                 </button>
@@ -309,13 +312,13 @@ export default function OnboardingPage() {
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all"
                 >
                   Retour
                 </button>
                 <button
                   onClick={() => setStep(3)}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all"
                 >
                   Continuer
                 </button>
@@ -386,13 +389,13 @@ export default function OnboardingPage() {
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all"
                 >
                   Retour
                 </button>
                 <button
                   onClick={() => setStep(4)}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all"
                 >
                   Continuer
                 </button>
@@ -506,14 +509,14 @@ export default function OnboardingPage() {
               <div className="flex gap-4">
                 <button
                   onClick={() => setStep(3)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all"
                 >
                   Retour
                 </button>
                 <button
                   onClick={() => setStep(5)}
                   disabled={!formData.subscriptionType || !formData.duration}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continuer
                 </button>
@@ -570,14 +573,14 @@ export default function OnboardingPage() {
               <div className="flex gap-4">
                 <button
                   onClick={() => setStep(4)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all"
                 >
                   Retour
                 </button>
                 <button
                   onClick={submitOnboarding}
                   disabled={loading}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Génération du contrat...' : 'Générer le contrat'}
                 </button>

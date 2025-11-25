@@ -150,15 +150,19 @@ export default function SelectAccountTypePage() {
     : null;
 
   return (
-    <div className="select-account-page">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50">
       {/* Header */}
-      <header className="page-header">
-        <div className="container">
-          <h1>Choisissez votre type de compte</h1>
-          <p>Sélectionnez le type de compte qui correspond le mieux à vos besoins</p>
+      <header className="py-16 px-6 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
+            Choisissez votre type de compte
+          </h1>
+          <p className="text-xl text-orange-100 max-w-3xl mx-auto">
+            Sélectionnez le type de compte qui correspond le mieux à vos besoins
+          </p>
 
           {invitedByMessage && (
-            <div className="invited-message">
+            <div className="mt-6 inline-block bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold">
               🎉 {invitedByMessage}
             </div>
           )}
@@ -166,20 +170,20 @@ export default function SelectAccountTypePage() {
       </header>
 
       {/* Code Promo */}
-      <section className="promo-section">
-        <div className="container">
-          <div className="promo-input-group">
+      <section className="py-6 px-6 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center gap-3 max-w-md mx-auto">
             <input
               type="text"
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
               placeholder="Code promo (optionnel)"
-              className="promo-input"
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:border-orange-500 uppercase"
             />
             <button
               onClick={handleApplyPromo}
               disabled={!promoCode.trim() || isApplyingPromo}
-              className="promo-button"
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isApplyingPromo ? 'Application...' : 'Appliquer'}
             </button>
@@ -188,14 +192,23 @@ export default function SelectAccountTypePage() {
       </section>
 
       {/* Grille de cartes de prix */}
-      <section className="pricing-grid-section">
-        <div className="container">
-          {loading && <div className="loading">Chargement des prix...</div>}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          {loading && (
+            <div className="text-center py-20">
+              <div className="inline-block w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-xl text-gray-600">Chargement des prix...</p>
+            </div>
+          )}
 
-          {error && <div className="error">Erreur: {error}</div>}
+          {error && (
+            <div className="bg-red-50 border-2 border-red-200 text-red-600 px-6 py-4 rounded-xl text-center">
+              <strong>Erreur:</strong> {error}
+            </div>
+          )}
 
           {!loading && !error && (
-            <div className="pricing-grid">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {creatableTypes.map((typeInfo) => {
                 const pricing = allPricing.find(p => p.accountType === typeInfo.type);
                 const calculatedPrice = calculatedPrices[typeInfo.type];
@@ -228,39 +241,57 @@ export default function SelectAccountTypePage() {
 
       {/* Actions */}
       {selectedType && (
-        <section className="actions-section">
-          <div className="container">
-            <div className="selected-summary">
-              <h3>Récapitulatif de votre sélection</h3>
-              <div className="summary-content">
-                <div>
-                  <strong>Type de compte:</strong>{' '}
-                  {getAllCreatableTypesInfo().find(t => t.type === selectedType)?.displayName}
-                </div>
-                <div>
-                  <strong>Prix:</strong>{' '}
-                  {calculatedPrices[selectedType]?.finalPrice === 0
-                    ? 'Gratuit'
-                    : formatPrice(
-                        calculatedPrices[selectedType]?.finalPrice,
-                        calculatedPrices[selectedType]?.currency,
-                        calculatedPrices[selectedType]?.billingPeriod
-                      )
-                  }
-                </div>
-                {calculatedPrices[selectedType]?.appliedVariant && (
-                  <div>
-                    <strong>Variante:</strong> {calculatedPrices[selectedType].appliedVariant.name}
+        <section className="py-12 px-6 pb-20">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white border-4 border-orange-500 rounded-2xl p-8 shadow-2xl">
+              <h3 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
+                Récapitulatif de votre sélection
+              </h3>
+
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 mb-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b border-orange-200">
+                    <strong className="text-gray-700">Type de compte:</strong>
+                    <span className="text-gray-900 font-semibold">
+                      {getAllCreatableTypesInfo().find(t => t.type === selectedType)?.displayName}
+                    </span>
                   </div>
-                )}
-                {calculatedPrices[selectedType]?.appliedPromo && (
-                  <div className="promo-applied">
-                    🎉 <strong>Code promo appliqué:</strong> {calculatedPrices[selectedType].appliedPromo.code}
+                  <div className="flex justify-between py-2 border-b border-orange-200">
+                    <strong className="text-gray-700">Prix:</strong>
+                    <span className="text-gray-900 font-semibold">
+                      {calculatedPrices[selectedType]?.finalPrice === 0
+                        ? 'Gratuit'
+                        : formatPrice(
+                            calculatedPrices[selectedType]?.finalPrice,
+                            calculatedPrices[selectedType]?.currency,
+                            calculatedPrices[selectedType]?.billingPeriod
+                          )
+                      }
+                    </span>
                   </div>
-                )}
+                  {calculatedPrices[selectedType]?.appliedVariant && (
+                    <div className="flex justify-between py-2 border-b border-orange-200">
+                      <strong className="text-gray-700">Variante:</strong>
+                      <span className="text-gray-900 font-semibold">
+                        {calculatedPrices[selectedType].appliedVariant.name}
+                      </span>
+                    </div>
+                  )}
+                  {calculatedPrices[selectedType]?.appliedPromo && (
+                    <div className="flex justify-between py-2 text-green-600">
+                      <strong>Code promo appliqué:</strong>
+                      <span className="font-semibold">
+                        🎉 {calculatedPrices[selectedType].appliedPromo.code}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <button onClick={handleConfirm} className="btn-confirm">
+              <button
+                onClick={handleConfirm}
+                className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all"
+              >
                 {calculatedPrices[selectedType]?.finalPrice > 0
                   ? 'Continuer vers le paiement →'
                   : 'Activer mon compte →'
@@ -270,210 +301,6 @@ export default function SelectAccountTypePage() {
           </div>
         </section>
       )}
-
-      {/* Styles */}
-      <style jsx>{`
-        .select-account-page {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 20px;
-        }
-
-        /* Header */
-        .page-header {
-          padding: 60px 0 40px;
-          text-align: center;
-          background: white;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .page-header h1 {
-          font-size: 36px;
-          font-weight: 800;
-          margin: 0 0 16px 0;
-          color: #1f2937;
-        }
-
-        .page-header p {
-          font-size: 18px;
-          color: #6b7280;
-          margin: 0;
-        }
-
-        .invited-message {
-          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-          color: #1e40af;
-          padding: 12px 24px;
-          border-radius: 8px;
-          margin-top: 20px;
-          display: inline-block;
-          font-weight: 500;
-        }
-
-        /* Code Promo */
-        .promo-section {
-          padding: 24px 0;
-          background: white;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .promo-input-group {
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-          max-width: 400px;
-          margin: 0 auto;
-        }
-
-        .promo-input {
-          flex: 1;
-          padding: 10px 16px;
-          border: 2px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 14px;
-          text-transform: uppercase;
-        }
-
-        .promo-input:focus {
-          outline: none;
-          border-color: #3b82f6;
-        }
-
-        .promo-button {
-          padding: 10px 24px;
-          background: #3b82f6;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .promo-button:hover:not(:disabled) {
-          background: #2563eb;
-        }
-
-        .promo-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        /* Grille de prix */
-        .pricing-grid-section {
-          padding: 60px 0;
-        }
-
-        .pricing-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 24px;
-          margin-top: 32px;
-        }
-
-        .loading, .error {
-          text-align: center;
-          padding: 40px;
-          font-size: 16px;
-        }
-
-        .error {
-          color: #ef4444;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 8px;
-        }
-
-        /* Actions */
-        .actions-section {
-          padding: 40px 0 60px;
-        }
-
-        .selected-summary {
-          background: white;
-          border: 2px solid #3b82f6;
-          border-radius: 12px;
-          padding: 32px;
-          text-align: center;
-          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
-        }
-
-        .selected-summary h3 {
-          margin: 0 0 24px 0;
-          font-size: 24px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .summary-content {
-          background: #f9fafb;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 24px;
-          text-align: left;
-        }
-
-        .summary-content > div {
-          padding: 8px 0;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .summary-content > div:last-child {
-          border-bottom: none;
-        }
-
-        .promo-applied {
-          color: #059669;
-        }
-
-        .btn-confirm {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          color: white;
-          padding: 16px 48px;
-          border: none;
-          border-radius: 8px;
-          font-size: 18px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-confirm:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-          .page-header h1 {
-            font-size: 28px;
-          }
-
-          .page-header p {
-            font-size: 16px;
-          }
-
-          .pricing-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .selected-summary {
-            padding: 24px;
-          }
-
-          .btn-confirm {
-            width: 100%;
-            padding: 14px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
