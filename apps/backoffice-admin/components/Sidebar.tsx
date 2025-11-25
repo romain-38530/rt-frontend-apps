@@ -1,6 +1,7 @@
 import { Home, Building2, DollarSign, Package, Activity, Settings, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { LogoCompact } from '../../../src/components/Logo';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -46,17 +47,17 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         {/* Logo Section */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <a href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                RT
-              </div>
-              {!collapsed && (
-                <div className="flex flex-col">
-                  <span className="font-bold text-gray-900 text-lg">RT Tech</span>
-                  <span className="text-xs text-gray-500">Admin Panel</span>
+            {!collapsed ? (
+              <a href="/" className="flex items-center">
+                <LogoCompact width={180} height={54} showTagline={false} />
+              </a>
+            ) : (
+              <a href="/" className="flex items-center justify-center w-full">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  S
                 </div>
-              )}
-            </a>
+              </a>
+            )}
             <button
               onClick={handleToggle}
               className="lg:block hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Navbar, Footer } from '../../../../src/components';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://rttechnologie.com'),
@@ -72,7 +73,9 @@ export default function RootLayout({
         <link rel="canonical" href="https://rttechnologie.com" />
       </head>
       <body className="antialiased">
-        {children}
+        <Navbar />
+        <main>{children}</main>
+        <Footer />
       </body>
     </html>
   );
