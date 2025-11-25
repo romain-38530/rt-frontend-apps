@@ -10,7 +10,7 @@ const portals = [
     icon: Factory,
     description: 'Vigilance, planification, suivi et Affret.IA',
     gradient: 'from-purple-500 via-purple-600 to-indigo-600',
-    url: process.env.NEXT_PUBLIC_INDUSTRY_URL || 'https://industry.rttechnologie.com',
+    url: '/industry',
     features: [
       'Tableau de bord intelligent',
       'Vigilance et alertes',
@@ -26,7 +26,7 @@ const portals = [
     icon: Truck,
     description: 'Gestion des transports et des livraisons',
     gradient: 'from-emerald-500 via-teal-500 to-cyan-600',
-    url: process.env.NEXT_PUBLIC_TRANSPORTER_URL || 'https://transporter.rttechnologie.com',
+    url: '/transporter',
     features: [
       'Planning intelligent',
       'Optimisation des routes',
@@ -42,7 +42,7 @@ const portals = [
     icon: MapPin,
     description: 'Suivi et réception de vos livraisons',
     gradient: 'from-green-500 via-emerald-500 to-teal-600',
-    url: process.env.NEXT_PUBLIC_RECIPIENT_URL || 'https://recipient.rttechnologie.com',
+    url: '/recipient',
     features: [
       'Suivi en temps réel',
       'Notifications de livraison',
@@ -58,7 +58,7 @@ const portals = [
     icon: Building,
     description: 'Gestion de vos approvisionnements',
     gradient: 'from-pink-500 via-rose-500 to-red-500',
-    url: process.env.NEXT_PUBLIC_SUPPLIER_URL || 'https://supplier.rttechnologie.com',
+    url: '/supplier',
     features: [
       'Gestion des commandes',
       'Suivi des livraisons',
@@ -74,7 +74,7 @@ const portals = [
     icon: Ship,
     description: 'Coordination des expéditions internationales',
     gradient: 'from-blue-500 via-indigo-500 to-purple-500',
-    url: process.env.NEXT_PUBLIC_FORWARDER_URL || 'https://forwarder.rttechnologie.com',
+    url: '/forwarder',
     features: [
       'Gestion multimodale',
       'Documentation douanière',
@@ -90,7 +90,7 @@ const portals = [
     icon: Package,
     description: 'Optimisation logistique et gestion des flux',
     gradient: 'from-amber-500 via-orange-500 to-red-500',
-    url: process.env.NEXT_PUBLIC_LOGISTICIAN_URL || 'https://logistician.rttechnologie.com',
+    url: '/logistician',
     features: [
       'Tableau de bord analytique',
       'Gestion des stocks',
@@ -154,8 +154,6 @@ export default function PortalsPage() {
                 <a
                   key={portal.id}
                   href={portal.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   onMouseEnter={() => setHoveredPortal(portal.id)}
                   onMouseLeave={() => setHoveredPortal(null)}
                   className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
