@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountUpgrade } from '@/hooks/useAccountUpgrade';
 import { getAccountTypeInfo } from '@/types/account';
 import type { AccountType } from '@/types/account';
 
-export default function UpgradeAccountPage() {
+function UpgradeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
@@ -347,5 +347,17 @@ export default function UpgradeAccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UpgradeAccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    }>
+      <UpgradeContent />
+    </Suspense>
   );
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountTypes } from '@/hooks/useAccountTypes';
 import { getCreatableAccountTypes } from '@/types/account';
 import type { AccountType } from '@/types/account';
 
-export default function SelectAccountTypePage() {
+function SelectTypeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
@@ -203,5 +203,17 @@ export default function SelectAccountTypePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SelectAccountTypePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    }>
+      <SelectTypeContent />
+    </Suspense>
   );
 }

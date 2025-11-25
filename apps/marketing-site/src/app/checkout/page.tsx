@@ -15,7 +15,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BackendAccountType } from '../../../../../src/hooks/usePricing';
 import { getAccountTypeInfo, formatPrice } from '../../../../../src/utils/accountTypeMapping';
@@ -27,10 +27,10 @@ import { getAccountTypeInfo, formatPrice } from '../../../../../src/utils/accoun
 const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
 
 // ==========================================
-// Page Principale
+// Composant avec useSearchParams
 // ==========================================
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -592,5 +592,28 @@ export default function CheckoutPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// ==========================================
+// Page Principale avec Suspense
+// ==========================================
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Chargement de la page de paiement...
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
