@@ -16,6 +16,7 @@
 const express = require('express');
 const router = express.Router();
 const pricingService = require('../services/pricingService');
+const { requireAdmin } = require('../middleware/authAdmin');
 
 // ==========================================
 // ENDPOINTS PUBLICS (Pas d'auth requise)
@@ -366,32 +367,17 @@ router.post('/validate-promo', async (req, res) => {
 // ==========================================
 
 /**
- * Middleware d'authentification admin (à implémenter)
- * TODO: Implémenter la vérification du token admin JWT
+ * Les endpoints admin utilisent le middleware requireAdmin importé depuis
+ * middleware/authAdmin.js qui vérifie:
+ * - Présence du token JWT dans le header Authorization
+ * - Validité du token (signature, expiration)
+ * - Permissions admin de l'utilisateur
+ *
+ * Pour utiliser ces endpoints, incluez le header:
+ * Authorization: Bearer <jwt-token>
+ *
+ * Le token doit contenir un rôle admin (admin, super_admin, pricing_manager)
  */
-const requireAdmin = (req, res, next) => {
-  // TODO: Vérifier le token JWT et les permissions admin
-  // Pour l'instant, on laisse passer pour le développement
-  // En production, il faut implémenter la vérification réelle
-
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      success: false,
-      message: 'Token d\'authentification requis'
-    });
-  }
-
-  // TODO: Vérifier le token JWT
-  // const token = authHeader.replace('Bearer ', '');
-  // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  // if (!decoded.isAdmin) {
-  //   return res.status(403).json({ message: 'Accès admin requis' });
-  // }
-
-  next();
-};
 
 /**
  * @route   POST /api/pricing
