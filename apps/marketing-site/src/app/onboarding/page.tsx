@@ -555,54 +555,242 @@ export default function OnboardingPage() {
           {/* Étape 4 : Type d'abonnement */}
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold mb-4">Choisissez votre formule</h2>
+              <h2 className="text-2xl font-bold mb-4">Choisissez votre espace professionnel</h2>
               <p className="text-gray-600 mb-6">
-                Sélectionnez l'abonnement qui correspond à votre activité et profitez de remises sur les engagements longue durée.
-                Vous pourrez modifier votre formule à tout moment depuis votre espace client.
+                Sélectionnez l'abonnement qui correspond à votre activité. Chaque espace est conçu pour répondre aux besoins spécifiques de votre métier.
               </p>
 
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type d'abonnement *
-                  </label>
-                  <select
-                    value={formData.subscriptionType}
-                    onChange={(e) => setFormData({ ...formData, subscriptionType: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  >
-                    <option value="">Sélectionnez...</option>
-                    <option value="industriel">Industriel - 499€/mois</option>
-                    <option value="transporteur_premium">Transporteur Premium - 299€/mois</option>
-                    <option value="transporteur_pro">Transporteur Pro - 499€/mois</option>
-                    <option value="logisticien_premium">Logisticien Premium - 499€/mois</option>
-                    <option value="transitaire_premium">Transitaire Premium - 299€/mois</option>
-                  </select>
+              {/* Cartes d'abonnement */}
+              <div className="grid md:grid-cols-2 gap-4 mb-8">
+                {/* Industriel */}
+                <div
+                  onClick={() => setFormData({ ...formData, subscriptionType: 'industriel' })}
+                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                    formData.subscriptionType === 'industriel'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {formData.subscriptionType === 'industriel' && (
+                    <div className="absolute top-4 right-4">
+                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Espace Industriel</h3>
+                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Gestion complète des commandes transport</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Affrètement intelligent avec IA</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Tableau de bord analytics</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Intégration ERP (SAP, Sage, Odoo)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Support prioritaire</span>
+                    </li>
+                  </ul>
+                  <p className="text-xs text-gray-500">Idéal pour les industriels expéditeurs</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Durée d'engagement *
-                  </label>
-                  <select
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  >
-                    <option value="">Sélectionnez...</option>
-                    <option value="12">1 an - Tarif plein</option>
-                    <option value="36">3 ans - Remise 3%</option>
-                    <option value="48">4 ans - Remise 5%</option>
-                    <option value="60">5 ans - Remise 7%</option>
-                  </select>
+                {/* Transporteur Premium */}
+                <div
+                  onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_premium' })}
+                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                    formData.subscriptionType === 'transporteur_premium'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {formData.subscriptionType === 'transporteur_premium' && (
+                    <div className="absolute top-4 right-4">
+                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Transporteur Premium</h3>
+                    <p className="text-3xl font-extrabold text-orange-600">299€<span className="text-lg text-gray-500">/mois</span></p>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Réception commandes clients</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Planning optimisé des tournées</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Suivi en temps réel des livraisons</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>POD électronique (photos, signature)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Application mobile chauffeur</span>
+                    </li>
+                  </ul>
+                  <p className="text-xs text-gray-500">Pour PME de transport (5-50 camions)</p>
                 </div>
 
-                {/* Options */}
-                <div className="border-t pt-4">
-                  <p className="font-medium mb-3">Options (facultatif)</p>
-                  <div className="space-y-2">
-                    {formData.subscriptionType === 'industriel' && (
-                      <label className="flex items-center">
+                {/* Transporteur Pro */}
+                <div
+                  onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_pro' })}
+                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                    formData.subscriptionType === 'transporteur_pro'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  <div className="absolute top-2 right-2">
+                    <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-bold rounded-full">
+                      RECOMMANDÉ
+                    </span>
+                  </div>
+                  {formData.subscriptionType === 'transporteur_pro' && (
+                    <div className="absolute top-4 right-4 mt-8">
+                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="mb-4 mt-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Transporteur Pro</h3>
+                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Toutes les fonctionnalités Premium</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>TMS complet (gestion flotte avancée)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Connectivité télématique (GPS, capteurs)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Facturation et comptabilité intégrées</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>API et intégrations illimitées</span>
+                    </li>
+                  </ul>
+                  <p className="text-xs text-gray-500">Pour entreprises de transport (50+ camions)</p>
+                </div>
+
+                {/* Logisticien */}
+                <div
+                  onClick={() => setFormData({ ...formData, subscriptionType: 'logisticien_premium' })}
+                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                    formData.subscriptionType === 'logisticien_premium'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {formData.subscriptionType === 'logisticien_premium' && (
+                    <div className="absolute top-4 right-4">
+                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Logisticien Premium</h3>
+                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>WMS complet (gestion d'entrepôt)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Gestion multi-sites et multi-clients</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Prévisions IA de stock et flux</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Marketplace de palettes</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>Reporting avancé</span>
+                    </li>
+                  </ul>
+                  <p className="text-xs text-gray-500">Pour 3PL et plateformes logistiques</p>
+                </div>
+              </div>
+
+              {/* Durée d'engagement */}
+              <div className="mb-8">
+                <h3 className="text-lg font-bold mb-4">Durée d'engagement</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { value: '12', label: '1 an', discount: 'Tarif plein', popular: false },
+                    { value: '36', label: '3 ans', discount: 'Remise 3%', popular: true },
+                    { value: '48', label: '4 ans', discount: 'Remise 5%', popular: false },
+                    { value: '60', label: '5 ans', discount: 'Remise 7%', popular: false },
+                  ].map((option) => (
+                    <div
+                      key={option.value}
+                      onClick={() => setFormData({ ...formData, duration: option.value })}
+                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all text-center ${
+                        formData.duration === option.value
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 hover:border-orange-300'
+                      }`}
+                    >
+                      {option.popular && (
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full whitespace-nowrap">
+                          POPULAIRE
+                        </span>
+                      )}
+                      <p className="font-bold text-lg">{option.label}</p>
+                      <p className="text-sm text-gray-600">{option.discount}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Options complémentaires */}
+              <div className="mb-8">
+                <h3 className="text-lg font-bold mb-2">Options complémentaires</h3>
+                <p className="text-sm text-gray-600 mb-4">Ajoutez des fonctionnalités avancées à votre abonnement</p>
+
+                <div className="space-y-4">
+                  {/* Afret IA - uniquement pour industriels */}
+                  {formData.subscriptionType === 'industriel' && (
+                    <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      formData.options.afretIA ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                    }`}>
+                      <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
                           checked={formData.options.afretIA}
@@ -610,12 +798,27 @@ export default function OnboardingPage() {
                             ...formData,
                             options: { ...formData.options, afretIA: e.target.checked }
                           })}
-                          className="mr-3"
+                          className="mt-1 w-5 h-5 text-orange-600 rounded"
                         />
-                        <span>Afret IA Premium (+200€/mois)</span>
-                      </label>
-                    )}
-                    <label className="flex items-center">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold">Afret IA Premium</h4>
+                            <span className="text-orange-600 font-bold">+200€/mois</span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Intelligence artificielle avancée pour l'affrètement optimal. Analyse en temps réel de 10 000+ transporteurs,
+                            prédiction des tarifs, optimisation automatique des tournées multi-modales. ROI moyen : 15-20% de réduction des coûts transport.
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  )}
+
+                  {/* Envoi SMS */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.sms ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={formData.options.sms}
@@ -623,11 +826,26 @@ export default function OnboardingPage() {
                           ...formData,
                           options: { ...formData.options, sms: e.target.checked }
                         })}
-                        className="mr-3"
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
                       />
-                      <span>Envoi SMS (0.07€/SMS)</span>
-                    </label>
-                    <label className="flex items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Notifications SMS</h4>
+                          <span className="text-orange-600 font-bold">0,07€/SMS</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Envoi automatique de SMS aux destinataires (alertes livraison, fenêtres horaires, retards).
+                          Taux d'ouverture 98% (vs 20% email). Pas de forfait minimum, facturation à l'usage réel.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Télématique */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.telematics ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={formData.options.telematics}
@@ -635,11 +853,27 @@ export default function OnboardingPage() {
                           ...formData,
                           options: { ...formData.options, telematics: e.target.checked }
                         })}
-                        className="mr-3"
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
                       />
-                      <span>Connexion télématique (19€/camion/mois)</span>
-                    </label>
-                    <label className="flex items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Connexion télématique</h4>
+                          <span className="text-orange-600 font-bold">19€/camion/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Intégration directe avec vos boîtiers GPS (TomTom, Verizon, Masternaut, Rio...).
+                          Géolocalisation temps réel, données de conduite (vitesse, freinage), calcul automatique des ETAs.
+                          Compatible 95% des systèmes embarqués.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Connexion outil tiers */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.thirdPartyConnection ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={formData.options.thirdPartyConnection}
@@ -647,11 +881,21 @@ export default function OnboardingPage() {
                           ...formData,
                           options: { ...formData.options, thirdPartyConnection: e.target.checked }
                         })}
-                        className="mr-3"
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
                       />
-                      <span>Connexion outil tiers (89€/mois)</span>
-                    </label>
-                  </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Connexion outil tiers</h4>
+                          <span className="text-orange-600 font-bold">89€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Intégration bidirectionnelle avec vos outils existants (ERP, TMS, WMS, comptabilité).
+                          API REST complète + webhooks. Synchronisation temps réel des commandes, stocks, factures.
+                          Connecteurs pré-configurés : SAP, Sage, Odoo, Microsoft Dynamics, Oracle.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
 
