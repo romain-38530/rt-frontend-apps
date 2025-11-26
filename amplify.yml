@@ -7,15 +7,16 @@ applications:
           commands:
             - echo "Installing pnpm globally..."
             - npm install -g pnpm@8.15.4
-            - echo "Installing all workspace dependencies..."
+            - echo "Going to repository root..."
             - cd ../..
+            - echo "Installing all workspace dependencies..."
             - pnpm install
             - echo "Building shared packages..."
-            - cd packages/contracts && pnpm run build && cd ../..
-            - cd packages/utils && pnpm run build && cd ../..
-            - cd packages/ui-components && pnpm run build && cd ../..
+            - cd packages/contracts && pnpm run build
+            - cd ../utils && pnpm run build
+            - cd ../ui-components && pnpm run build
             - echo "Returning to app directory..."
-            - cd apps/web-industry
+            - cd ../../apps/web-industry
         build:
           commands:
             - echo "Building web-industry app..."
