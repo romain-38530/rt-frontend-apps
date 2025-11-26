@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingPage() {
@@ -8,6 +8,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [vatValidating, setVatValidating] = useState(false);
+  const [vatValidated, setVatValidated] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
 
   // État du formulaire
   const [formData, setFormData] = useState({
@@ -17,12 +20,17 @@ export default function OnboardingPage() {
     companyName: '',
     legalForm: '',
     capital: '',
-    address: '',
-    city: '',
+    // Adresse entreprise (découpée)
+    companyAddress: '',
+    companyPostalCode: '',
+    companyCity: '',
+    companyDepartment: '',
+    companyCountry: 'France',
     siret: '',
     siren: '',
-    // Étape 3 : Représentant légal
-    representativeName: '',
+    // Étape 3 : Représentant légal (découpé)
+    representativeFirstName: '',
+    representativeLastName: '',
     representativeTitle: '',
     representativeEmail: '',
     representativePhone: '',
@@ -39,48 +47,68 @@ export default function OnboardingPage() {
     paymentMethod: 'card'
   });
 
-  // Vérification TVA
-  const verifyVAT = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      // Call VAT API directly (now HTTPS via CloudFront)
-      const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
-      const response = await fetch(`${vatApiUrl}/api/vat/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vatNumber: formData.vatNumber })
-      });
-
-      const data = await response.json();
-
-      // Only proceed if VAT number is actually valid (not just if API call succeeded)
-      if (data.valid === true) {
-        // Pré-remplir les données entreprise
-        const responseData = data.data || data;
-
-        setFormData(prev => ({
-          ...prev,
-          companyName: responseData.companyName || responseData.name || '',
-          legalForm: responseData.legalForm || '',
-          capital: responseData.capital || '',
-          address: responseData.companyAddress || responseData.address || '',
-          city: responseData.registrationCity || '',
-          siret: responseData.siret || '',
-          siren: responseData.siren || ''
-        }));
-
-        setStep(2);
-      } else {
-        setError(data.error || data.message || 'Numéro de TVA invalide');
+  // Auto-validation TVA avec debounce
+  useEffect(() => {
+    const validateVAT = async () => {
+      if (!formData.vatNumber || formData.vatNumber.length < 5) {
+        setVatValidated(false);
+        setCompanyInfo(null);
+        return;
       }
-    } catch (err) {
-      setError('Erreur de connexion au serveur');
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      setVatValidating(true);
+      setError('');
+
+      try {
+        const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+        const response = await fetch(`${vatApiUrl}/api/vat/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vatNumber: formData.vatNumber })
+        });
+
+        const data = await response.json();
+
+        if (data.valid === true) {
+          const responseData = data.data || data;
+          setCompanyInfo(responseData);
+          setVatValidated(true);
+          setError('');
+
+          // Pré-remplir les données entreprise
+          setFormData(prev => ({
+            ...prev,
+            companyName: responseData.companyName || responseData.name || '',
+            legalForm: responseData.legalForm || '',
+            capital: responseData.capital || '',
+            companyAddress: responseData.companyAddress || responseData.address || '',
+            companyCity: responseData.registrationCity || responseData.city || '',
+            companyPostalCode: responseData.postalCode || '',
+            companyDepartment: responseData.department || '',
+            siret: responseData.siret || '',
+            siren: responseData.siren || ''
+          }));
+        } else {
+          setVatValidated(false);
+          setCompanyInfo(null);
+          setError(data.error || data.message || 'Numéro de TVA invalide');
+        }
+      } catch (err) {
+        setVatValidated(false);
+        setCompanyInfo(null);
+        setError('Erreur de connexion au serveur');
+      } finally {
+        setVatValidating(false);
+      }
+    };
+
+    // Debounce de 800ms après la saisie
+    const timer = setTimeout(() => {
+      validateVAT();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [formData.vatNumber]);
 
   // Soumission finale
   const submitOnboarding = async () => {
@@ -90,10 +118,17 @@ export default function OnboardingPage() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
 
-      // Format de l'adresse complète
-      const fullAddress = formData.city
-        ? `${formData.address}, ${formData.city}`
-        : formData.address;
+      // Format de l'adresse complète avec tous les champs
+      const fullAddress = [
+        formData.companyAddress,
+        formData.companyPostalCode,
+        formData.companyCity,
+        formData.companyDepartment,
+        formData.companyCountry
+      ].filter(Boolean).join(', ');
+
+      // Nom complet du représentant
+      const representativeName = `${formData.representativeFirstName} ${formData.representativeLastName}`.trim();
 
       const response = await fetch(`${apiUrl}/api/onboarding/submit`, {
         method: 'POST',
@@ -183,9 +218,8 @@ export default function OnboardingPage() {
               <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-4 mb-6">
                 <p className="text-orange-900 font-bold mb-2">Comment ça marche ?</p>
                 <p className="text-orange-800 text-sm leading-relaxed">
-                  Nous vérifions instantanément votre numéro de TVA via les API officielles européennes (VIES) et INSEE.
-                  Vos données d'entreprise (raison sociale, SIRET, adresse) seront automatiquement récupérées et pré-remplies.
-                  Aucune saisie manuelle nécessaire !
+                  Saisissez votre numéro de TVA intracommunautaire. Nous le vérifions automatiquement via les API officielles européennes (VIES) et INSEE.
+                  Vos données d'entreprise seront récupérées et pré-remplies instantanément.
                 </p>
               </div>
 
@@ -194,24 +228,75 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Numéro de TVA intracommunautaire *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="FR12345678901"
-                    value={formData.vatNumber}
-                    onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="FR12345678901"
+                      value={formData.vatNumber}
+                      onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value.toUpperCase() })}
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 transition-all ${
+                        vatValidated
+                          ? 'border-green-500 bg-green-50'
+                          : vatValidating
+                          ? 'border-orange-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {vatValidating && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    {vatValidated && !vatValidating && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <p className="mt-2 text-sm text-gray-500">
-                    Format : Code pays + numéro (ex: FR41948816988)
+                    {vatValidating ? 'Recherche en cours...' : 'Format : Code pays + numéro (ex: FR41948816988)'}
                   </p>
                 </div>
 
+                {/* Affichage des informations de la société trouvée */}
+                {vatValidated && companyInfo && (
+                  <div className="bg-green-50 border-2 border-green-500 rounded-xl p-6 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-green-900 font-bold text-lg mb-1">Entreprise trouvée !</p>
+                        <p className="text-green-800 text-2xl font-extrabold mb-3">
+                          {companyInfo.companyName || companyInfo.name}
+                        </p>
+                        {companyInfo.siret && (
+                          <p className="text-green-700 text-sm">
+                            <span className="font-medium">SIRET :</span> {companyInfo.siret}
+                          </p>
+                        )}
+                        {(companyInfo.companyAddress || companyInfo.address) && (
+                          <p className="text-green-700 text-sm">
+                            <span className="font-medium">Adresse :</span> {companyInfo.companyAddress || companyInfo.address}
+                            {companyInfo.registrationCity && `, ${companyInfo.registrationCity}`}
+                          </p>
+                        )}
+                        <p className="text-green-600 text-xs mt-2">
+                          ✓ Toutes les informations seront pré-remplies à l'étape suivante
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
-                  onClick={verifyVAT}
-                  disabled={!formData.vatNumber || loading}
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setStep(2)}
+                  disabled={!vatValidated}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                 >
-                  {loading ? 'Vérification en cours...' : 'Vérifier et continuer'}
+                  {vatValidated ? 'Valider et continuer →' : 'Saisissez un numéro de TVA valide'}
                 </button>
               </div>
             </div>
@@ -249,10 +334,11 @@ export default function OnboardingPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Forme juridique *
+                    Forme juridique
                   </label>
                   <input
                     type="text"
+                    placeholder="ex: SARL, SAS, SA..."
                     value={formData.legalForm}
                     onChange={(e) => setFormData({ ...formData, legalForm: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
@@ -265,6 +351,7 @@ export default function OnboardingPage() {
                   </label>
                   <input
                     type="text"
+                    placeholder="ex: 50000"
                     value={formData.capital}
                     onChange={(e) => setFormData({ ...formData, capital: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
@@ -273,36 +360,82 @@ export default function OnboardingPage() {
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Adresse du siège social *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     SIRET
                   </label>
                   <input
                     type="text"
+                    placeholder="14 chiffres"
                     value={formData.siret}
                     onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
                   />
                 </div>
 
-                <div>
+                {/* Adresse du siège social (découpée) */}
+                <div className="col-span-2 border-t pt-4 mt-2">
+                  <p className="text-sm font-medium text-gray-900 mb-3">Adresse du siège social</p>
+                </div>
+
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ville d'immatriculation
+                    Adresse *
                   </label>
                   <input
                     type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="Numéro et nom de rue"
+                    value={formData.companyAddress}
+                    onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Code postal *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="75001"
+                    value={formData.companyPostalCode}
+                    onChange={(e) => setFormData({ ...formData, companyPostalCode: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ville *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Paris"
+                    value={formData.companyCity}
+                    onChange={(e) => setFormData({ ...formData, companyCity: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Département
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ex: Paris, Hauts-de-Seine..."
+                    value={formData.companyDepartment}
+                    onChange={(e) => setFormData({ ...formData, companyDepartment: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pays *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.companyCountry}
+                    onChange={(e) => setFormData({ ...formData, companyCountry: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
                   />
                 </div>
@@ -335,25 +468,39 @@ export default function OnboardingPage() {
               </p>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom et prénom *
+                    Prénom *
                   </label>
                   <input
                     type="text"
-                    value={formData.representativeName}
-                    onChange={(e) => setFormData({ ...formData, representativeName: e.target.value })}
+                    placeholder="Jean"
+                    value={formData.representativeFirstName}
+                    onChange={(e) => setFormData({ ...formData, representativeFirstName: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Dupont"
+                    value={formData.representativeLastName}
+                    onChange={(e) => setFormData({ ...formData, representativeLastName: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Fonction *
                   </label>
                   <input
                     type="text"
-                    placeholder="ex: Directeur Général"
+                    placeholder="ex: Directeur Général, Président..."
                     value={formData.representativeTitle}
                     onChange={(e) => setFormData({ ...formData, representativeTitle: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
@@ -362,22 +509,24 @@ export default function OnboardingPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
+                    Email professionnel *
                   </label>
                   <input
                     type="email"
+                    placeholder="jean.dupont@entreprise.com"
                     value={formData.representativeEmail}
                     onChange={(e) => setFormData({ ...formData, representativeEmail: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Téléphone
+                    Téléphone *
                   </label>
                   <input
                     type="tel"
+                    placeholder="+33 6 12 34 56 78"
                     value={formData.representativePhone}
                     onChange={(e) => setFormData({ ...formData, representativePhone: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg"
@@ -394,7 +543,8 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   onClick={() => setStep(4)}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all"
+                  disabled={!formData.representativeFirstName || !formData.representativeLastName || !formData.representativeEmail || !formData.representativeTitle}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continuer
                 </button>
@@ -534,12 +684,28 @@ export default function OnboardingPage() {
 
               <div className="bg-gray-50 p-6 rounded-lg mb-6">
                 <h3 className="font-bold mb-4">Récapitulatif</h3>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Entreprise :</strong> {formData.companyName}</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <div className="col-span-2 border-b pb-2 mb-2">
+                    <p className="text-xs text-gray-500 font-medium uppercase">Entreprise</p>
+                  </div>
+                  <p><strong>Raison sociale :</strong> {formData.companyName}</p>
                   <p><strong>TVA :</strong> {formData.vatNumber}</p>
-                  <p><strong>Représentant :</strong> {formData.representativeName}</p>
+                  <p><strong>SIRET :</strong> {formData.siret}</p>
+                  <p><strong>Forme juridique :</strong> {formData.legalForm || 'Non renseignée'}</p>
+                  <p className="col-span-2"><strong>Adresse :</strong> {formData.companyAddress}, {formData.companyPostalCode} {formData.companyCity}</p>
+
+                  <div className="col-span-2 border-b pb-2 mb-2 mt-3">
+                    <p className="text-xs text-gray-500 font-medium uppercase">Représentant légal</p>
+                  </div>
+                  <p><strong>Nom :</strong> {formData.representativeFirstName} {formData.representativeLastName}</p>
+                  <p><strong>Fonction :</strong> {formData.representativeTitle}</p>
                   <p><strong>Email :</strong> {formData.representativeEmail}</p>
-                  <p><strong>Abonnement :</strong> {formData.subscriptionType}</p>
+                  <p><strong>Téléphone :</strong> {formData.representativePhone}</p>
+
+                  <div className="col-span-2 border-b pb-2 mb-2 mt-3">
+                    <p className="text-xs text-gray-500 font-medium uppercase">Abonnement</p>
+                  </div>
+                  <p><strong>Type :</strong> {formData.subscriptionType}</p>
                   <p><strong>Durée :</strong> {formData.duration} mois</p>
                 </div>
               </div>
