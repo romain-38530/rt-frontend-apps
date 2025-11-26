@@ -44,7 +44,12 @@ export default function OnboardingPage() {
       thirdPartyConnection: false
     },
     // Étape 5 : Paiement
-    paymentMethod: 'card'
+    paymentMethod: 'card',
+    // Informations carte bancaire
+    cardNumber: '',
+    cardName: '',
+    cardExpiry: '',
+    cardCvv: ''
   });
 
   // Auto-validation TVA avec debounce
@@ -555,196 +560,294 @@ export default function OnboardingPage() {
           {/* Étape 4 : Type d'abonnement */}
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold mb-4">Choisissez votre espace professionnel</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-2xl font-bold mb-4 text-center">Choisissez votre espace professionnel</h2>
+              <p className="text-gray-600 mb-8 text-center">
                 Sélectionnez l'abonnement qui correspond à votre activité. Chaque espace est conçu pour répondre aux besoins spécifiques de votre métier.
               </p>
 
               {/* Cartes d'abonnement */}
-              <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
                 {/* Industriel */}
                 <div
-                  onClick={() => setFormData({ ...formData, subscriptionType: 'industriel' })}
-                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  className={`relative bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all hover:shadow-xl ${
                     formData.subscriptionType === 'industriel'
-                      ? 'border-orange-500 bg-orange-50'
+                      ? 'border-orange-500 shadow-lg'
                       : 'border-gray-200 hover:border-orange-300'
                   }`}
                 >
-                  {formData.subscriptionType === 'industriel' && (
-                    <div className="absolute top-4 right-4">
-                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Espace Industriel</h3>
+                    <div className="mb-2">
+                      <p className="text-5xl font-extrabold text-gray-900">499€</p>
+                      <p className="text-gray-500 text-sm">/mois</p>
                     </div>
-                  )}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Espace Industriel</h3>
-                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                    <p className="text-sm text-orange-600 font-semibold">5 988€ - Facturé annuellement</p>
                   </div>
-                  <ul className="space-y-2 mb-4">
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Gestion complète des commandes transport</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Affrètement intelligent avec IA</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Tableau de bord analytics</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Intégration ERP (SAP, Sage, Odoo)</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Support prioritaire</span>
-                    </li>
-                  </ul>
-                  <p className="text-xs text-gray-500">Idéal pour les industriels expéditeurs</p>
+
+                  <button
+                    onClick={() => setFormData({ ...formData, subscriptionType: 'industriel' })}
+                    className={`w-full py-3 rounded-xl font-bold transition-all mb-6 ${
+                      formData.subscriptionType === 'industriel'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {formData.subscriptionType === 'industriel' ? '✓ Sélectionné' : 'Choisir ce forfait'}
+                  </button>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-xs font-bold text-gray-900 uppercase mb-4">Fonctionnalités</p>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Gestion complète des commandes transport</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Affrètement intelligent avec IA</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Tableau de bord analytics</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Intégration ERP (SAP, Sage, Odoo)</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Support prioritaire</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 text-center">Idéal pour les industriels expéditeurs</p>
+                  </div>
                 </div>
 
                 {/* Transporteur Premium */}
                 <div
-                  onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_premium' })}
-                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  className={`relative bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all hover:shadow-xl ${
                     formData.subscriptionType === 'transporteur_premium'
-                      ? 'border-orange-500 bg-orange-50'
+                      ? 'border-orange-500 shadow-lg'
                       : 'border-gray-200 hover:border-orange-300'
                   }`}
                 >
-                  {formData.subscriptionType === 'transporteur_premium' && (
-                    <div className="absolute top-4 right-4">
-                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Transporteur Premium</h3>
+                    <div className="mb-2">
+                      <p className="text-5xl font-extrabold text-gray-900">299€</p>
+                      <p className="text-gray-500 text-sm">/mois</p>
                     </div>
-                  )}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Transporteur Premium</h3>
-                    <p className="text-3xl font-extrabold text-orange-600">299€<span className="text-lg text-gray-500">/mois</span></p>
+                    <p className="text-sm text-orange-600 font-semibold">3 588€ - Facturé annuellement</p>
                   </div>
-                  <ul className="space-y-2 mb-4">
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Réception commandes clients</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Planning optimisé des tournées</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Suivi en temps réel des livraisons</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>POD électronique (photos, signature)</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Application mobile chauffeur</span>
-                    </li>
-                  </ul>
-                  <p className="text-xs text-gray-500">Pour PME de transport (5-50 camions)</p>
+
+                  <button
+                    onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_premium' })}
+                    className={`w-full py-3 rounded-xl font-bold transition-all mb-6 ${
+                      formData.subscriptionType === 'transporteur_premium'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {formData.subscriptionType === 'transporteur_premium' ? '✓ Sélectionné' : 'Choisir ce forfait'}
+                  </button>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-xs font-bold text-gray-900 uppercase mb-4">Fonctionnalités</p>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Réception commandes clients</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Planning optimisé des tournées</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Suivi en temps réel des livraisons</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">POD électronique (photos, signature)</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Application mobile chauffeur</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 text-center">Pour PME de transport (5-50 camions)</p>
+                  </div>
                 </div>
 
-                {/* Transporteur Pro */}
+                {/* Transporteur Pro - FAVORIS */}
                 <div
-                  onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_pro' })}
-                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  className={`relative bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all hover:shadow-xl ${
                     formData.subscriptionType === 'transporteur_pro'
-                      ? 'border-orange-500 bg-orange-50'
+                      ? 'border-orange-500 shadow-lg'
                       : 'border-gray-200 hover:border-orange-300'
                   }`}
                 >
-                  <div className="absolute top-2 right-2">
-                    <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-bold rounded-full">
-                      RECOMMANDÉ
+                  {/* Badge FAVORIS */}
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1 bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg">
+                      ⭐ FAVORIS
                     </span>
                   </div>
-                  {formData.subscriptionType === 'transporteur_pro' && (
-                    <div className="absolute top-4 right-4 mt-8">
-                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+
+                  <div className="text-center mb-6 mt-2">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Transporteur Pro</h3>
+                    <div className="mb-2">
+                      <p className="text-5xl font-extrabold text-gray-900">499€</p>
+                      <p className="text-gray-500 text-sm">/mois</p>
                     </div>
-                  )}
-                  <div className="mb-4 mt-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Transporteur Pro</h3>
-                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                    <p className="text-sm text-orange-600 font-semibold">5 988€ - Facturé annuellement</p>
                   </div>
-                  <ul className="space-y-2 mb-4">
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Toutes les fonctionnalités Premium</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>TMS complet (gestion flotte avancée)</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Connectivité télématique (GPS, capteurs)</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Facturation et comptabilité intégrées</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>API et intégrations illimitées</span>
-                    </li>
-                  </ul>
-                  <p className="text-xs text-gray-500">Pour entreprises de transport (50+ camions)</p>
+
+                  <button
+                    onClick={() => setFormData({ ...formData, subscriptionType: 'transporteur_pro' })}
+                    className={`w-full py-3 rounded-xl font-bold transition-all mb-6 ${
+                      formData.subscriptionType === 'transporteur_pro'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {formData.subscriptionType === 'transporteur_pro' ? '✓ Sélectionné' : 'Choisir ce forfait'}
+                  </button>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-xs font-bold text-gray-900 uppercase mb-4">Fonctionnalités</p>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Toutes les fonctionnalités Premium</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">TMS complet (gestion flotte avancée)</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Connectivité télématique (GPS, capteurs)</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Facturation et comptabilité intégrées</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">API et intégrations illimitées</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 text-center">Pour entreprises de transport (50+ camions)</p>
+                  </div>
                 </div>
 
-                {/* Logisticien */}
+                {/* Logisticien Premium */}
                 <div
-                  onClick={() => setFormData({ ...formData, subscriptionType: 'logisticien_premium' })}
-                  className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  className={`relative bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all hover:shadow-xl ${
                     formData.subscriptionType === 'logisticien_premium'
-                      ? 'border-orange-500 bg-orange-50'
+                      ? 'border-orange-500 shadow-lg'
                       : 'border-gray-200 hover:border-orange-300'
                   }`}
                 >
-                  {formData.subscriptionType === 'logisticien_premium' && (
-                    <div className="absolute top-4 right-4">
-                      <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Logisticien Premium</h3>
+                    <div className="mb-2">
+                      <p className="text-5xl font-extrabold text-gray-900">499€</p>
+                      <p className="text-gray-500 text-sm">/mois</p>
                     </div>
-                  )}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Logisticien Premium</h3>
-                    <p className="text-3xl font-extrabold text-orange-600">499€<span className="text-lg text-gray-500">/mois</span></p>
+                    <p className="text-sm text-orange-600 font-semibold">5 988€ - Facturé annuellement</p>
                   </div>
-                  <ul className="space-y-2 mb-4">
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>WMS complet (gestion d'entrepôt)</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Gestion multi-sites et multi-clients</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Prévisions IA de stock et flux</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Marketplace de palettes</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Reporting avancé</span>
-                    </li>
-                  </ul>
-                  <p className="text-xs text-gray-500">Pour 3PL et plateformes logistiques</p>
+
+                  <button
+                    onClick={() => setFormData({ ...formData, subscriptionType: 'logisticien_premium' })}
+                    className={`w-full py-3 rounded-xl font-bold transition-all mb-6 ${
+                      formData.subscriptionType === 'logisticien_premium'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {formData.subscriptionType === 'logisticien_premium' ? '✓ Sélectionné' : 'Choisir ce forfait'}
+                  </button>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-xs font-bold text-gray-900 uppercase mb-4">Fonctionnalités</p>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">WMS complet (gestion d'entrepôt)</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Gestion multi-sites et multi-clients</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Prévisions IA de stock et flux</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Marketplace de palettes</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm">
+                        <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-gray-700">Reporting avancé</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 text-center">Pour 3PL et plateformes logistiques</p>
+                  </div>
                 </div>
               </div>
 
@@ -968,6 +1071,115 @@ export default function OnboardingPage() {
                   <option value="transfer">Virement bancaire</option>
                 </select>
               </div>
+
+              {/* Formulaire de carte bancaire */}
+              {formData.paymentMethod === 'card' && (
+                <div className="bg-gradient-to-br from-gray-50 to-orange-50 border-2 border-orange-200 rounded-xl p-6 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-900">Informations de paiement</h3>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-xs text-gray-600 font-medium">Paiement sécurisé SSL</span>
+                    </div>
+                  </div>
+
+                  {/* Logos cartes acceptées */}
+                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-orange-200">
+                    <span className="text-xs text-gray-600 font-medium">Cartes acceptées :</span>
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 bg-white rounded border border-gray-200 text-xs font-bold text-blue-600">VISA</div>
+                      <div className="px-2 py-1 bg-white rounded border border-gray-200 text-xs font-bold text-orange-600">Mastercard</div>
+                      <div className="px-2 py-1 bg-white rounded border border-gray-200 text-xs font-bold text-blue-800">Amex</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Numéro de carte */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Numéro de carte *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="1234 5678 9012 3456"
+                        value={formData.cardNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                          const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                          setFormData({ ...formData, cardNumber: formatted });
+                        }}
+                        maxLength={19}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+
+                    {/* Nom sur la carte */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom sur la carte *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="JEAN DUPONT"
+                        value={formData.cardName}
+                        onChange={(e) => setFormData({ ...formData, cardName: e.target.value.toUpperCase() })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+
+                    {/* Date expiration et CVV */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date d'expiration *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="MM/YY"
+                          value={formData.cardExpiry}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            if (value.length >= 2) {
+                              value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                            }
+                            setFormData({ ...formData, cardExpiry: value });
+                          }}
+                          maxLength={5}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          CVV *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="123"
+                          value={formData.cardCvv}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            setFormData({ ...formData, cardCvv: value });
+                          }}
+                          maxLength={3}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-start gap-2 text-xs text-gray-600 bg-white rounded-lg p-3">
+                    <svg className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <p>
+                      Votre première facturation sera effectuée immédiatement après validation du contrat.
+                      Les prélèvements suivants seront automatiques chaque mois à la même date.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="mb-6">
                 <label className="flex items-start">
