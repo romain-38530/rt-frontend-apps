@@ -18,6 +18,9 @@
     "build": "tsc",
     "dev": "tsc --watch"
   },
+  "dependencies": {
+    "@rt/contracts": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.3.3"
   }
