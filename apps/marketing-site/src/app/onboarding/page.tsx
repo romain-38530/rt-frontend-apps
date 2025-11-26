@@ -155,11 +155,21 @@ export default function OnboardingPage() {
       if (data.success) {
         router.push(`/onboarding/success?requestId=${data.requestId}&email=${encodeURIComponent(data.email)}`);
       } else {
-        const errorMessage = data.error?.message || data.error || 'Erreur lors de la soumission';
+        // Gestion des codes d'erreur spécifiques
+        let errorMessage = data.error?.message || data.error || 'Erreur lors de la soumission';
+
+        if (response.status === 409 || data.error?.code === 'DUPLICATE_REQUEST') {
+          errorMessage = `Cette entreprise (TVA: ${formData.vatNumber}) est déjà enregistrée dans notre système. Utilisez un autre numéro de TVA ou contactez le support si vous pensez qu'il s'agit d'une erreur.`;
+        } else if (response.status === 400) {
+          errorMessage = data.error?.message || 'Données invalides. Veuillez vérifier vos informations.';
+        } else if (response.status === 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer dans quelques instants.';
+        }
+
         setError(errorMessage);
       }
     } catch (err) {
-      setError('Erreur de connexion au serveur');
+      setError('Erreur de connexion au serveur. Vérifiez votre connexion internet.');
     } finally {
       setLoading(false);
     }
@@ -1190,6 +1200,27 @@ export default function OnboardingPage() {
                   </span>
                 </label>
               </div>
+
+              {/* Affichage des erreurs */}
+              {error && (
+                <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-red-900 font-bold text-lg mb-1">Erreur</p>
+                      <p className="text-red-800 text-sm">{error}</p>
+                      {error.includes('TVA') || error.includes('DUPLICATE') || error.includes('déjà') ? (
+                        <p className="text-red-700 text-xs mt-2">
+                          💡 Ce numéro de TVA est déjà enregistré dans notre système.
+                          Si vous pensez qu'il s'agit d'une erreur, contactez notre support.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-4">
                 <button
