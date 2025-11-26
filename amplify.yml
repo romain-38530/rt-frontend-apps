@@ -60,7 +60,12 @@ applications:
 
         build:
           commands:
+            # Build the app with Next.js static export
             - pnpm run build
+            # Remove .next directory to prevent Amplify from detecting as SSR app
+            - rm -rf .next
+            # Create required-server-files.json for AWS Amplify
+            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
 
       artifacts:
         baseDirectory: out
