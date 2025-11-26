@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 // Types
@@ -51,8 +51,8 @@ const DOCUMENT_TYPES = {
 };
 
 export default function CarrierDetailsPage() {
-  const params = useParams();
-  const carrierId = params.id as string;
+  const searchParams = useSearchParams();
+  const carrierId = searchParams.get('id') || '';
 
   const [carrier, setCarrier] = useState<Carrier | null>(null);
   const [loading, setLoading] = useState(true);

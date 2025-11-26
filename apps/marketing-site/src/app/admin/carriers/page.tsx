@@ -297,7 +297,7 @@ export default function CarriersAdminPage() {
                       </td>
                       <td className="px-6 py-4">
                         <Link
-                          href={`/admin/carriers/${carrier._id}`}
+                          href={`/admin/carriers/details?id=${carrier._id}`}
                           className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                         >
                           Voir détails →

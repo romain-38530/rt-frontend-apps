@@ -49,7 +49,7 @@ export default function InviteCarrierPage() {
       if (data.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push(`/admin/carriers/${data.carrierId}`);
+          router.push(`/admin/carriers/details?id=${data.carrierId}`);
         }, 2000);
       } else {
         setError(data.error?.message || 'Erreur lors de l\'invitation');
