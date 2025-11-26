@@ -29,3 +29,31 @@ export { colors, subscriptionColors } from './styles/colors';
 
 // Hooks
 export { useSubscription } from './hooks/useSubscription';
+
+// Orders Components
+export { CreateOrderForm, OrdersList } from './components/Orders';
+export type { CreateOrderFormProps } from './components/Orders/CreateOrderForm';
+export type { OrdersListProps } from './components/Orders/OrdersList';
+
+// Notifications Components
+export { NotificationBell, NotificationPanel } from './Notifications';
+export type { Notification } from './Notifications';
+
+// Tracking Components
+export { MapView, TrackingPanel } from './components/Tracking';
+
+// Appointments Components
+export { Calendar } from './components/Appointments';
+
+// Documents Components
+export { FileUpload, DocumentsList, DocumentViewer } from './components/Documents';
+
+// Scoring Components
+export { ScoreCard, PerformanceChart, CarrierRanking, AnalyticsDashboard } from './components/Scoring';
+
+// Affret.IA Components
+export { CarrierSearch, OffersList } from './components/Affret';
+
+// Timeline Components
+export { Timeline } from './components/Timeline';
+export type { TimelineEvent } from './components/Timeline';

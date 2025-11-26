@@ -1,7 +1,7 @@
 {
   "name": "rt-frontend-apps",
   "version": "1.0.0",
-  "description": "Frontend applications for RT Technologie platform",
+  "description": "Frontend applications for RT Technologie platform - SYMPHONI.A",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -13,7 +13,21 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "typecheck": "turbo run typecheck",
+    "dev:industry": "pnpm --filter @rt/web-industry dev",
+    "dev:transporter": "pnpm --filter @rt/web-transporter dev",
+    "dev:logistician": "pnpm --filter @rt/web-logistician dev",
+    "dev:recipient": "pnpm --filter @rt/web-recipient dev",
+    "dev:supplier": "pnpm --filter @rt/web-supplier dev",
+    "dev:forwarder": "pnpm --filter @rt/web-forwarder dev",
+    "dev:admin": "pnpm --filter @rt/backoffice-admin dev",
+    "build:packages": "pnpm --filter @rt/utils build && pnpm --filter @rt/contracts build && pnpm --filter @repo/ui-components build",
+    "setup": "bash setup.sh"
   },
   "devDependencies": {
     "bcryptjs": "^3.0.3",
@@ -25,5 +39,14 @@
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.555.0",
+    "react-hot-toast": "^2.6.0",
+    "socket.io-client": "^4.8.1",
+    "zod": "^4.1.13"
   }
 }
