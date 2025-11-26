@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -50,7 +50,7 @@ const DOCUMENT_TYPES = {
   id_card: 'Pièce d\'identité'
 };
 
-export default function CarrierDetailsPage() {
+function CarrierDetailsContent() {
   const searchParams = useSearchParams();
   const carrierId = searchParams.get('id') || '';
 
@@ -372,5 +372,20 @@ export default function CarrierDetailsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CarrierDetailsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <CarrierDetailsContent />
+    </Suspense>
   );
 }
