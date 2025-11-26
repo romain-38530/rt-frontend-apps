@@ -8,27 +8,29 @@ applications:
             - echo "Installing pnpm globally..."
             - npm install -g pnpm@8.15.4
             - echo "Installing all workspace dependencies..."
+            - cd ../..
             - pnpm install
             - echo "Building shared packages..."
-            - cd ../../packages/contracts && pnpm run build && cd ../..
-            - cd ../../packages/utils && pnpm run build && cd ../..
-            - cd ../../packages/ui-components && pnpm run build && cd ../..
+            - cd packages/contracts && pnpm run build && cd ../..
+            - cd packages/utils && pnpm run build && cd ../..
+            - cd packages/ui-components && pnpm run build && cd ../..
+            - echo "Returning to app directory..."
+            - cd apps/web-industry
         build:
           commands:
             - echo "Building web-industry app..."
-            - cd apps/web-industry
             - pnpm run build
       artifacts:
-        baseDirectory: apps/web-industry/.next
+        baseDirectory: .next
         files:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/*
+          - ../../node_modules/**/*
           - .next/cache/**/*
-          - packages/contracts/node_modules/**/*
-          - packages/utils/node_modules/**/*
-          - packages/ui-components/node_modules/**/*
+          - ../../packages/contracts/node_modules/**/*
+          - ../../packages/utils/node_modules/**/*
+          - ../../packages/ui-components/node_modules/**/*
     environment:
       variables:
         # API URLs - À configurer dans AWS Amplify Console
