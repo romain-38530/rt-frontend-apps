@@ -445,6 +445,9 @@ importers:
       '@rt/contracts':
         specifier: ^1.0.0
         version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: ^1.0.0
+        version: link:../../packages/ui-components
       '@rt/utils':
         specifier: ^1.0.0
         version: link:../../packages/utils

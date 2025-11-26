@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { OrdersService } from '@rt/utils/lib/services/orders-service';
-import type { ImportResult } from '@rt/contracts/src/types/orders';
+import type { ImportResult } from '@rt/contracts';
 
 interface ImportOrdersFormProps {
   onSuccess?: (result: ImportResult) => void;

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
-import type { DocumentType } from '@rt/contracts/src/types/documents';
+import type { DocumentType } from '@rt/contracts';
 import DocumentsService from '@rt/utils/lib/services/documents-service';
 
 interface FileUploadProps {

@@ -10,8 +10,8 @@ import { isAuthenticated } from '../../../lib/auth';
 import { FileUpload, DocumentsList, DocumentViewer } from '@rt/ui-components';
 import DocumentsService from '@rt/utils/lib/services/documents-service';
 import OrdersService from '@rt/utils/lib/services/orders-service';
-import type { Document, DocumentStats } from '@rt/contracts/src/types/documents';
-import type { Order } from '@rt/contracts/src/types/orders';
+import type { Document, DocumentStats } from '@rt/contracts';
+import type { Order } from '@rt/contracts';
 
 export default function DocumentsPage() {
   const router = useRouter();

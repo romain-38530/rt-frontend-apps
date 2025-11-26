@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import type { CarrierAnalytics, ScorePeriod } from '@rt/contracts/src/types/scoring';
+import type { CarrierAnalytics, ScorePeriod } from '@rt/contracts';
 import ScoringService from '@rt/utils/lib/services/scoring-service';
 import { ScoreCard } from './ScoreCard';
 import { PerformanceChart } from './PerformanceChart';

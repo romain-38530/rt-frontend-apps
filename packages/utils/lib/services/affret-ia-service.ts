@@ -20,7 +20,7 @@ import type {
   SearchHistory,
   OfferStatus,
   BidStatus,
-} from '@rt/contracts/src/types/affret';
+} from '@rt/contracts';
 
 // Client API pour Affret.IA
 const affretApi = createApiClient({

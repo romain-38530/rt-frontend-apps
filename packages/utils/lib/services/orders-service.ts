@@ -13,7 +13,7 @@ import type {
   OrderTemplate,
   PricingEstimate,
   ImportResult,
-} from '@rt/contracts/src/types/orders';
+} from '@rt/contracts';
 
 export class OrdersService {
   /**
@@ -78,7 +78,7 @@ export class OrdersService {
   static async exportOrders(filters?: OrderFilters): Promise<Blob> {
     // Cette méthode retourne un Blob pour téléchargement
     const params = new URLSearchParams(filters as any);
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_ORDERS_API_URL}/orders/export?${params}`,

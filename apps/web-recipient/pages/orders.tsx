@@ -14,7 +14,7 @@ import type {
   CreateOrderInput,
   OrderFilters,
   PaginatedOrders,
-} from '@rt/contracts/src/types/orders';
+} from '@rt/contracts';
 
 export default function OrdersPage() {
   const router = useRouter();

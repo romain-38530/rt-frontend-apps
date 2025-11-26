@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import type { Order, OrderStatus, OrderFilters } from '@rt/contracts/src/types/orders';
+import type { Order, OrderStatus, OrderFilters } from '@rt/contracts';
 
-interface OrdersListProps {
+export interface OrdersListProps {
   orders: Order[];
   total: number;
   page: number;

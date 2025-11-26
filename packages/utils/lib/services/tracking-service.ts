@@ -19,7 +19,7 @@ import type {
   TrackingStats,
   TrackingSettings,
   TrackingAlert,
-} from '@rt/contracts/src/types/tracking';
+} from '@rt/contracts';
 
 export class TrackingService {
   /**
@@ -268,7 +268,7 @@ export class TrackingService {
    * Obtenir la couleur du niveau de trafic
    */
   static getTrafficColor(level: TrafficInfo['level']): string {
-    const colors = {
+    const colors: Record<string, string> = {
       free: '#10b981',
       light: '#84cc16',
       moderate: '#f59e0b',
@@ -282,7 +282,7 @@ export class TrackingService {
    * Obtenir l'icône du type d'alerte
    */
   static getAlertIcon(type: TrackingAlert['type']): string {
-    const icons = {
+    const icons: Record<string, string> = {
       delay: '⏰',
       route_deviation: '🛣️',
       speed_limit: '🚨',

@@ -20,7 +20,7 @@ import type {
   ScoringWeights,
   ScoringCriterion,
   ScorePeriod,
-} from '@rt/contracts/src/types/scoring';
+} from '@rt/contracts';
 
 // Client API pour le scoring
 const scoringApi = createApiClient({

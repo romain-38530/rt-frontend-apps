@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import type { CalendarEvent } from '@rt/contracts/src/types/appointments';
+import type { CalendarEvent } from '@rt/contracts';
 
 interface CalendarProps {
   events: CalendarEvent[];

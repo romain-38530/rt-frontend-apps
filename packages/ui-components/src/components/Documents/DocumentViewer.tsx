@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import type { Document } from '@rt/contracts/src/types/documents';
+import type { Document } from '@rt/contracts';
 import DocumentsService from '@rt/utils/lib/services/documents-service';
 
 interface DocumentViewerProps {

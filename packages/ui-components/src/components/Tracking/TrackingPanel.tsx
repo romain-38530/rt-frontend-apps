@@ -11,7 +11,7 @@ import type {
   TrafficInfo,
   TrackingAlert,
   TrackingLevel,
-} from '@rt/contracts/src/types/tracking';
+} from '@rt/contracts';
 
 interface TrackingPanelProps {
   session: TrackingSession;

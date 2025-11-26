@@ -14,7 +14,7 @@ import type {
   RankingList,
   CarrierScore,
   ScorePeriod,
-} from '@rt/contracts/src/types/scoring';
+} from '@rt/contracts';
 
 export default function CarriersAnalyticsPage() {
   const router = useRouter();

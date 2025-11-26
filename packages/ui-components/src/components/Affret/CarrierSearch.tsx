@@ -8,7 +8,7 @@ import type {
   CarrierSearchRequest,
   CarrierSearchResult,
   AffretCarrier,
-} from '@rt/contracts/src/types/affret';
+} from '@rt/contracts';
 import AffretIAService from '@rt/utils/lib/services/affret-ia-service';
 
 interface CarrierSearchProps {

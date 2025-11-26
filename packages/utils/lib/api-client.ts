@@ -40,9 +40,9 @@ class ApiClient {
     const url = `${this.baseURL}${path}`;
     const token = this.getToken();
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (token) {
@@ -70,8 +70,10 @@ class ApiClient {
         try {
           const errorData = await response.json();
           error.details = errorData;
-          error.message = errorData.message || error.message;
-          error.code = errorData.code;
+          if (errorData && typeof errorData === 'object') {
+            error.message = (errorData as any).message || error.message;
+            error.code = (errorData as any).code;
+          }
         } catch {
           // Response body n'est pas du JSON
         }
@@ -84,7 +86,7 @@ class ApiClient {
         return {} as T;
       }
 
-      return await response.json();
+      return await response.json() as T;
     } catch (error: any) {
       clearTimeout(timeoutId);
 
@@ -156,7 +158,7 @@ class ApiClient {
     }
 
     const token = this.getToken();
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -175,7 +177,7 @@ class ApiClient {
       throw error;
     }
 
-    return await response.json();
+    return await response.json() as T;
   }
 }
 

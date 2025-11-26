@@ -2,7 +2,9 @@
  * Types TypeScript pour le système de tracking SYMPHONI.A
  */
 
-export type TrackingLevel = 'basic' | 'gps' | 'premium';
+import type { TrackingLevel } from './orders';
+
+export type { TrackingLevel };
 
 export type TrackingStatus =
   | 'pending'

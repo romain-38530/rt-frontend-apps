@@ -19,7 +19,7 @@ import type {
   BulkExportResponse,
   DocumentType,
   DocumentStatus,
-} from '@rt/contracts/src/types/documents';
+} from '@rt/contracts';
 
 // Client API pour les documents
 const documentsApi = createApiClient({
@@ -76,11 +76,7 @@ export class DocumentsService {
       formData.append('performOCR', String(request.performOCR));
     }
 
-    return await documentsApi.post<Document>('/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await documentsApi.post<Document>('/documents/upload', formData);
   }
 
   /**
@@ -144,7 +140,9 @@ export class DocumentsService {
    */
   static async downloadDocument(documentId: string): Promise<void> {
     const url = await this.getDownloadUrl(documentId);
-    window.open(url, '_blank');
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
   }
 
   /**

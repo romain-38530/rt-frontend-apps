@@ -19,7 +19,7 @@ import type {
   RecurrencePattern,
   AppointmentReminder,
   CalendarEvent,
-} from '@rt/contracts/src/types/appointments';
+} from '@rt/contracts';
 
 // Client API pour les appointments
 const appointmentsApi = createApiClient({
@@ -296,7 +296,7 @@ export class AppointmentsService {
    * Obtenir la couleur d'un statut
    */
   static getStatusColor(status: Appointment['status']): string {
-    const colors = {
+    const colors: Record<string, string> = {
       pending: '#f59e0b',
       proposed: '#3b82f6',
       confirmed: '#10b981',
@@ -312,7 +312,7 @@ export class AppointmentsService {
    * Obtenir le label d'un statut
    */
   static getStatusLabel(status: Appointment['status']): string {
-    const labels = {
+    const labels: Record<string, string> = {
       pending: 'En attente',
       proposed: 'Proposé',
       confirmed: 'Confirmé',

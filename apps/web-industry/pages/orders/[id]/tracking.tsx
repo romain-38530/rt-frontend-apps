@@ -15,8 +15,8 @@ import type {
   TrackingSession,
   TrackingPosition,
   MapMarker,
-} from '@rt/contracts/src/types/tracking';
-import type { Order } from '@rt/contracts/src/types/orders';
+} from '@rt/contracts';
+import type { Order } from '@rt/contracts';
 
 export default function TrackingPage() {
   const router = useRouter();

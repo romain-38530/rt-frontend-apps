@@ -33,9 +33,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`relative p-2 text-white hover:bg-white/20 rounded-lg transition-all ${className} ${
-        isRinging ? 'animate-wiggle' : ''
-      }`}
+      className={`relative p-2 text-white hover:bg-white/20 rounded-lg transition-all ${className}`}
+      style={{
+        animation: isRinging ? 'wiggle 0.5s ease-in-out 2' : undefined,
+      }}
       aria-label={`Notifications (${unreadCount} non lues)`}
     >
       {/* Icône cloche */}
@@ -55,7 +56,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
       {/* Badge de compteur */}
       {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse-slow">
+        <span
+          className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
+          style={{
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }}
+        >
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
@@ -64,21 +70,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       {unreadCount > 0 && (
         <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
       )}
-
-      {/* Styles inline pour l'animation wiggle */}
-      <style jsx>{`
-        @keyframes wiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-10deg); }
-          75% { transform: rotate(10deg); }
-        }
-        .animate-wiggle {
-          animation: wiggle 0.5s ease-in-out 2;
-        }
-        .animate-pulse-slow {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-      `}</style>
     </button>
   );
 };

@@ -8,7 +8,7 @@ import type {
   Document,
   DocumentType,
   DocumentStatus,
-} from '@rt/contracts/src/types/documents';
+} from '@rt/contracts';
 import DocumentsService from '@rt/utils/lib/services/documents-service';
 
 interface DocumentsListProps {

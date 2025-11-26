@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import OrdersService from '@rt/utils/lib/services/orders-service';
-import type { Order, OrderEvent, OrderStatus } from '@rt/contracts/src/types/orders';
+import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
   draft: { label: 'Brouillon', color: '#9ca3af', icon: '📝' },

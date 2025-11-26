@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import type { AffretOffer } from '@rt/contracts/src/types/affret';
+import type { AffretOffer } from '@rt/contracts';
 import AffretIAService from '@rt/utils/lib/services/affret-ia-service';
 
 interface OffersListProps {

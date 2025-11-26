@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import type { CarrierScore, ScoringCriterion } from '@rt/contracts/src/types/scoring';
+import type { CarrierScore, ScoringCriterion } from '@rt/contracts';
 import ScoringService from '@rt/utils/lib/services/scoring-service';
 
 interface ScoreCardProps {

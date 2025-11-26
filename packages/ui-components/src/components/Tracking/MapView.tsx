@@ -9,7 +9,7 @@ import type {
   MapMarker,
   TrackingPosition,
   Route,
-} from '@rt/contracts/src/types/tracking';
+} from '@rt/contracts';
 
 interface MapViewProps {
   // Position actuelle du véhicule

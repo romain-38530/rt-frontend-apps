@@ -11,9 +11,9 @@ import type {
   Constraint,
   OrderDates,
   ConstraintType,
-} from '@rt/contracts/src/types/orders';
+} from '@rt/contracts';
 
-interface CreateOrderFormProps {
+export interface CreateOrderFormProps {
   onSubmit: (input: CreateOrderInput) => Promise<void>;
   onCancel: () => void;
   initialData?: Partial<CreateOrderInput>;
@@ -121,13 +121,13 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       setSelectedConstraints(selectedConstraints.filter((c) => c !== type));
       setFormData({
         ...formData,
-        constraints: formData.constraints.filter((c) => c.type !== type),
+        constraints: formData.constraints?.filter((c) => c.type !== type) || [],
       });
     } else {
       setSelectedConstraints([...selectedConstraints, type]);
       setFormData({
         ...formData,
-        constraints: [...formData.constraints, { type, description: '' }],
+        constraints: [...(formData.constraints || []), { type, description: '' }],
       });
     }
   };
