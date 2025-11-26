@@ -11,12 +11,10 @@ applications:
             - cd ../..
             - echo "Installing all workspace dependencies..."
             - pnpm install
-            - echo "Building shared packages..."
-            - cd packages/contracts && pnpm run build
-            - cd ../utils && pnpm run build
-            - cd ../ui-components && pnpm run build
+            - echo "Building all dependencies with Turbo (handles package dependencies automatically)..."
+            - pnpm turbo build --filter=@rt/web-industry^...
             - echo "Returning to app directory..."
-            - cd ../../apps/web-industry
+            - cd apps/web-industry
         build:
           commands:
             - echo "Building web-industry app..."
@@ -29,9 +27,7 @@ applications:
         paths:
           - ../../node_modules/**/*
           - .next/cache/**/*
-          - ../../packages/contracts/node_modules/**/*
-          - ../../packages/utils/node_modules/**/*
-          - ../../packages/ui-components/node_modules/**/*
+          - ../../.turbo/**/*
     environment:
       variables:
         # API URLs - À configurer dans AWS Amplify Console
