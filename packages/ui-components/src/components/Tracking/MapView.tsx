@@ -274,7 +274,7 @@ export const MapView: React.FC<MapViewProps> = ({
         {route && route.points.length > 1 && (
           <polyline
             points={route.points
-              .map((point) => {
+              .map((point: GeoLocation) => {
                 const x = ((point.longitude + 180) / 360) * 800;
                 const y = ((90 - point.latitude) / 180) * 600;
                 return `${x},${y}`;

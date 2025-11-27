@@ -121,7 +121,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       setSelectedConstraints(selectedConstraints.filter((c) => c !== type));
       setFormData({
         ...formData,
-        constraints: formData.constraints?.filter((c) => c.type !== type) || [],
+        constraints: formData.constraints?.filter((c: Constraint) => c.type !== type) || [],
       });
     } else {
       setSelectedConstraints([...selectedConstraints, type]);

@@ -65,7 +65,7 @@ export const CarrierRanking: React.FC<CarrierRankingProps> = ({
 
       {/* Liste complète */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {displayedCarriers.map((carrier) => (
+        {displayedCarriers.map((carrier: RankingType) => (
           <RankingRow
             key={carrier.carrierId}
             carrier={carrier}
@@ -76,7 +76,7 @@ export const CarrierRanking: React.FC<CarrierRankingProps> = ({
       </div>
 
       {/* Carrier de l'utilisateur (si hors top) */}
-      {ranking.userCarrier && !displayedCarriers.find((c) => c.carrierId === ranking.userCarrier!.carrierId) && (
+      {ranking.userCarrier && !displayedCarriers.find((c: RankingType) => c.carrierId === ranking.userCarrier!.carrierId) && (
         <>
           <div
             style={{

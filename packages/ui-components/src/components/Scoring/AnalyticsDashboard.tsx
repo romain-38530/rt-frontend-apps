@@ -213,7 +213,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             💪 Points forts
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {analytics.strengths.slice(0, 3).map((criterion) => {
+            {analytics.strengths.slice(0, 3).map((criterion: string) => {
               const score = scores.scores[criterion];
               return (
                 <div
@@ -258,7 +258,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             ⚠️ Points d'amélioration
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {analytics.weaknesses.slice(0, 3).map((criterion) => {
+            {analytics.weaknesses.slice(0, 3).map((criterion: string) => {
               const score = scores.scores[criterion];
               return (
                 <div
@@ -353,7 +353,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             💡 Recommandations
           </h3>
           <ul style={{ margin: 0, paddingLeft: '20px', color: '#92400e' }}>
-            {analytics.recommendations.map((recommendation, index) => (
+            {analytics.recommendations.map((recommendation: string, index: number) => (
               <li key={index} style={{ marginBottom: '8px', fontSize: '14px' }}>
                 {recommendation}
               </li>

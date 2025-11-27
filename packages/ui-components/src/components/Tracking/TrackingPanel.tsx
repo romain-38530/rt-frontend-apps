@@ -402,7 +402,7 @@ export const TrackingPanel: React.FC<TrackingPanelProps> = ({
               <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#6b7280' }}>
                 Incidents signalés :
               </div>
-              {session.traffic.incidents.map((incident, index) => (
+              {session.traffic.incidents.map((incident: { type: string; description: string }, index: number) => (
                 <div
                   key={index}
                   style={{
@@ -426,12 +426,12 @@ export const TrackingPanel: React.FC<TrackingPanelProps> = ({
       {session.alerts && session.alerts.length > 0 && (
         <div style={cardStyle}>
           <div style={sectionTitleStyle}>
-            ⚠️ Alertes ({session.alerts.filter((a) => !a.acknowledged).length} non lues)
+            ⚠️ Alertes ({session.alerts.filter((a: TrackingAlert) => !a.acknowledged).length} non lues)
           </div>
 
           {session.alerts
-            .filter((a) => !a.acknowledged)
-            .map((alert) => (
+            .filter((a: TrackingAlert) => !a.acknowledged)
+            .map((alert: TrackingAlert) => (
               <div
                 key={alert.id}
                 style={{
