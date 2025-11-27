@@ -20,7 +20,7 @@ applications:
             - echo "Building web-industry app..."
             - pnpm run build
       artifacts:
-        baseDirectory: .next
+        baseDirectory: out
         files:
           - '**/*'
       cache:
