@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import type { CarrierAnalytics, ScorePeriod } from '@rt/contracts';
+import type { CarrierAnalytics, ScorePeriod, ScoringCriterion } from '@rt/contracts';
 import ScoringService from '@rt/utils/lib/services/scoring-service';
 import { ScoreCard } from './ScoreCard';
 import { PerformanceChart } from './PerformanceChart';
@@ -213,7 +213,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             💪 Points forts
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {analytics.strengths.slice(0, 3).map((criterion: string) => {
+            {analytics.strengths.slice(0, 3).map((criterion: ScoringCriterion) => {
               const score = scores.scores[criterion];
               return (
                 <div
@@ -258,7 +258,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             ⚠️ Points d'amélioration
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {analytics.weaknesses.slice(0, 3).map((criterion: string) => {
+            {analytics.weaknesses.slice(0, 3).map((criterion: ScoringCriterion) => {
               const score = scores.scores[criterion];
               return (
                 <div
