@@ -587,7 +587,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                         onChange={() => {}}
                         style={{ width: '16px', height: '16px' }}
                       />
-                      <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                         {constraint.label}
                       </span>
                     </div>

@@ -28,17 +28,26 @@ applications:
           - ../../node_modules/**/*
           - .next/cache/**/*
           - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
     environment:
       variables:
-        # API URLs - À configurer dans AWS Amplify Console
-        NEXT_PUBLIC_API_URL: 'https://api.symphonia.com/api/v1'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://api.symphonia.com/orders/api/v1'
-        NEXT_PUBLIC_TRACKING_API_URL: 'https://api.symphonia.com/tracking/api/v1'
-        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://api.symphonia.com/appointments/api/v1'
-        NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://api.symphonia.com/documents/api/v1'
-        NEXT_PUBLIC_SCORING_API_URL: 'https://api.symphonia.com/scoring/api/v1'
-        NEXT_PUBLIC_AFFRET_API_URL: 'https://api.symphonia.com/affret/api/v1'
-        NEXT_PUBLIC_WS_URL: 'wss://ws.symphonia.com'
+        # API URLs - AWS Elastic Beanstalk
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-geo-tracking-api-prod.eba-3mi2pcfi.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com'
         # Build configuration
         NODE_VERSION: '20'
         PNPM_VERSION: '8.15.4'
