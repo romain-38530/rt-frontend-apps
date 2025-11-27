@@ -633,6 +633,12 @@ importers:
 
   packages/ui-components:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../utils
       react:
         specifier: ^18.2.0
         version: 18.2.0

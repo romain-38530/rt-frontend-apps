@@ -79,7 +79,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedConstraints, setSelectedConstraints] = useState<ConstraintType[]>(
-    initialData?.constraints?.map((c) => c.type) || []
+    initialData?.constraints?.map((c: Constraint) => c.type) || []
   );
 
   // Mise à jour des champs d'adresse
