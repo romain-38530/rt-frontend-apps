@@ -10,10 +10,9 @@ applications:
             - pnpm install --frozen-lockfile
         build:
           commands:
-            - cd apps/backoffice-admin
             - pnpm run build
       artifacts:
-        baseDirectory: apps/backoffice-admin/out
+        baseDirectory: out
         files:
           - '**/*'
       cache:
