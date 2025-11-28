@@ -1,6 +1,6 @@
 version: 1
 applications:
-  - appRoot: apps/web-industry
+  - appRoot: apps/marketing-site
     frontend:
       phases:
         preBuild:
@@ -12,12 +12,12 @@ applications:
             - echo "Installing all workspace dependencies..."
             - pnpm install
             - echo "Building all dependencies with Turbo (handles package dependencies automatically)..."
-            - pnpm turbo build --filter=@rt/web-industry^...
+            - pnpm turbo build --filter=@rt/marketing-site^...
             - echo "Returning to app directory..."
-            - cd apps/web-industry
+            - cd apps/marketing-site
         build:
           commands:
-            - echo "Building web-industry app..."
+            - echo "Building marketing-site app..."
             - pnpm run build
       artifacts:
         baseDirectory: out
@@ -39,15 +39,15 @@ applications:
             value: 'public, max-age=0, must-revalidate'
     environment:
       variables:
-        # API URLs - AWS Elastic Beanstalk
+        # API URLs - AWS Elastic Beanstalk (Updated 2025-11-28)
         NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
         NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-geo-tracking-api-prod.eba-3mi2pcfi.eu-central-1.elasticbeanstalk.com/api'
-        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-        NEXT_PUBLIC_WS_URL: 'ws://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
         # Build configuration
         NODE_VERSION: '20'
         PNPM_VERSION: '8.15.4'
