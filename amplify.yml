@@ -5,15 +5,13 @@ applications:
       phases:
         preBuild:
           commands:
-            - cd ../..
             - npm install -g pnpm@8.15.4
             - pnpm install --frozen-lockfile
         build:
           commands:
-            - cd apps/backoffice-admin
             - pnpm run build
       artifacts:
-        baseDirectory: apps/backoffice-admin/out
+        baseDirectory: out
         files:
           - '**/*'
       cache:
