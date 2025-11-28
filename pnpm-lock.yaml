@@ -405,6 +405,15 @@ importers:
 
   apps/web-forwarder:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.2.5
         version: 14.2.5(@babel/core@7.28.5)(react-dom@18.2.0)(react@18.2.0)
@@ -527,6 +536,15 @@ importers:
 
   apps/web-logistician:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.2.5
         version: 14.2.5(@babel/core@7.28.5)(react-dom@18.2.0)(react@18.2.0)
@@ -552,6 +570,15 @@ importers:
 
   apps/web-recipient:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.2.5
         version: 14.2.5(@babel/core@7.28.5)(react-dom@18.2.0)(react@18.2.0)
@@ -577,6 +604,15 @@ importers:
 
   apps/web-supplier:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.2.5
         version: 14.2.5(@babel/core@7.28.5)(react-dom@18.2.0)(react@18.2.0)
@@ -602,6 +638,15 @@ importers:
 
   apps/web-transporter:
     dependencies:
+      '@rt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@rt/ui-components':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@rt/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.2.5
         version: 14.2.5(@babel/core@7.28.5)(react-dom@18.2.0)(react@18.2.0)
