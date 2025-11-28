@@ -5,32 +5,19 @@ applications:
       phases:
         preBuild:
           commands:
-            # Install pnpm globally
-            - npm install -g pnpm@8.15.4
-
-            # Navigate to root and install all dependencies
             - cd ../..
-            - pnpm install
-
-            # Navigate to app (Next.js will transpile workspace packages)
-            - cd apps/web-recipient
-
+            - npm install -g pnpm@8.15.4
+            - pnpm install --frozen-lockfile
         build:
           commands:
-            # Build the app with Next.js static export
+            - cd apps/web-recipient
             - pnpm run build
-            # Remove .next directory to prevent Amplify from detecting as SSR app
-            - rm -rf .next
-            # Create required-server-files.json for AWS Amplify
-            - echo '{"version":1,"config":{},"appDir":"","files":[],"ignore":[]}' > out/required-server-files.json
-
       artifacts:
-        baseDirectory: out
+        baseDirectory: apps/web-recipient/out
         files:
           - '**/*'
-
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
-          - ../../.pnpm-store/**/*
+          - node_modules/**/*
+          - apps/web-recipient/node_modules/**/*
+          - apps/web-recipient/.next/cache/**/*
