@@ -10,9 +10,10 @@ applications:
             - pnpm install --frozen-lockfile
         build:
           commands:
+            - cd apps/marketing-site
             - pnpm run build
       artifacts:
-        baseDirectory: out
+        baseDirectory: apps/marketing-site/out
         files:
           - '**/*'
       cache:
