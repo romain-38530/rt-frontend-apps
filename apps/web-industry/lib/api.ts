@@ -308,3 +308,106 @@ export const appointmentsApi = {
     return res.json();
   }
 };
+
+// ============================================
+// CHATBOT API - Suite de Chatbots RT Technologie
+// ============================================
+
+// Chatbot API URL
+const CHATBOT_API = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://rt-chatbot-api-prod.eba-xxx.eu-central-1.elasticbeanstalk.com';
+
+export type ChatBotType = 'helpbot' | 'planif-ia' | 'routier' | 'quai-wms' | 'livraisons' | 'expedition' | 'freight-ia' | 'copilote';
+
+export const chatbotApi = {
+  // Envoyer un message au chatbot
+  sendMessage: async (botType: ChatBotType, data: {
+    message: string;
+    context?: {
+      userId?: string;
+      companyId?: string;
+      role?: string;
+      currentModule?: string;
+      currentOrderId?: string;
+      interactionCount?: number;
+      category?: string;
+      conversationHistory?: { role: string; content: string }[];
+    };
+    attachments?: string[];
+  }) => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/chat/${botType}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Obtenir l'historique de conversation
+  getHistory: async (sessionId: string) => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/chat/history/${sessionId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Transfert vers technicien
+  transferToTechnician: async (data: {
+    conversationHistory: any[];
+    userContext: any;
+    botType: ChatBotType;
+    priority: 1 | 2 | 3;
+    description?: string;
+  }) => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/support/transfer`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Obtenir le statut du support
+  getSupportStatus: async (ticketId: string) => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/support/status/${ticketId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Diagnostics API (pour RT HelpBot)
+  runDiagnostic: async (type: 'api_erp' | 'api_tracking' | 'connection' | 'documents' | 'servers') => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/diagnostics/${type}`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Base de connaissances - Recherche FAQ
+  searchKnowledge: async (query: string, category?: string) => {
+    const params = new URLSearchParams({ query, ...(category && { category }) });
+    const res = await fetch(`${CHATBOT_API}/api/v1/knowledge/search?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Obtenir les articles FAQ
+  getFAQ: async (category?: string) => {
+    const params = category ? `?category=${category}` : '';
+    const res = await fetch(`${CHATBOT_API}/api/v1/knowledge/faq${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Feedback sur une reponse
+  submitFeedback: async (messageId: string, helpful: boolean, comment?: string) => {
+    const res = await fetch(`${CHATBOT_API}/api/v1/feedback`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ messageId, helpful, comment })
+    });
+    return res.json();
+  }
+};

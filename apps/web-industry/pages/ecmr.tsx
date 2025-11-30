@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { ecmrApi } from '../lib/api';
 
 interface ECMR {
   id: string;
@@ -50,7 +51,6 @@ interface ECMR {
 
 export default function ECMRPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://ecmr-api.symphonia.aws-music-streaming.com';
 
   const [ecmrs, setEcmrs] = useState<ECMR[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,18 +80,25 @@ export default function ECMRPage() {
   const loadECMRs = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/v1/ecmr/list`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const data = await ecmrApi.list();
 
-      if (response.ok) {
-        const data = await response.json();
-        setEcmrs(data.data || mockECMRs);
+      if (data.data && data.data.length > 0) {
+        const formattedEcmrs = data.data.map((e: any) => ({
+          ...e,
+          id: e._id || e.id
+        }));
+        setEcmrs(formattedEcmrs);
+
+        // Update stats
+        const pending = formattedEcmrs.filter((e: ECMR) => ['pending_shipper', 'pending_carrier', 'pending_consignee', 'in_transit'].includes(e.status)).length;
+        const completed = formattedEcmrs.filter((e: ECMR) => e.status === 'completed').length;
+        const disputed = formattedEcmrs.filter((e: ECMR) => e.status === 'disputed').length;
+        setStats({ total: formattedEcmrs.length, pending, completed, disputed });
       } else {
         setEcmrs(mockECMRs);
       }
     } catch (error) {
-      console.log('Using mock data');
+      console.log('API unavailable, using mock data');
       setEcmrs(mockECMRs);
     }
     setLoading(false);
@@ -334,31 +341,69 @@ export default function ECMRPage() {
   const handleSign = async () => {
     if (!selectedEcmr) return;
 
+    // Get signature from canvas
+    const canvas = canvasRef.current;
+    const signatureData = canvas ? canvas.toDataURL('image/png') : '';
+
+    // Determine which party is signing
+    let party: 'shipper' | 'carrier' | 'consignee' = 'shipper';
+    if (selectedEcmr.status === 'pending_carrier') party = 'carrier';
+    if (selectedEcmr.status === 'pending_consignee') party = 'consignee';
+
+    try {
+      await ecmrApi.sign(selectedEcmr.id, {
+        party,
+        signatureData,
+        signerName: 'Marc Dupont'
+      });
+    } catch (error) {
+      console.log('Sign API - using local update');
+    }
+
     const now = new Date().toISOString();
     setEcmrs(prev =>
       prev.map(ecmr => {
         if (ecmr.id === selectedEcmr.id) {
-          // Update shipper signature
-          return {
-            ...ecmr,
-            shipper: {
-              ...ecmr.shipper,
-              signedAt: now,
-              signedBy: 'Marc Dupont'
-            },
-            status: ecmr.status === 'pending_shipper' ? 'pending_carrier' : ecmr.status
-          };
+          // Update appropriate signature based on status
+          const updates: any = {};
+          if (party === 'shipper') {
+            updates.shipper = { ...ecmr.shipper, signedAt: now, signedBy: 'Marc Dupont' };
+            updates.status = 'pending_carrier';
+          } else if (party === 'carrier') {
+            updates.carrier = { ...ecmr.carrier, signedAt: now, signedBy: ecmr.carrier.driverName };
+            updates.status = 'in_transit';
+          } else if (party === 'consignee') {
+            updates.consignee = { ...ecmr.consignee, signedAt: now, signedBy: 'Destinataire' };
+            updates.status = 'completed';
+          }
+          return { ...ecmr, ...updates };
         }
         return ecmr;
       })
     );
     setShowSignModal(false);
     setSelectedEcmr(null);
+    clearSignature();
   };
 
-  const handleDownload = (ecmr: ECMR) => {
-    // Mock download
-    alert(`Telechargement du eCMR ${ecmr.id}...`);
+  const handleDownload = async (ecmr: ECMR) => {
+    try {
+      const data = await ecmrApi.download(ecmr.id);
+      if (data.success && data.data) {
+        // Create download link
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${ecmr.id}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        alert(`Telechargement du eCMR ${ecmr.id}...`);
+      }
+    } catch (error) {
+      alert(`Telechargement du eCMR ${ecmr.id}... (demo)`);
+    }
   };
 
   if (loading) {
