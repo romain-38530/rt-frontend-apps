@@ -131,6 +131,20 @@ export default function HomePage() {
       desc: 'Optimisation IA des flux logistiques et fret',
       locked: subscription?.tier !== 'enterprise',
       route: '/affret-ia'
+    },
+    {
+      icon: '💶',
+      title: 'Facturation',
+      desc: 'Préfacturations, écarts tarifaires et export ERP',
+      locked: false,
+      route: '/billing'
+    },
+    {
+      icon: '📦',
+      title: 'Palettes Europe',
+      desc: 'Économie circulaire et gestion des palettes',
+      locked: false,
+      route: '/palettes'
     }
   ];
 

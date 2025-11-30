@@ -124,6 +124,13 @@ export default function HomePage() {
       desc: 'Accédez aux modules de formation pour vos équipes',
       locked: subscription?.tier === 'free',
       route: '/training'
+    },
+    {
+      icon: '💶',
+      title: 'Facturation',
+      desc: 'Supervision préfacturations, litiges et blocages',
+      locked: false,
+      route: '/billing'
     }
   ];
 
