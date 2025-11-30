@@ -4,27 +4,30 @@ import Link from 'next/link';
 export default function BlogPage() {
   const articles = [
     {
-      title: 'Comment l\'IA transforme la logistique moderne',
-      excerpt: 'Découvrez comment l\'intelligence artificielle révolutionne la gestion des transports et optimise les coûts logistiques.',
+      slug: 'ia-transforme-logistique',
+      title: "Comment l'IA transforme la logistique moderne",
+      excerpt: "Decouvrez comment l'intelligence artificielle revolutionne la gestion des transports et optimise les couts logistiques.",
       date: '15 novembre 2024',
-      author: 'Équipe SYMPHONI.A',
+      author: 'Equipe SYMPHONI.A',
       category: 'Innovation',
       readTime: '5 min'
     },
     {
+      slug: 'optimiser-flux-transport',
       title: 'Guide complet : Optimiser vos flux de transport',
-      excerpt: 'Les meilleures pratiques pour réduire vos coûts de transport et améliorer votre efficacité opérationnelle.',
+      excerpt: 'Les meilleures pratiques pour reduire vos couts de transport et ameliorer votre efficacite operationnelle.',
       date: '8 novembre 2024',
       author: 'Jean Dupont',
       category: 'Guide',
       readTime: '8 min'
     },
     {
-      title: 'e-CMR : La dématérialisation des lettres de voiture',
-      excerpt: 'Tout ce que vous devez savoir sur l\'e-CMR et comment cette solution simplifie votre gestion documentaire.',
+      slug: 'ecmr-dematerialisation',
+      title: 'e-CMR : La dematerialisation des lettres de voiture',
+      excerpt: "Tout ce que vous devez savoir sur l'e-CMR et comment cette solution simplifie votre gestion documentaire.",
       date: '1 novembre 2024',
       author: 'Marie Martin',
-      category: 'Réglementation',
+      category: 'Reglementation',
       readTime: '6 min'
     }
   ];
@@ -39,7 +42,7 @@ export default function BlogPage() {
             <h1 className="text-5xl font-extrabold">Blog SYMPHONI.A</h1>
           </div>
           <p className="text-2xl text-indigo-100 max-w-3xl mx-auto">
-            Actualités, guides et insights sur la logistique et l'innovation
+            Actualites, guides et insights sur la logistique et l'innovation
           </p>
         </div>
       </section>
@@ -55,7 +58,7 @@ export default function BlogPage() {
               <div className="p-12 flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">
-                    Article à la une
+                    Article a la une
                   </span>
                 </div>
                 <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
@@ -75,7 +78,7 @@ export default function BlogPage() {
                   </div>
                 </div>
                 <Link
-                  href="#"
+                  href={`/blog/${articles[0].slug}`}
                   className="inline-flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
                 >
                   Lire l'article
@@ -93,15 +96,16 @@ export default function BlogPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Derniers articles</h2>
             <p className="text-xl text-gray-600">
-              Restez informé des dernières tendances en logistique et transport
+              Restez informe des dernieres tendances en logistique et transport
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {articles.map((article, idx) => (
-              <div
+              <Link
                 key={idx}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all group"
+                href={`/blog/${article.slug}`}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all group block"
               >
                 <div className="h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <BookOpen size={64} className="text-white opacity-50" />
@@ -134,15 +138,12 @@ export default function BlogPage() {
                     </div>
                   </div>
 
-                  <Link
-                    href="#"
-                    className="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
-                  >
+                  <span className="inline-flex items-center gap-2 text-indigo-600 font-semibold group-hover:text-indigo-700 transition-colors">
                     Lire plus
                     <ArrowRight size={16} />
-                  </Link>
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -151,9 +152,9 @@ export default function BlogPage() {
       {/* Newsletter */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-12 text-white text-center">
-          <h3 className="text-3xl font-extrabold mb-6">Restez informé</h3>
+          <h3 className="text-3xl font-extrabold mb-6">Restez informe</h3>
           <p className="text-xl text-indigo-100 mb-8">
-            Recevez nos derniers articles et actualités directement dans votre boîte mail
+            Recevez nos derniers articles et actualites directement dans votre boite mail
           </p>
           <div className="max-w-md mx-auto flex gap-4">
             <input
@@ -164,26 +165,6 @@ export default function BlogPage() {
             <button className="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold hover:shadow-lg transition-all whitespace-nowrap">
               S'abonner
             </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Placeholder */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-white rounded-2xl shadow-lg p-12">
-            <BookOpen size={64} className="mx-auto mb-6 text-gray-400" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Le blog arrive bientôt !</h3>
-            <p className="text-lg text-gray-600 mb-8">
-              Nous préparons du contenu de qualité pour vous aider à optimiser votre logistique.
-              En attendant, découvrez notre plateforme.
-            </p>
-            <Link
-              href="/onboarding"
-              className="inline-block px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
-            >
-              Découvrir SYMPHONI.A
-            </Link>
           </div>
         </div>
       </section>

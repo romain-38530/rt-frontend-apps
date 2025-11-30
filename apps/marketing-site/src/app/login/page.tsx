@@ -149,9 +149,9 @@ function LoginContent() {
                 />
                 <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
               </label>
-              <a href="#" className="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">
-                Mot de passe oublié ?
-              </a>
+              <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">
+                Mot de passe oublie ?
+              </Link>
             </div>
 
             <button

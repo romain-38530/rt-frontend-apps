@@ -79,7 +79,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
                   ))}
                 </div>
                 <div className="p-3 border-t border-gray-200 bg-gray-50">
-                  <a href="#" className="text-sm text-primary-500 font-medium hover:text-primary-600">
+                  <a href="/notifications" className="text-sm text-primary-500 font-medium hover:text-primary-600">
                     Voir toutes les notifications
                   </a>
                 </div>
