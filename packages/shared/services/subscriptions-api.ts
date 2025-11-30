@@ -60,12 +60,23 @@ export interface Discount {
   durationYears: number;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  priceOneShot?: number;
+  pricePerUnit?: number;
+  unit?: string;
+  features: string[];
+}
+
 export interface PricingGrid {
   subscriptions: Record<string, SubscriptionType>;
   trackingIA: Record<string, TrackingIAOption>;
   modules: Record<string, Module>;
   packs: Record<string, Pack>;
   discounts: Record<string, Discount>;
+  services: Record<string, Service>;
   isLaunchPeriod: boolean;
   launchEndDate: string;
 }
@@ -243,6 +254,10 @@ export async function getPacks(): Promise<Pack[]> {
 
 export async function getDiscounts(): Promise<Discount[]> {
   return fetchAPI('/pricing/discounts');
+}
+
+export async function getServices(): Promise<Service[]> {
+  return fetchAPI('/pricing/services');
 }
 
 export async function calculatePrice(params: {

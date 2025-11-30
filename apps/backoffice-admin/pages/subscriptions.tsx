@@ -56,14 +56,16 @@ interface RevenueStats {
   subscribersByType: Array<{ _id: string; count: number }>;
 }
 
-// Grille tarifaire hardcodee pour la demo
+// Grille tarifaire officielle SYMPHONI.A
 const PRICING_GRID = {
   subscriptions: {
     INDUSTRIEL: { name: 'Industriel', priceMonthly: 799, priceLaunch: 499 },
     TRANSPORTEUR_INVITE: { name: 'Transporteur Invite', priceMonthly: 0 },
     TRANSPORTEUR_PREMIUM: { name: 'Transporteur Premium', priceMonthly: 299 },
     TRANSPORTEUR_DO: { name: 'Transporteur D.O.', priceMonthly: 499 },
+    LOGISTICIEN_INVITE: { name: 'Logisticien Invite', priceMonthly: 0 },
     LOGISTICIEN_PREMIUM: { name: 'Logisticien Premium', priceMonthly: 499 },
+    TRANSITAIRE_INVITE: { name: 'Transitaire Invite', priceMonthly: 0 },
     TRANSITAIRE_PREMIUM: { name: 'Transitaire Premium', priceMonthly: 299 },
   },
   trackingIA: {
@@ -76,6 +78,12 @@ const PRICING_GRID = {
     PALETTES_EUROPE: { name: 'Palettes Europe', priceMonthly: 199 },
     SIGNATURE_ELECTRONIQUE: { name: 'Signature eCMR', priceMonthly: 99 },
     PREFACTURATION: { name: 'Prefacturation', priceMonthly: 199 },
+    TMS_SYNC_PREMIUM: { name: 'TMS Sync Premium', priceMonthly: 149 },
+    CHATBOT_IA: { name: 'Chatbot IA', priceMonthly: 49 },
+  },
+  services: {
+    TRAINING: { name: 'Training et Formation', priceOneShot: 299 },
+    SMS: { name: 'Notifications SMS', pricePerUnit: 0.04, unit: 'SMS' },
   },
   packs: {
     INDUSTRIEL_PREMIUM: { name: 'Pack Industriel Premium', priceMonthly: 699, savings: '35%' },
