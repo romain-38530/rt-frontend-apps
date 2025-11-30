@@ -56,11 +56,32 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: '🏭',
-      title: 'Production & Planning',
-      desc: 'Planifiez et suivez vos opérations de production',
-      locked: subscription?.tier === 'free',
-      route: '/production'
+      icon: '📅',
+      title: 'Planning Quais',
+      desc: 'Gestion des sites, quais et créneaux de chargement',
+      locked: false,
+      route: '/planning'
+    },
+    {
+      icon: '📋',
+      title: 'RDV Transporteurs',
+      desc: 'Gestion des rendez-vous avec les transporteurs',
+      locked: false,
+      route: '/rdv-transporteurs'
+    },
+    {
+      icon: '🚛',
+      title: 'Borne Chauffeur',
+      desc: 'Check-in chauffeurs et gestion file d\'attente',
+      locked: false,
+      route: '/borne-chauffeur'
+    },
+    {
+      icon: '📝',
+      title: 'e-CMR Signature',
+      desc: 'Lettres de voiture électroniques et signatures',
+      locked: false,
+      route: '/ecmr'
     },
     {
       icon: '📦',
@@ -92,10 +113,10 @@ export default function HomePage() {
     },
     {
       icon: '📦',
-      title: 'Storage Market',
-      desc: 'Trouvez et réservez des espaces de stockage',
+      title: 'Bourse de Stockage',
+      desc: 'Publiez vos besoins et recevez des offres avec IA',
       locked: subscription?.tier === 'free',
-      route: '/storage'
+      route: '/storage-market'
     },
     {
       icon: '📚',
