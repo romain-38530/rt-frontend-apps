@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { driverApi } from '../lib/api';
 
 interface DriverCheckin {
   id: string;
@@ -24,7 +25,6 @@ interface DriverCheckin {
 
 export default function BorneChauffeurPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://planning-api.symphonia.aws-music-streaming.com';
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'queue' | 'checkin'>('dashboard');
   const [drivers, setDrivers] = useState<DriverCheckin[]>([]);

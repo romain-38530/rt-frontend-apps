@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { planningApi } from '../lib/api';
 
 interface Site {
   id: string;
@@ -36,7 +37,6 @@ interface TimeSlot {
 
 export default function PlanningPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://planning-api.symphonia.aws-music-streaming.com';
 
   const [activeTab, setActiveTab] = useState<'overview' | 'sites' | 'docks' | 'slots'>('overview');
   const [sites, setSites] = useState<Site[]>([]);
@@ -68,23 +68,41 @@ export default function PlanningPage() {
     setLoading(true);
     try {
       // Charger les sites depuis l'API
-      const response = await fetch(`${apiUrl}/api/v1/planning/sites`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const data = await planningApi.getSites();
 
-      if (response.ok) {
-        const data = await response.json();
-        setSites(data.data || mockSites);
-        if (data.data?.length > 0) {
-          setSelectedSite(data.data[0]);
-        }
+      if (data.data && data.data.length > 0) {
+        // Transformer les donnees API pour inclure les docks
+        const sitesWithDocks = await Promise.all(
+          data.data.map(async (site: any) => {
+            try {
+              const docksData = await planningApi.getDocks(site._id || site.id);
+              return {
+                ...site,
+                id: site._id || site.id,
+                docks: docksData.data || []
+              };
+            } catch {
+              return { ...site, id: site._id || site.id, docks: [] };
+            }
+          })
+        );
+        setSites(sitesWithDocks);
+        setSelectedSite(sitesWithDocks[0]);
+
+        // Update stats
+        const totalDocks = sitesWithDocks.reduce((acc: number, s: Site) => acc + s.docks.length, 0);
+        setStats(prev => ({
+          ...prev,
+          totalSites: sitesWithDocks.length,
+          totalDocks
+        }));
       } else {
         // Fallback to mock data
         setSites(mockSites);
         setSelectedSite(mockSites[0]);
       }
     } catch (error) {
-      console.log('Using mock data');
+      console.log('API unavailable, using mock data');
       setSites(mockSites);
       setSelectedSite(mockSites[0]);
     }
