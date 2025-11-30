@@ -1,177 +1,93 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { isAuthenticated } from '../lib/auth';
+import { isAuthenticated, getToken } from '../lib/auth';
+
+interface Session { sessionId: string; orderId: string; status: string; createdAt: string; analysis?: { complexity: number; estimatedPrice: number }; selection?: { carrierId: string; carrierName: string; finalPrice: number }; proposalsReceived?: number; }
+interface Proposal { _id: string; carrierId: string; carrierName: string; proposedPrice: number; status: string; scores?: { price: number; quality: number; overall: number }; submittedAt: string; }
+interface Stats { totalSessions: number; successRate: number; avgResponseTime: number; avgPrice: number; topCarriers: Array<{ carrierId: string; name: string; assignations: number; avgScore: number }>; }
 
 export default function AffretiaPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_AFFRET_IA_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || '';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'bourse' | 'tracking' | 'vigilance' | 'stats'>('dashboard');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [bourseOffers, setBourseOffers] = useState<any[]>([]);
+  const [trackingLevels, setTrackingLevels] = useState<any>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [triggerForm, setTriggerForm] = useState({ orderId: '', reason: '' });
+  const [negotiateForm, setNegotiateForm] = useState({ proposalId: '', counterPrice: '' });
 
-  const [optimization, setOptimization] = useState({
-    routes: 45,
-    savings: '€ 12 500',
-    co2Reduction: '2.3 tonnes',
-    efficiency: '+18%'
-  });
-  const [suggestions, setSuggestions] = useState([
-    'Regrouper les livraisons Paris Nord et Paris Sud',
-    'Optimiser le chargement du véhicule V-042',
-    'Utiliser un itinéraire alternatif pour éviter les embouteillages'
-  ]);
+  const apiCall = useCallback(async (endpoint: string, method = 'GET', body?: any) => {
+    const token = getToken();
+    const options: RequestInit = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    if (body) options.body = JSON.stringify(body);
+    const response = await fetch(apiUrl + endpoint, options);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || 'API Error');
+    return data;
+  }, [apiUrl]);
 
-  useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-    }
-  }, [router]);
+  useEffect(() => { if (!isAuthenticated()) { router.push('/login'); return; } loadSessions(); loadStats(); }, [router]);
+
+  const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const triggerAffretIA = async () => { if (!triggerForm.orderId) { setError('Order ID requis'); return; } try { setLoading(true); const data = await apiCall('/affretia/trigger', 'POST', { orderId: triggerForm.orderId, reason: triggerForm.reason || 'Declenchement manuel', triggerType: 'manual', organizationId: 'org-demo' }); setSuccessMsg('Session ' + data.data.sessionId + ' creee'); setTriggerForm({ orderId: '', reason: '' }); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadSessionDetails = async (sessionId: string) => { try { setLoading(true); const [sessionData, proposalsData] = await Promise.all([apiCall('/affretia/session/' + sessionId), apiCall('/affretia/proposals/' + sessionId)]); setSelectedSession(sessionData.data); setProposals(proposalsData.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const analyzeOrder = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/analyze', 'POST', { sessionId }); setSuccessMsg('Analyse: complexite ' + data.data.complexity + ', prix ' + data.data.estimatedPrice + 'EUR'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const broadcastToCarriers = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/broadcast', 'POST', { sessionId, channels: ['email', 'bourse', 'push'] }); setSuccessMsg('Diffusion: ' + data.data.recipientsCount + ' destinataires'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadBourseOffers = async () => { try { setLoading(true); const data = await apiCall('/affretia/bourse'); setBourseOffers(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const acceptProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/accept', 'PUT', { userId: 'user-demo', reason: 'Acceptation manuelle' }); setSuccessMsg('Proposition acceptee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const rejectProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/reject', 'PUT', { userId: 'user-demo', reason: 'Rejet manuel' }); setSuccessMsg('Proposition rejetee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const negotiateProposal = async () => { if (!negotiateForm.proposalId || !negotiateForm.counterPrice) { setError('Proposition et prix requis'); return; } try { setLoading(true); await apiCall('/affretia/proposals/' + negotiateForm.proposalId + '/negotiate', 'POST', { counterPrice: parseFloat(negotiateForm.counterPrice), message: 'Contre-proposition', userId: 'user-demo' }); setSuccessMsg('Negociation lancee'); setNegotiateForm({ proposalId: '', counterPrice: '' }); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const selectBestCarrier = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/select', 'POST', { sessionId }); setSuccessMsg('Selection: ' + data.data.selectedCarrierName + ' - ' + data.data.selectedPrice + 'EUR'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const getDecision = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/decision/' + sessionId); setSuccessMsg('Recommandation: ' + data.data.recommendation + ' (confiance ' + data.data.confidence + '%)'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const assignCarrier = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/assign', 'POST', { sessionId, userId: 'user-demo' }); setSuccessMsg('Assigne a ' + data.data.carrierName); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadTrackingLevels = async () => { try { const data = await apiCall('/affretia/tracking/levels'); setTrackingLevels(data.data); } catch (err: any) { setError(err.message); } };
+  const configureTracking = async (orderId: string, level: string) => { try { setLoading(true); await apiCall('/affretia/tracking/configure', 'POST', { orderId, carrierId: 'carrier-demo', level }); setSuccessMsg('Tracking ' + level + ' configure'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const checkVigilance = async (carrierId: string) => { try { setLoading(true); const data = await apiCall('/affretia/vigilance/check', 'POST', { carrierId, checks: ['kbis', 'insurance', 'license', 'blacklist'] }); setSuccessMsg('Vigilance: ' + data.data.overallStatus + ' (score ' + data.data.complianceScore + '%)'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadStats = async () => { try { const data = await apiCall('/affretia/stats'); setStats(data.data); } catch (err: any) { console.error(err); } };
+
+  useEffect(() => { if (error || successMsg) { const timer = setTimeout(() => { setError(null); setSuccessMsg(null); }, 5000); return () => clearTimeout(timer); } }, [error, successMsg]);
+
+  const cardStyle = { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', marginBottom: '20px' };
+  const buttonStyle = { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', color: 'white', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' as const, marginRight: '10px', marginBottom: '10px' };
+  const inputStyle = { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', width: '100%', marginBottom: '10px' };
+  const tabStyle = (active: boolean) => ({ background: active ? 'rgba(102,126,234,0.8)' : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' as const, marginRight: '10px' });
 
   return (
     <>
-      <Head>
-        <title>Affret.IA - Industry | SYMPHONI.A</title>
-      </Head>
-
-      <div style={{
-        minHeight: '100vh',
-        background: 'url(https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1920&q=80) center/cover',
-        position: 'relative',
-        color: 'white',
-        fontFamily: 'system-ui, sans-serif'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 0
-        }} />
-
-        {/* Header */}
-        <div style={{
-          padding: '20px 40px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'rgba(0,0,0,0.1)',
-          backdropFilter: 'blur(10px)',
-          position: 'relative',
-          zIndex: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
-        }}>
+      <Head><title>AFFRET.IA - Affretement Intelligent | SYMPHONI.A</title></Head>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', color: 'white', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button
-              onClick={() => router.push('/')}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
-              ← Retour
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '32px' }}>🧠</span>
-              <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Affret.IA</h1>
-            </div>
+            <button onClick={() => router.push('/')} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>Retour</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><span style={{ fontSize: '32px' }}>🧠</span><h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>AFFRET.IA</h1><span style={{ fontSize: '12px', opacity: 0.7, marginLeft: '10px' }}>v4 - 38 endpoints IA</span></div>
           </div>
-          <div style={{
-            padding: '8px 20px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '700',
-            border: '1px solid rgba(255,255,255,0.3)'
-          }}>
-            🏭 Industry
-          </div>
+          <div style={{ padding: '8px 20px', background: 'rgba(102,126,234,0.3)', borderRadius: '20px', fontSize: '13px' }}>Industry</div>
         </div>
-
-        {/* Content */}
-        <div style={{
-          padding: '40px',
-          position: 'relative',
-          zIndex: 1,
-          maxWidth: '1400px',
-          margin: '0 auto'
-        }}>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
-              <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px' }}>{optimization.routes}</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>Routes optimisées</div>
-              </div>
-              <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#00D084' }}>{optimization.savings}</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>Économies réalisées</div>
-              </div>
-              <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#00D084' }}>{optimization.co2Reduction}</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>CO₂ évité</div>
-              </div>
-              <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#667eea' }}>{optimization.efficiency}</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>Efficacité améliorée</div>
-              </div>
-            </div>
-
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              padding: '24px',
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px' }}>💡 Suggestions d'optimisation</div>
-              {suggestions.map((sug, i) => (
-                <div key={i} style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  marginBottom: '12px',
-                  fontSize: '15px'
-                }}>
-                  {sug}
-                </div>
-              ))}
-            </div>
+        {error && <div style={{ background: 'rgba(255,0,0,0.3)', padding: '15px 40px' }}>{error}</div>}
+        {successMsg && <div style={{ background: 'rgba(0,255,0,0.2)', padding: '15px 40px' }}>{successMsg}</div>}
+        <div style={{ padding: '20px 40px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <button style={tabStyle(activeTab === 'dashboard')} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
+          <button style={tabStyle(activeTab === 'sessions')} onClick={() => { setActiveTab('sessions'); loadSessions(); }}>Sessions</button>
+          <button style={tabStyle(activeTab === 'bourse')} onClick={() => { setActiveTab('bourse'); loadBourseOffers(); }}>Bourse</button>
+          <button style={tabStyle(activeTab === 'tracking')} onClick={() => { setActiveTab('tracking'); loadTrackingLevels(); }}>Tracking IA</button>
+          <button style={tabStyle(activeTab === 'vigilance')} onClick={() => setActiveTab('vigilance')}>Vigilance</button>
+          <button style={tabStyle(activeTab === 'stats')} onClick={() => { setActiveTab('stats'); loadStats(); }}>Statistiques</button>
+        </div>
+        <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+          {loading && <div style={{ textAlign: 'center', padding: '40px' }}>Chargement...</div>}
+          {activeTab === 'dashboard' && (<><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#667eea' }}>{stats?.totalSessions || 0}</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Sessions</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#00D084' }}>{stats?.successRate?.toFixed(1) || 0}%</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Succes</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800' }}>{stats?.avgResponseTime || 0}min</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Temps reponse</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#f39c12' }}>{stats?.avgPrice?.toFixed(0) || 0}EUR</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Prix moyen</div></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Declencher AFFRET.IA</h3><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '15px', alignItems: 'end' }}><div><label style={{ fontSize: '12px', opacity: 0.7 }}>Order ID</label><input style={inputStyle} placeholder="ex: ORD-2024-001" value={triggerForm.orderId} onChange={e => setTriggerForm({ ...triggerForm, orderId: e.target.value })} /></div><div><label style={{ fontSize: '12px', opacity: 0.7 }}>Raison</label><input style={inputStyle} placeholder="ex: Urgence" value={triggerForm.reason} onChange={e => setTriggerForm({ ...triggerForm, reason: e.target.value })} /></div><button style={buttonStyle} onClick={triggerAffretIA}>Lancer IA</button></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Sessions recentes</h3>{sessions.slice(0, 5).map(s => (<div key={s.sessionId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><strong>{s.sessionId}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>Order: {s.orderId} | {s.status}</div></div><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px' }} onClick={() => { loadSessionDetails(s.sessionId); setActiveTab('sessions'); }}>Details</button></div>))}</div></>)}
+          {activeTab === 'stats' && stats && (<><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#667eea' }}>{stats.totalSessions}</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Sessions</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#00D084' }}>{stats.successRate.toFixed(1)}%</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Succes</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800' }}>{stats.avgResponseTime}min</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Temps reponse</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#f39c12' }}>{stats.avgPrice.toFixed(0)}EUR</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Prix moyen</div></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Top Transporteurs</h3>{stats.topCarriers?.map((c, i) => (<div key={c.carrierId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}><span style={{ width: '30px', height: '30px', borderRadius: '50%', background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{i + 1}</span><div><strong>{c.name}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>{c.assignations} missions</div></div></div><div style={{ textAlign: 'right' }}><div style={{ color: '#00D084', fontWeight: '700' }}>{c.avgScore}/100</div></div></div>))}</div></>)}
+          {activeTab === 'bourse' && <div style={cardStyle}><h3 style={{ marginTop: 0 }}>Offres Bourse ({bourseOffers.length})</h3>{bourseOffers.length === 0 ? <div style={{ opacity: 0.7, textAlign: 'center', padding: '40px' }}>Aucune offre</div> : bourseOffers.map((o, i) => (<div key={i} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '15px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><strong>{o.pickupCity} - {o.deliveryCity}</strong><span style={{ color: '#00D084', fontWeight: '700' }}>{o.estimatedPrice}EUR</span></div><div style={{ fontSize: '13px', opacity: 0.7 }}>Date: {new Date(o.pickupDate).toLocaleDateString()} | Type: {o.vehicleType}</div></div>))}</div>}
+          {activeTab === 'tracking' && <><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Niveaux Tracking IA</h3>{trackingLevels && Object.entries(trackingLevels).map(([k, l]: [string, any]) => (<div key={k} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '15px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><strong>{l.name}</strong><span style={{ color: '#f39c12' }}>{l.price}</span></div><div style={{ fontSize: '13px', opacity: 0.7 }}>{l.description}</div></div>))}</div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Configurer Tracking</h3><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'basic')}>Basic</button><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'intermediate')}>Intermediaire</button><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'premium')}>Premium</button></div></div></>}
+          {activeTab === 'vigilance' && <div style={cardStyle}><h3 style={{ marginTop: 0 }}>Verification Vigilance</h3><p style={{ opacity: 0.7, marginBottom: '20px' }}>KBIS, assurance, licence, blacklist</p><div style={{ display: 'flex', gap: '15px' }}><input style={{ ...inputStyle, flex: 1 }} placeholder="Carrier ID" id="vig-id" /><button style={buttonStyle} onClick={() => { const el = document.getElementById('vig-id') as HTMLInputElement; if (el?.value) checkVigilance(el.value); }}>Verifier</button></div></div>}
+          {activeTab === 'sessions' && (selectedSession ? (<><button style={{ ...buttonStyle, marginBottom: '20px' }} onClick={() => setSelectedSession(null)}>Retour liste</button><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Session {selectedSession.sessionId}</h3><div style={{ marginBottom: '20px' }}><button style={buttonStyle} onClick={() => analyzeOrder(selectedSession.sessionId)}>Analyser</button><button style={buttonStyle} onClick={() => broadcastToCarriers(selectedSession.sessionId)}>Diffuser</button><button style={buttonStyle} onClick={() => selectBestCarrier(selectedSession.sessionId)}>Selection IA</button><button style={buttonStyle} onClick={() => getDecision(selectedSession.sessionId)}>Decision IA</button>{selectedSession.selection && <button style={{ ...buttonStyle, background: 'linear-gradient(135deg, #00D084 0%, #00a86b 100%)' }} onClick={() => assignCarrier(selectedSession.sessionId)}>Assigner</button>}</div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Propositions ({proposals.length})</h3>{proposals.map(p => (<div key={p._id} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><div><strong>{p.carrierName}</strong> - {p.proposedPrice}EUR</div><span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', background: p.status === 'accepted' ? 'rgba(0,208,132,0.3)' : 'rgba(255,255,255,0.1)' }}>{p.status}</span></div>{p.status === 'pending' && <div><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(0,208,132,0.6)' }} onClick={() => acceptProposal(p._id)}>Accepter</button><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255,0,0,0.6)' }} onClick={() => rejectProposal(p._id)}>Rejeter</button><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px' }} onClick={() => setNegotiateForm({ proposalId: p._id, counterPrice: '' })}>Negocier</button></div>}</div>))}</div></>) : (<div style={cardStyle}><h3 style={{ marginTop: 0 }}>Toutes les sessions</h3>{sessions.map(s => (<div key={s.sessionId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', cursor: 'pointer' }} onClick={() => loadSessionDetails(s.sessionId)}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><strong>{s.sessionId}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>Order: {s.orderId}</div></div><span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', background: s.status === 'assigned' ? 'rgba(0,208,132,0.3)' : 'rgba(102,126,234,0.3)' }}>{s.status}</span></div></div>))}</div>))}
         </div>
       </div>
     </>
