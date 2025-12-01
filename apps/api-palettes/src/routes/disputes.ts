@@ -4,6 +4,7 @@ import PalletDispute, { DisputeStatus, DisputeType, DisputePriority } from '../m
 import PalletCheque from '../models/PalletCheque';
 import PalletLedger from '../models/PalletLedger';
 import PalletSite from '../models/PalletSite';
+import { getPendingEscalationDisputes } from '../services/dispute-escalation';
 
 const router = Router();
 
@@ -354,6 +355,20 @@ router.post('/:disputeId/escalate', async (req: Request, res: Response) => {
     await dispute.save();
 
     res.json(dispute);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /disputes/pending-escalation - Liste des litiges en attente d'escalation
+router.get('/pending-escalation', async (req: Request, res: Response) => {
+  try {
+    const disputes = await getPendingEscalationDisputes();
+    res.json({
+      total: disputes.length,
+      disputes,
+      info: 'Litiges ouverts depuis plus de 40h (escalade automatique à 48h)',
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

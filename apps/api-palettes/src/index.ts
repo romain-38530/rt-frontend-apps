@@ -10,9 +10,13 @@ import ledgerRoutes from './routes/ledger';
 import sitesRoutes from './routes/sites';
 import disputesRoutes from './routes/disputes';
 import matchingRoutes from './routes/matching';
+import analyticsRoutes from './routes/analytics';
+import notificationsRoutes from './routes/notifications';
+import epalRoutes from './routes/epal';
 
 // Services
 import { getPublicKey } from './services/crypto';
+import { startEscalationScheduler } from './services/dispute-escalation';
 
 dotenv.config();
 
@@ -92,6 +96,31 @@ app.get('/', (req, res) => {
         stats: 'GET /api/v1/palette/matching/stats',
         simulate: 'POST /api/v1/palette/matching/simulate',
         coverage: 'GET /api/v1/palette/matching/coverage'
+      },
+      analytics: {
+        description: 'Analytics et prédictions IA',
+        predictions: 'GET /api/v1/palette/analytics/predictions/:siteId',
+        anomalies: 'GET /api/v1/palette/analytics/anomalies',
+        routes: 'GET /api/v1/palette/analytics/routes/:transporterId',
+        networkHealth: 'GET /api/v1/palette/analytics/network-health',
+        kpis: 'GET /api/v1/palette/analytics/kpis'
+      },
+      notifications: {
+        description: 'Gestion des notifications multi-canaux',
+        list: 'GET /api/v1/palette/notifications',
+        get: 'GET /api/v1/palette/notifications/:notificationId',
+        settings: 'POST /api/v1/palette/notifications/settings',
+        getSettings: 'GET /api/v1/palette/notifications/settings/:companyId',
+        stats: 'GET /api/v1/palette/notifications/stats/global'
+      },
+      epal: {
+        description: 'Intégration registre EPAL',
+        validateSerial: 'POST /api/v1/palette/epal/validate-serial',
+        reportMovement: 'POST /api/v1/palette/epal/report-movement',
+        stats: 'GET /api/v1/palette/epal/stats',
+        sync: 'POST /api/v1/palette/epal/sync/:companyId',
+        search: 'GET /api/v1/palette/epal/search/:serialNumber',
+        history: 'GET /api/v1/palette/epal/history/:serialNumber'
       }
     },
     palletTypes: ['EURO_EPAL', 'EURO_EPAL_2', 'DEMI_PALETTE', 'PALETTE_PERDUE'],
@@ -111,6 +140,9 @@ app.use('/api/v1/palette/ledger', ledgerRoutes);
 app.use('/api/v1/palette/sites', sitesRoutes);
 app.use('/api/v1/palette/disputes', disputesRoutes);
 app.use('/api/v1/palette/matching', matchingRoutes);
+app.use('/api/v1/palette/analytics', analyticsRoutes);
+app.use('/api/v1/palette/notifications', notificationsRoutes);
+app.use('/api/v1/palette/epal', epalRoutes);
 
 // Clé publique pour vérification externe
 app.get('/api/v1/public-key', (req, res) => {
@@ -198,10 +230,17 @@ mongoose.connect(MONGODB_URI)
     // Planifier la réinitialisation quotidienne (minuit)
     setInterval(resetDailyQuotas, 24 * 60 * 60 * 1000);
 
+    // Démarrer le scheduler d'escalation automatique des litiges
+    startEscalationScheduler();
+    console.log('⏰ Scheduler d\'escalation des litiges démarré');
+
     app.listen(PORT, () => {
       console.log(`🚀 RT Palettes API v2.0.0 running on port ${PORT}`);
       console.log(`📚 Documentation: http://localhost:${PORT}/`);
       console.log(`🔐 Public Key: http://localhost:${PORT}/api/v1/public-key`);
+      console.log(`📊 Analytics: http://localhost:${PORT}/api/v1/palette/analytics/network-health`);
+      console.log(`🔔 Notifications: http://localhost:${PORT}/api/v1/palette/notifications`);
+      console.log(`🏷️  EPAL Registry: http://localhost:${PORT}/api/v1/palette/epal/stats`);
     });
   })
   .catch((error) => {
