@@ -13,7 +13,7 @@ import type {
   ExportToERPRequest,
   BillingStats,
   Dispute
-} from '@rt-apps/contracts';
+} from '@rt/contracts';
 
 /**
  * Service client pour l'API Billing

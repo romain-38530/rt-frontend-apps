@@ -24,7 +24,7 @@ import type {
   UpdateMissionStatusRequest,
   CheckpointArrivalRequest,
   CheckpointCompletionRequest,
-  UploadDocumentRequest,
+  ChatbotUploadDocumentRequest,
   SendLocationRequest,
 } from '@rt/contracts';
 
@@ -365,7 +365,7 @@ export class ChatbotService {
   /**
    * Uploader un document
    */
-  static async uploadDocument(request: UploadDocumentRequest): Promise<CopiloteMission> {
+  static async uploadDocument(request: ChatbotUploadDocumentRequest): Promise<CopiloteMission> {
     return await chatbotApi.post<CopiloteMission>(
       `/copilote/missions/${request.missionId}/documents`,
       request

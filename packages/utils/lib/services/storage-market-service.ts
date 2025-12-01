@@ -11,23 +11,27 @@ import type {
   LogisticianSite,
   LogisticianSubscription,
   NeedStatus,
-  OfferStatus,
-  ContractStatus,
+  StorageOfferStatus,
+  StorageContractStatus,
   StorageType,
   VolumeUnit,
-  CreateStorageNeedRequest,
-  UpdateStorageNeedRequest,
-  PublishNeedRequest,
-  SubmitOfferRequest,
-  CounterOfferRequest,
-  CreateSiteRequest,
-  UpdateSiteRequest,
-  OfferRanking,
-  RFPDocument,
-  MarketInsights,
-  SubscriptionPlan,
-  SubscriptionUsage,
+  CreateStorageNeedInput,
+  CreateStorageOfferInput,
+  CreateLogisticianSiteInput,
+  OfferRankingResponse,
+  RFPGenerationResponse,
 } from '@rt/contracts';
+
+// Temporary local types until contracts are updated
+type UpdateStorageNeedRequest = Partial<CreateStorageNeedInput>;
+type PublishNeedRequest = { targetLogisticians?: string[]; sendNotifications?: boolean };
+type CounterOfferRequest = { newPrice?: number; newConditions?: string; message?: string };
+type UpdateSiteRequest = Partial<CreateLogisticianSiteInput>;
+type OfferRanking = OfferRankingResponse;
+type RFPDocument = RFPGenerationResponse;
+type MarketInsights = { averagePrice: number; demandTrend: string; topRegions: string[] };
+type SubscriptionPlan = { id: string; name: string; price: number; features: string[] };
+type SubscriptionUsage = { sitesUsed: number; offersSubmitted: number; contractsActive: number };
 
 // Client API pour Storage Market
 const storageApi = createApiClient({
@@ -103,7 +107,7 @@ export class StorageMarketService {
   /**
    * Créer un besoin de stockage
    */
-  static async createNeed(request: CreateStorageNeedRequest): Promise<ApiResponse<StorageNeed>> {
+  static async createNeed(request: CreateStorageNeedInput): Promise<ApiResponse<StorageNeed>> {
     return await storageApi.post<ApiResponse<StorageNeed>>('/needs', request);
   }
 
@@ -156,7 +160,7 @@ export class StorageMarketService {
    */
   static async getOffers(params?: {
     needId?: string;
-    status?: OfferStatus;
+    status?: StorageOfferStatus;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<StorageOffer>> {
@@ -167,7 +171,7 @@ export class StorageMarketService {
    * Obtenir mes offres (logisticien)
    */
   static async getMyOffers(params?: {
-    status?: OfferStatus;
+    status?: StorageOfferStatus;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<StorageOffer>> {
@@ -178,7 +182,7 @@ export class StorageMarketService {
    * Obtenir les offres pour un besoin
    */
   static async getOffersForNeed(needId: string, params?: {
-    status?: OfferStatus;
+    status?: StorageOfferStatus;
     sortBy?: string;
     page?: number;
     limit?: number;
@@ -196,14 +200,14 @@ export class StorageMarketService {
   /**
    * Soumettre une offre
    */
-  static async submitOffer(request: SubmitOfferRequest): Promise<ApiResponse<StorageOffer>> {
+  static async submitOffer(request: CreateStorageOfferInput): Promise<ApiResponse<StorageOffer>> {
     return await storageApi.post<ApiResponse<StorageOffer>>('/offers', request);
   }
 
   /**
    * Modifier une offre
    */
-  static async updateOffer(offerId: string, request: Partial<SubmitOfferRequest>): Promise<ApiResponse<StorageOffer>> {
+  static async updateOffer(offerId: string, request: Partial<CreateStorageOfferInput>): Promise<ApiResponse<StorageOffer>> {
     return await storageApi.put<ApiResponse<StorageOffer>>(`/offers/${offerId}`, request);
   }
 
@@ -292,7 +296,7 @@ export class StorageMarketService {
   /**
    * Créer un site
    */
-  static async createSite(request: CreateSiteRequest): Promise<ApiResponse<LogisticianSite>> {
+  static async createSite(request: CreateLogisticianSiteInput): Promise<ApiResponse<LogisticianSite>> {
     return await storageApi.post<ApiResponse<LogisticianSite>>('/capacity/sites', request);
   }
 
@@ -337,7 +341,7 @@ export class StorageMarketService {
    * Obtenir la liste des contrats
    */
   static async getContracts(params?: {
-    status?: ContractStatus;
+    status?: StorageContractStatus;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<StorageContract>> {
@@ -593,8 +597,8 @@ export class StorageMarketService {
   /**
    * Obtenir la couleur d'un statut d'offre
    */
-  static getOfferStatusColor(status: OfferStatus): string {
-    const colors: Record<OfferStatus, string> = {
+  static getOfferStatusColor(status: StorageOfferStatus): string {
+    const colors: Record<StorageOfferStatus, string> = {
       SUBMITTED: '#3b82f6',
       UNDER_REVIEW: '#f59e0b',
       SHORTLISTED: '#8b5cf6',
@@ -609,8 +613,8 @@ export class StorageMarketService {
   /**
    * Obtenir le label d'un statut d'offre
    */
-  static getOfferStatusLabel(status: OfferStatus): string {
-    const labels: Record<OfferStatus, string> = {
+  static getOfferStatusLabel(status: StorageOfferStatus): string {
+    const labels: Record<StorageOfferStatus, string> = {
       SUBMITTED: 'Soumise',
       UNDER_REVIEW: 'En examen',
       SHORTLISTED: 'Présélectionnée',

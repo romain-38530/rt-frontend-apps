@@ -18,7 +18,7 @@ import type {
   PlaceBidRequest,
   AffretStats,
   SearchHistory,
-  OfferStatus,
+  AffretOfferStatus,
   BidStatus,
 } from '@rt/contracts';
 
@@ -94,7 +94,7 @@ export class AffretIAService {
   /**
    * Obtenir toutes les offres
    */
-  static async getOffers(orderId?: string, status?: OfferStatus): Promise<AffretOffer[]> {
+  static async getOffers(orderId?: string, status?: AffretOfferStatus): Promise<AffretOffer[]> {
     return await affretApi.get<AffretOffer[]>('/offers', { orderId, status });
   }
 
@@ -266,8 +266,8 @@ export class AffretIAService {
   /**
    * Obtenir la couleur d'un statut d'offre
    */
-  static getOfferStatusColor(status: OfferStatus): string {
-    const colors: Record<OfferStatus, string> = {
+  static getAffretOfferStatusColor(status: AffretOfferStatus): string {
+    const colors: Record<AffretOfferStatus, string> = {
       pending: '#f59e0b',
       submitted: '#3b82f6',
       accepted: '#10b981',
@@ -281,8 +281,8 @@ export class AffretIAService {
   /**
    * Obtenir le label d'un statut d'offre
    */
-  static getOfferStatusLabel(status: OfferStatus): string {
-    const labels: Record<OfferStatus, string> = {
+  static getAffretOfferStatusLabel(status: AffretOfferStatus): string {
+    const labels: Record<AffretOfferStatus, string> = {
       pending: 'En attente',
       submitted: 'Soumise',
       accepted: 'Acceptée',
