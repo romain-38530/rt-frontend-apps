@@ -40,3 +40,6 @@ export * from './billing';
 
 // Agents Commerciaux & Commissions
 export * from './sales-agents';
+
+// Chatbots IA (HelpBot, Planif-IA, Routier, Copilote, etc.)
+export * from './chatbot';
