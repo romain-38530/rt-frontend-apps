@@ -31,3 +31,8 @@ export type { UseWebSocketOptions } from './hooks/useWebSocket';
 
 export { useNotifications } from './hooks/useNotifications';
 export type { UseNotificationsOptions, Notification } from './hooks/useNotifications';
+
+// Services
+export { AffretIAService } from './services/affret-ia-service';
+export { StorageMarketService } from './services/storage-market-service';
+export type { PaginatedResponse, ApiResponse } from './services/storage-market-service';

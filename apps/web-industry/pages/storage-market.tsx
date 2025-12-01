@@ -47,7 +47,7 @@ interface NewNeedForm {
   };
 }
 
-const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://rt-storage-market-prod.eba-6dcj6yvh.eu-central-1.elasticbeanstalk.com';
+const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://localhost:3006';
 
 // Constants
 const STORAGE_TYPES = [

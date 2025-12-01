@@ -27,3 +27,6 @@ export * from './carrier-referencing';
 
 // Archivage légal 10 ans
 export * from './archiving';
+
+// Bourse de Stockage / Storage Market
+export * from './storage-market';
