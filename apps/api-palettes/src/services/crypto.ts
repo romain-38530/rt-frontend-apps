@@ -7,9 +7,9 @@ const SERVER_SEED = process.env.CRYPTO_SEED || 'rt-technologie-palettes-europe-s
 // Générer une paire de clés Ed25519 déterministe à partir d'une seed
 function generateKeyPair(): nacl.SignKeyPair {
   const seed = new Uint8Array(32);
-  const seedBytes = encodeUTF8(SERVER_SEED);
+  const seedBytes = decodeUTF8(SERVER_SEED);
   for (let i = 0; i < 32; i++) {
-    seed[i] = seedBytes.charCodeAt(i % seedBytes.length);
+    seed[i] = seedBytes[i % seedBytes.length];
   }
   return nacl.sign.keyPair.fromSeed(seed);
 }

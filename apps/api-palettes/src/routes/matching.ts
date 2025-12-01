@@ -183,17 +183,17 @@ router.post('/simulate', async (req: Request, res: Response) => {
 // GET /matching/coverage - Zones de couverture
 router.get('/coverage', async (req: Request, res: Response) => {
   try {
-    const { PalletSite } = await import('../models/PalletSite');
+    const PalletSiteModel = (await import('../models/PalletSite')).default;
 
     // Récupérer tous les sites actifs avec leurs coordonnées
-    const sites = await PalletSite.find({ active: true })
+    const sites = await PalletSiteModel.find({ active: true })
       .select('siteId siteName address.city address.coordinates priority')
       .lean();
 
     // Grouper par ville
     const byCity: Record<string, number> = {};
-    sites.forEach(site => {
-      const city = site.address.city || 'Inconnu';
+    sites.forEach((site: any) => {
+      const city = site.address?.city || 'Inconnu';
       byCity[city] = (byCity[city] || 0) + 1;
     });
 
@@ -207,12 +207,12 @@ router.get('/coverage', async (req: Request, res: Response) => {
       totalSites: sites.length,
       byCity,
       topCities,
-      sites: sites.map(s => ({
+      sites: sites.map((s: any) => ({
         siteId: s.siteId,
         name: s.siteName,
-        city: s.address.city,
-        lat: s.address.coordinates.latitude,
-        lng: s.address.coordinates.longitude,
+        city: s.address?.city,
+        lat: s.address?.coordinates?.latitude,
+        lng: s.address?.coordinates?.longitude,
         priority: s.priority,
       })),
     });
