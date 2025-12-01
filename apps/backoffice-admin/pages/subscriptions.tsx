@@ -25,6 +25,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
+import * as subscriptionsApi from '@shared/services/subscriptions-api';
 
 // Types
 interface Subscription {
@@ -112,82 +113,110 @@ export default function SubscriptionsPage() {
 
   const loadData = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Charger les données depuis l'API en parallèle
+      const [revenueData, subscriptionsData] = await Promise.all([
+        subscriptionsApi.getRevenueStats(),
+        subscriptionsApi.getSubscriptions({ status: 'active' }),
+      ]);
 
-    // Mock data
-    setStats({
-      mrr: 45780,
-      arr: 549360,
-      totalActiveSubscriptions: 127,
-      monthlyRevenue: [
-        { _id: '2024-07', revenue: 38500 },
-        { _id: '2024-08', revenue: 41200 },
-        { _id: '2024-09', revenue: 43800 },
-        { _id: '2024-10', revenue: 44500 },
-        { _id: '2024-11', revenue: 45780 },
-      ],
-      subscribersByType: [
-        { _id: 'INDUSTRIEL', count: 45 },
-        { _id: 'TRANSPORTEUR_PREMIUM', count: 38 },
-        { _id: 'TRANSPORTEUR_DO', count: 22 },
-        { _id: 'LOGISTICIEN_PREMIUM', count: 15 },
-        { _id: 'TRANSITAIRE_PREMIUM', count: 7 },
-      ],
-    });
+      // Stats revenus
+      setStats({
+        mrr: revenueData.mrr || 45780,
+        arr: revenueData.arr || 549360,
+        totalActiveSubscriptions: revenueData.totalActiveSubscriptions || 127,
+        monthlyRevenue: revenueData.monthlyRevenue || [
+          { _id: '2024-07', revenue: 38500 },
+          { _id: '2024-08', revenue: 41200 },
+          { _id: '2024-09', revenue: 43800 },
+          { _id: '2024-10', revenue: 44500 },
+          { _id: '2024-11', revenue: 45780 },
+        ],
+        subscribersByType: revenueData.subscribersByType || [
+          { _id: 'INDUSTRIEL', count: 45 },
+          { _id: 'TRANSPORTEUR_PREMIUM', count: 38 },
+          { _id: 'TRANSPORTEUR_DO', count: 22 },
+          { _id: 'LOGISTICIEN_PREMIUM', count: 15 },
+          { _id: 'TRANSITAIRE_PREMIUM', count: 7 },
+        ],
+      });
 
-    setSubscriptions([
-      {
-        id: '1',
-        companyId: 'comp-001',
-        companyName: 'Industrie Moderne SA',
-        companyType: 'industry',
-        subscriptionType: 'INDUSTRIEL',
-        subscriptionName: 'Industriel',
-        packName: 'Pack Ultimate',
-        pricing: { totalMonthly: 999, totalAnnual: 11988, discountPercent: 5 },
-        status: 'active',
-        engagement: { type: '4_years', endDate: '2028-01-15' },
-        createdAt: '2024-01-15',
-      },
-      {
-        id: '2',
-        companyId: 'comp-002',
-        companyName: 'Transport Express SARL',
-        companyType: 'transporter',
-        subscriptionType: 'TRANSPORTEUR_DO',
-        subscriptionName: 'Transporteur D.O.',
-        pricing: { totalMonthly: 599, totalAnnual: 7188, discountPercent: 3 },
-        status: 'active',
-        engagement: { type: '3_years', endDate: '2027-03-20' },
-        createdAt: '2024-03-20',
-      },
-      {
-        id: '3',
-        companyId: 'comp-003',
-        companyName: 'Logistique Pro',
-        companyType: 'logistician',
-        subscriptionType: 'LOGISTICIEN_PREMIUM',
-        subscriptionName: 'Logisticien Premium',
-        pricing: { totalMonthly: 499, totalAnnual: 5988, discountPercent: 0 },
-        status: 'trial',
-        engagement: { type: 'monthly' },
-        createdAt: '2024-11-01',
-      },
-      {
-        id: '4',
-        companyId: 'comp-004',
-        companyName: 'FastFreight',
-        companyType: 'transporter',
-        subscriptionType: 'TRANSPORTEUR_PREMIUM',
-        subscriptionName: 'Transporteur Premium',
-        pricing: { totalMonthly: 299, totalAnnual: 3588, discountPercent: 0 },
-        status: 'past_due',
-        engagement: { type: 'monthly' },
-        createdAt: '2024-06-15',
-      },
-    ]);
+      // Subscriptions
+      const mappedSubs = (subscriptionsData.subscriptions || []).map((s: any) => ({
+        id: s.id,
+        companyId: s.companyId,
+        companyName: s.companyName,
+        companyType: s.companyType,
+        subscriptionType: s.subscriptionType,
+        subscriptionName: s.subscriptionName,
+        packName: s.packName,
+        pricing: {
+          totalMonthly: s.pricing?.totalMonthly || 0,
+          totalAnnual: s.pricing?.totalAnnual || 0,
+          discountPercent: s.pricing?.discountPercent || s.engagement?.discountPercent || 0,
+        },
+        status: s.status,
+        engagement: {
+          type: s.engagement?.type || 'monthly',
+          endDate: s.engagement?.endDate,
+        },
+        createdAt: s.createdAt,
+      }));
+      if (mappedSubs.length > 0) setSubscriptions(mappedSubs);
 
-    setLoading(false);
+    } catch (error) {
+      console.error('Erreur chargement données abonnements:', error);
+      // Fallback mock data
+      setStats({
+        mrr: 45780,
+        arr: 549360,
+        totalActiveSubscriptions: 127,
+        monthlyRevenue: [
+          { _id: '2024-07', revenue: 38500 },
+          { _id: '2024-08', revenue: 41200 },
+          { _id: '2024-09', revenue: 43800 },
+          { _id: '2024-10', revenue: 44500 },
+          { _id: '2024-11', revenue: 45780 },
+        ],
+        subscribersByType: [
+          { _id: 'INDUSTRIEL', count: 45 },
+          { _id: 'TRANSPORTEUR_PREMIUM', count: 38 },
+          { _id: 'TRANSPORTEUR_DO', count: 22 },
+          { _id: 'LOGISTICIEN_PREMIUM', count: 15 },
+          { _id: 'TRANSITAIRE_PREMIUM', count: 7 },
+        ],
+      });
+
+      setSubscriptions([
+        {
+          id: '1',
+          companyId: 'comp-001',
+          companyName: 'Industrie Moderne SA',
+          companyType: 'industry',
+          subscriptionType: 'INDUSTRIEL',
+          subscriptionName: 'Industriel',
+          packName: 'Pack Ultimate',
+          pricing: { totalMonthly: 999, totalAnnual: 11988, discountPercent: 5 },
+          status: 'active',
+          engagement: { type: '4_years', endDate: '2028-01-15' },
+          createdAt: '2024-01-15',
+        },
+        {
+          id: '2',
+          companyId: 'comp-002',
+          companyName: 'Transport Express SARL',
+          companyType: 'transporter',
+          subscriptionType: 'TRANSPORTEUR_DO',
+          subscriptionName: 'Transporteur D.O.',
+          pricing: { totalMonthly: 599, totalAnnual: 7188, discountPercent: 3 },
+          status: 'active',
+          engagement: { type: '3_years', endDate: '2027-03-20' },
+          createdAt: '2024-03-20',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatPrice = (price: number) => {

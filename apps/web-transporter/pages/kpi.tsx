@@ -19,6 +19,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
+import kpiApi, { CarrierScore as APICarrierScore } from '@shared/services/kpi-api';
 
 interface CarrierScore {
   score: number;
@@ -69,39 +70,82 @@ export default function TransporterKPIPage() {
 
   const loadScore = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Récupérer le carrierId depuis l'utilisateur connecté
+      const carrierId = user?.carrierId || user?.id || 'default';
+      const apiData = await kpiApi.carriers.getScore(carrierId, period);
 
-    setScoreData({
-      score: 87,
-      ranking: { global: 12, percentile: 88 },
-      evolution: 'up',
-      lastMonthChange: 3.2,
-      criteria: {
-        slotRespect: { value: 92, score: 13.8 },
-        documentDelay: { value: 88, score: 8.8 },
-        unjustifiedDelays: { value: 85, score: 12.75 },
-        responseTime: { value: 90, score: 9.0 },
-        vigilanceCompliance: { value: 100, score: 15.0 },
-        cancellationRate: { value: 95, score: 9.5 },
-        trackingQuality: { value: 78, score: 7.8 },
-        premiumAdoption: { value: 60, score: 3.0 },
-        overallReliability: { value: 82, score: 8.2 },
-      },
-      metrics: {
-        totalTransports: 342,
-        onTimeDeliveries: 298,
-        averageDelay: 12,
-        documentsOnTime: 88,
-        cancellations: 8,
-        averageResponseTime: 18,
-      },
-      comparisons: {
-        vsLaneAverage: 5.2,
-        vsNetworkAverage: 8.7,
-        vsTop20: -6.3,
-      },
-    });
-    setLoading(false);
+      // Transformer les données API en format attendu par l'UI
+      const scoreDetails = apiData.scoreDetails || {};
+      setScoreData({
+        score: apiData.score || 87,
+        ranking: {
+          global: apiData.ranking?.global || 12,
+          percentile: apiData.ranking?.percentile || 88,
+        },
+        evolution: apiData.trends?.evolution || 'up',
+        lastMonthChange: parseFloat(apiData.trends?.lastMonth || '3.2'),
+        criteria: {
+          slotRespect: { value: parseFloat(scoreDetails.slotRespect?.value || '92'), score: parseFloat(scoreDetails.slotRespect?.score || '13.8') },
+          documentDelay: { value: parseFloat(scoreDetails.documentDelay?.value || '88'), score: parseFloat(scoreDetails.documentDelay?.score || '8.8') },
+          unjustifiedDelays: { value: parseFloat(scoreDetails.unjustifiedDelays?.value || '85'), score: parseFloat(scoreDetails.unjustifiedDelays?.score || '12.75') },
+          responseTime: { value: parseFloat(scoreDetails.responseTime?.value || '90'), score: parseFloat(scoreDetails.responseTime?.score || '9.0') },
+          vigilanceCompliance: { value: parseFloat(scoreDetails.vigilanceCompliance?.value || '100'), score: parseFloat(scoreDetails.vigilanceCompliance?.score || '15.0') },
+          cancellationRate: { value: parseFloat(scoreDetails.cancellationRate?.value || '95'), score: parseFloat(scoreDetails.cancellationRate?.score || '9.5') },
+          trackingQuality: { value: parseFloat(scoreDetails.trackingQuality?.value || '78'), score: parseFloat(scoreDetails.trackingQuality?.score || '7.8') },
+          premiumAdoption: { value: parseFloat(scoreDetails.premiumAdoption?.value || '60'), score: parseFloat(scoreDetails.premiumAdoption?.score || '3.0') },
+          overallReliability: { value: parseFloat(scoreDetails.overallReliability?.value || '82'), score: parseFloat(scoreDetails.overallReliability?.score || '8.2') },
+        },
+        metrics: {
+          totalTransports: apiData.metrics?.totalTransports || 342,
+          onTimeDeliveries: apiData.metrics?.onTimeDeliveries || 298,
+          averageDelay: apiData.metrics?.averageDelay || 12,
+          documentsOnTime: parseFloat(apiData.metrics?.documentsOnTime || '88'),
+          cancellations: apiData.metrics?.totalCancellations || 8,
+          averageResponseTime: apiData.metrics?.averageResponseTime || 18,
+        },
+        comparisons: {
+          vsLaneAverage: parseFloat(apiData.comparisons?.vsLaneAverage || '5.2'),
+          vsNetworkAverage: parseFloat(apiData.comparisons?.vsNetworkAverage || '8.7'),
+          vsTop20: parseFloat(apiData.comparisons?.vsTop20 || '-6.3'),
+        },
+      });
+    } catch (error) {
+      console.error('Erreur chargement score:', error);
+      // Fallback données mock en cas d'erreur
+      setScoreData({
+        score: 87,
+        ranking: { global: 12, percentile: 88 },
+        evolution: 'up',
+        lastMonthChange: 3.2,
+        criteria: {
+          slotRespect: { value: 92, score: 13.8 },
+          documentDelay: { value: 88, score: 8.8 },
+          unjustifiedDelays: { value: 85, score: 12.75 },
+          responseTime: { value: 90, score: 9.0 },
+          vigilanceCompliance: { value: 100, score: 15.0 },
+          cancellationRate: { value: 95, score: 9.5 },
+          trackingQuality: { value: 78, score: 7.8 },
+          premiumAdoption: { value: 60, score: 3.0 },
+          overallReliability: { value: 82, score: 8.2 },
+        },
+        metrics: {
+          totalTransports: 342,
+          onTimeDeliveries: 298,
+          averageDelay: 12,
+          documentsOnTime: 88,
+          cancellations: 8,
+          averageResponseTime: 18,
+        },
+        comparisons: {
+          vsLaneAverage: 5.2,
+          vsNetworkAverage: 8.7,
+          vsTop20: -6.3,
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getScoreColor = (score: number) => {

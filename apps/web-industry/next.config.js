@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -5,6 +7,12 @@ const nextConfig = {
 
   // Transpile workspace packages
   transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
+
+  // Webpack config for @shared alias
+  webpack: (config) => {
+    config.resolve.alias['@shared'] = path.resolve(__dirname, '../../packages/shared');
+    return config;
+  },
 
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
   output: 'export',

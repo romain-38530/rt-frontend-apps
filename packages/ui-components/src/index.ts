@@ -57,3 +57,47 @@ export { CarrierSearch, OffersList } from './components/Affret';
 // Timeline Components
 export { Timeline } from './components/Timeline';
 export type { TimelineEvent } from './components/Timeline';
+
+// Palettes Components - Économie Circulaire des Palettes Europe
+export { QRScanner, SitesMap, SignatureCapture, ChequeExportButton, chequeExportUtils } from './components/Palettes';
+export type { QRScannerProps, SitesMapProps, PaletteSite, SignatureCaptureProps, SignatureData, ChequeExportProps, PalletChequeExport } from './components/Palettes';
+
+// Planning Components - Module Planning Chargement & Livraison
+export { PlanningCalendar, SlotPicker, DriverKiosk, GeofenceDetector } from './components/Planning';
+export type {
+  PlanningCalendarProps,
+  PlanningSlot,
+  PlanningDock,
+  SlotPickerProps,
+  AvailableSlot,
+  SlotBookingData,
+  DriverKioskProps,
+  DriverBooking,
+  GeofenceDetectorProps,
+  GeofenceZone,
+  GeofenceEvent,
+  GeofenceStatus
+} from './components/Planning';
+
+// Billing Components - Module Préfacturation & Facturation Transport
+export { PrefacturationList, DiscrepancyAlert, InvoiceUpload, DisputeManager, BlockingStatus, ERPExportButton } from './components/Billing';
+export type {
+  PrefacturationListProps,
+  Prefacturation,
+  PrefacturationLine,
+  DiscrepancyAlertProps,
+  DiscrepancyDetail,
+  InvoiceUploadProps,
+  OCRResult,
+  OCRInvoiceLine,
+  DisputeManagerProps,
+  Dispute,
+  DisputeMessage,
+  BlockingStatusProps,
+  Blocking,
+  BlockingType,
+  ERPExportButtonProps,
+  ERPExportConfig,
+  ERPSystem,
+  ExportResult
+} from './components/Billing';

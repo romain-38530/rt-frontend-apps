@@ -36,10 +36,17 @@ const nextConfig = {
 
   // Configuration webpack pour transpiler TypeScript externe
   webpack: (config, { isServer }) => {
-    // Transpiler les fichiers TypeScript du dossier src/ root
+    // Alias pour @shared et @rt/ui-components
+    config.resolve.alias['@shared'] = path.resolve(__dirname, '../../packages/shared');
+    config.resolve.alias['@rt/ui-components'] = path.resolve(__dirname, '../../packages/ui-components/dist');
+
+    // Transpiler les fichiers TypeScript du dossier src/ root et packages/shared
     config.module.rules.push({
       test: /\.(ts|tsx)$/,
-      include: [path.resolve(__dirname, '../../src')],
+      include: [
+        path.resolve(__dirname, '../../src'),
+        path.resolve(__dirname, '../../packages/shared'),
+      ],
       use: {
         loader: 'babel-loader',
         options: {

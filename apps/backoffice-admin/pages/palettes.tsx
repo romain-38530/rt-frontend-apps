@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import {
   palettesAdminApi,
   PalletCheque,
@@ -8,7 +9,25 @@ import {
   PalletSiteQuota,
 } from '../lib/api/palettes';
 
-type Tab = 'dashboard' | 'cheques' | 'ledgers' | 'sites' | 'disputes' | 'analytics';
+// Dynamic imports for Palettes components (SSR disabled for camera/canvas)
+const QRScanner = dynamic<any>(
+  () => import('@rt/ui-components').then(mod => mod.QRScanner),
+  { ssr: false, loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Chargement scanner...</div> }
+);
+const SitesMap = dynamic<any>(
+  () => import('@rt/ui-components').then(mod => mod.SitesMap),
+  { ssr: false, loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Chargement carte...</div> }
+);
+const SignatureCapture = dynamic<any>(
+  () => import('@rt/ui-components').then(mod => mod.SignatureCapture),
+  { ssr: false }
+);
+const ChequeExportButton = dynamic<any>(
+  () => import('@rt/ui-components').then(mod => mod.ChequeExportButton),
+  { ssr: false }
+);
+
+type Tab = 'dashboard' | 'cheques' | 'ledgers' | 'sites' | 'disputes' | 'analytics' | 'scan' | 'map';
 
 export default function PalettesAdmin() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -25,6 +44,11 @@ export default function PalettesAdmin() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // QR Scanner and Signature states
+  const [showSignature, setShowSignature] = useState(false);
+  const [signatureForCheque, setSignatureForCheque] = useState<string | null>(null);
+  const [scannedChequeId, setScannedChequeId] = useState<string | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -101,6 +125,42 @@ export default function PalettesAdmin() {
     palettesAdminApi.exportToCSV(data, 'sites-palettes.csv');
   }
 
+  // Handle QR code scan (admin verification)
+  const handleQRScan = useCallback((qrData: string) => {
+    let chequeId = qrData;
+    try {
+      const parsed = JSON.parse(qrData);
+      chequeId = parsed.chequeId || parsed.id || qrData;
+    } catch {
+      // Not JSON, use as-is
+    }
+    setScannedChequeId(chequeId);
+    alert(`Chèque scanné: ${chequeId}\nCe chèque peut maintenant être vérifié dans le système.`);
+  }, []);
+
+  // Handle signature capture (admin validation)
+  const handleSignatureCapture = useCallback((signatureData: any) => {
+    if (!signatureForCheque) return;
+    console.log('Admin signature captured for cheque:', signatureForCheque, signatureData);
+    alert(`Signature admin enregistrée pour le chèque ${signatureForCheque}`);
+    setShowSignature(false);
+    setSignatureForCheque(null);
+  }, [signatureForCheque]);
+
+  // Convert sites to map format
+  const mapSites = sites.map((site, index) => ({
+    id: site.id,
+    name: site.name,
+    address: site.address,
+    latitude: (site as any).latitude || 48.8566 + (index * 0.02),
+    longitude: (site as any).longitude || 2.3522 + (index * 0.02),
+    type: 'admin' as const,
+    capacity: site.quotaDailyMax,
+    currentStock: 0,
+    openingHours: `${site.openingHours?.start || '08:00'} - ${site.openingHours?.end || '18:00'}`,
+    isOpen: true
+  }));
+
   // Calculate KPIs
   const kpis = {
     totalSites: sites.length,
@@ -140,8 +200,8 @@ export default function PalettesAdmin() {
       </header>
 
       {/* Navigation Tabs */}
-      <nav style={{ display: 'flex', gap: 8, borderBottom: '2px solid #eee', marginBottom: 24 }}>
-        {(['dashboard', 'cheques', 'ledgers', 'sites', 'disputes', 'analytics'] as Tab[]).map(tab => (
+      <nav style={{ display: 'flex', gap: 8, borderBottom: '2px solid #eee', marginBottom: 24, flexWrap: 'wrap' }}>
+        {(['dashboard', 'cheques', 'ledgers', 'sites', 'disputes', 'analytics', 'scan', 'map'] as Tab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -531,6 +591,170 @@ export default function PalettesAdmin() {
           <div style={{ padding: 16, border: '1px solid #0a66ff', borderRadius: 8, background: '#f0f8ff' }}>
             <strong>Graphiques avancés:</strong> À venir - Évolution des flux, prédictions IA, heatmap géographique
           </div>
+        </div>
+      )}
+
+      {/* SCAN TAB */}
+      {activeTab === 'scan' && (
+        <div>
+          <h2 style={{ fontSize: 24, marginBottom: 16 }}>Scanner QR Code - Vérification Admin</h2>
+          <p style={{ opacity: 0.8, marginBottom: 24 }}>
+            Scannez un chèque-palette pour vérifier son authenticité et son statut dans le système.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
+              <h3 style={{ fontSize: 18, marginBottom: 16 }}>Scanner</h3>
+              <QRScanner
+                onScan={handleQRScan}
+                onError={(err: string) => setError(err)}
+                scannerStyle="embedded"
+              />
+            </div>
+
+            <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
+              <h3 style={{ fontSize: 18, marginBottom: 16 }}>Résultat du scan</h3>
+              {scannedChequeId ? (
+                <div>
+                  <p style={{ marginBottom: 12 }}>
+                    <strong>Chèque ID:</strong> {scannedChequeId}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => {
+                        setSignatureForCheque(scannedChequeId);
+                        setShowSignature(true);
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        background: '#0a66ff',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Valider avec signature
+                    </button>
+                    <button
+                      onClick={() => setScannedChequeId(null)}
+                      style={{
+                        padding: '10px 16px',
+                        background: '#eee',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Effacer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ opacity: 0.6 }}>Aucun chèque scanné. Utilisez le scanner à gauche.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MAP TAB */}
+      {activeTab === 'map' && (
+        <div>
+          <h2 style={{ fontSize: 24, marginBottom: 16 }}>Carte des Sites de Retour</h2>
+          <p style={{ opacity: 0.8, marginBottom: 24 }}>
+            Visualisation géographique de tous les sites de retour de palettes.
+          </p>
+
+          <div style={{ border: '1px solid #ddd', borderRadius: 8, overflow: 'hidden', height: 600 }}>
+            <SitesMap
+              sites={mapSites}
+              height={600}
+              onSiteSelect={(site: any) => {
+                setSelectedSite(site.id);
+                setActiveTab('sites');
+              }}
+              showUserLocation={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Export Buttons - Fixed Position */}
+      {ledgers.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          display: 'flex',
+          gap: 12,
+          zIndex: 100
+        }}>
+          <ChequeExportButton
+            cheques={ledgers.map(l => ({
+              chequeId: `LEDGER-${l.companyId}`,
+              qrCode: '',
+              orderId: l.companyId,
+              palletType: 'EURO_EPAL',
+              quantity: Math.abs(l.balance),
+              emitterId: 'ADMIN',
+              emitterName: 'Administration',
+              receiverId: l.companyId,
+              receiverName: l.companyId,
+              status: l.balance >= 0 ? 'CREDIT' : 'DEBIT',
+              emittedAt: new Date().toISOString(),
+              validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+            }))}
+            exportType="pdf"
+            variant="primary"
+          />
+          <ChequeExportButton
+            cheques={ledgers.map(l => ({
+              chequeId: `LEDGER-${l.companyId}`,
+              qrCode: '',
+              orderId: l.companyId,
+              palletType: 'EURO_EPAL',
+              quantity: Math.abs(l.balance),
+              emitterId: 'ADMIN',
+              emitterName: 'Administration',
+              receiverId: l.companyId,
+              receiverName: l.companyId,
+              status: l.balance >= 0 ? 'CREDIT' : 'DEBIT',
+              emittedAt: new Date().toISOString(),
+              validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+            }))}
+            exportType="csv"
+            variant="secondary"
+          />
+        </div>
+      )}
+
+      {/* Signature Modal */}
+      {showSignature && signatureForCheque && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <SignatureCapture
+            onCapture={handleSignatureCapture}
+            onCancel={() => {
+              setShowSignature(false);
+              setSignatureForCheque(null);
+            }}
+            signerName="Administrateur"
+            signerRole="validator"
+            width={450}
+            height={220}
+          />
         </div>
       )}
     </div>

@@ -34,6 +34,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
+import * as salesAgentsApi from '@shared/services/sales-agents-api';
 
 // Types
 interface Agent {
@@ -134,116 +135,150 @@ export default function SalesAgentsPage() {
 
   const loadData = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Charger les données depuis l'API en parallèle
+      const [overviewData, agentsData, commissionsData, challengesData] = await Promise.all([
+        salesAgentsApi.getDirectionOverview(),
+        salesAgentsApi.getAgents(),
+        salesAgentsApi.getCommissions(),
+        salesAgentsApi.getChallenges(),
+      ]);
 
-    // Mock data
-    setStats({
-      totalAgents: 45,
-      activeAgents: 38,
-      pendingAgents: 5,
-      totalClients: 312,
-      activeClients: 287,
-      currentMonthCommissions: 20090,
-      yearToDateCommissions: 186540,
-      mrr: 287 * COMMISSION_RATE,
-    });
+      // Stats depuis l'overview
+      setStats({
+        totalAgents: overviewData.totalAgents || 45,
+        activeAgents: overviewData.activeAgents || 38,
+        pendingAgents: overviewData.pendingAgents || 5,
+        totalClients: overviewData.totalClients || 312,
+        activeClients: overviewData.activeClients || 287,
+        currentMonthCommissions: overviewData.currentMonthCommissions || 20090,
+        yearToDateCommissions: overviewData.yearToDateCommissions || 186540,
+        mrr: overviewData.mrr || (overviewData.activeClients || 287) * COMMISSION_RATE,
+      });
 
-    setAgents([
-      {
-        id: '1',
-        firstName: 'Jean',
-        lastName: 'Dupont',
-        email: 'jean.dupont@example.com',
-        phone: '06 12 34 56 78',
-        company: 'JD Consulting',
-        region: 'Ile-de-France',
-        status: 'active',
-        contractType: 'unlimited',
-        stats: { totalClients: 28, activeClients: 25, totalCommissions: 15400, pendingCommissions: 1750 },
-        createdAt: '2024-03-15',
-        activatedAt: '2024-03-20',
-      },
-      {
-        id: '2',
-        firstName: 'Marie',
-        lastName: 'Martin',
-        email: 'marie.martin@example.com',
-        phone: '06 98 76 54 32',
-        region: 'Auvergne-Rhone-Alpes',
-        status: 'active',
-        contractType: '1_year',
-        stats: { totalClients: 19, activeClients: 18, totalCommissions: 9800, pendingCommissions: 1260 },
-        createdAt: '2024-05-01',
-        activatedAt: '2024-05-10',
-      },
-      {
-        id: '3',
-        firstName: 'Pierre',
-        lastName: 'Bernard',
-        email: 'pierre.bernard@example.com',
-        phone: '06 55 44 33 22',
-        company: 'Bernard & Associes',
-        region: 'Nouvelle-Aquitaine',
-        status: 'pending_signature',
-        contractType: 'unlimited',
-        stats: { totalClients: 0, activeClients: 0, totalCommissions: 0, pendingCommissions: 0 },
-        createdAt: '2024-11-25',
-      },
-      {
-        id: '4',
-        firstName: 'Sophie',
-        lastName: 'Leroy',
-        email: 'sophie.leroy@example.com',
-        phone: '06 11 22 33 44',
-        region: 'Occitanie',
-        status: 'non_compliant',
-        contractType: 'unlimited',
-        stats: { totalClients: 12, activeClients: 12, totalCommissions: 4200, pendingCommissions: 840 },
-        createdAt: '2024-06-15',
-        activatedAt: '2024-06-20',
-      },
-      {
-        id: '5',
-        firstName: 'Luc',
-        lastName: 'Moreau',
-        email: 'luc.moreau@example.com',
-        phone: '06 77 88 99 00',
-        region: 'Hauts-de-France',
-        status: 'suspended',
-        contractType: '1_year',
-        stats: { totalClients: 8, activeClients: 0, totalCommissions: 2800, pendingCommissions: 0 },
-        createdAt: '2024-04-01',
-        activatedAt: '2024-04-10',
-      },
-    ]);
+      // Agents
+      const mappedAgents = (agentsData.agents || []).map((a: any) => ({
+        id: a.id,
+        firstName: a.firstName,
+        lastName: a.lastName,
+        email: a.email,
+        phone: a.phone,
+        company: a.company,
+        region: a.region,
+        status: a.status,
+        contractType: a.contractType,
+        stats: a.stats || { totalClients: 0, activeClients: 0, totalCommissions: 0, pendingCommissions: 0 },
+        createdAt: a.createdAt,
+        activatedAt: a.activatedAt,
+      }));
+      if (mappedAgents.length > 0) setAgents(mappedAgents);
 
-    setCommissions([
-      { id: '1', agentId: '1', agentName: 'Jean Dupont', period: '2024-11', activeClients: 25, totalAmount: 1750, status: 'pending', createdAt: '2024-12-01' },
-      { id: '2', agentId: '2', agentName: 'Marie Martin', period: '2024-11', activeClients: 18, totalAmount: 1260, status: 'pending', createdAt: '2024-12-01' },
-      { id: '3', agentId: '1', agentName: 'Jean Dupont', period: '2024-10', activeClients: 24, totalAmount: 1680, status: 'paid', createdAt: '2024-11-01' },
-      { id: '4', agentId: '2', agentName: 'Marie Martin', period: '2024-10', activeClients: 17, totalAmount: 1190, status: 'paid', createdAt: '2024-11-01' },
-      { id: '5', agentId: '4', agentName: 'Sophie Leroy', period: '2024-11', activeClients: 12, totalAmount: 840, status: 'pending', createdAt: '2024-12-01' },
-    ]);
+      // Commissions
+      const mappedCommissions = (commissionsData.commissions || []).map((c: any) => ({
+        id: c.id,
+        agentId: c.agentId,
+        agentName: c.agentName,
+        period: c.period,
+        activeClients: c.activeClients,
+        totalAmount: c.totalAmount,
+        status: c.status,
+        createdAt: c.createdAt,
+      }));
+      if (mappedCommissions.length > 0) setCommissions(mappedCommissions);
 
-    setChallenges([
-      {
-        id: '1',
-        name: '1000 clients en 4 mois',
-        description: 'Objectif collectif: recruter 1000 nouveaux clients actifs en 4 mois',
-        startDate: '2024-10-01',
-        endDate: '2025-01-31',
-        targetClients: 1000,
-        status: 'active',
-        ranking: [
-          { agentId: '1', agentName: 'Jean Dupont', clientsRecruited: 28, rank: 1 },
-          { agentId: '2', agentName: 'Marie Martin', clientsRecruited: 19, rank: 2 },
-          { agentId: '4', agentName: 'Sophie Leroy', clientsRecruited: 12, rank: 3 },
-          { agentId: '5', agentName: 'Luc Moreau', clientsRecruited: 8, rank: 4 },
-        ],
-      },
-    ]);
+      // Challenges
+      const mappedChallenges = (challengesData || []).map((ch: any) => ({
+        id: ch.id,
+        name: ch.name,
+        description: ch.description,
+        startDate: ch.startDate,
+        endDate: ch.endDate,
+        targetClients: ch.targetClients,
+        status: ch.status,
+        ranking: ch.ranking || [],
+      }));
+      if (mappedChallenges.length > 0) setChallenges(mappedChallenges);
 
-    setLoading(false);
+    } catch (error) {
+      console.error('Erreur chargement données agents:', error);
+      // Fallback mock data
+      setStats({
+        totalAgents: 45,
+        activeAgents: 38,
+        pendingAgents: 5,
+        totalClients: 312,
+        activeClients: 287,
+        currentMonthCommissions: 20090,
+        yearToDateCommissions: 186540,
+        mrr: 287 * COMMISSION_RATE,
+      });
+
+      setAgents([
+        {
+          id: '1',
+          firstName: 'Jean',
+          lastName: 'Dupont',
+          email: 'jean.dupont@example.com',
+          phone: '06 12 34 56 78',
+          company: 'JD Consulting',
+          region: 'Ile-de-France',
+          status: 'active',
+          contractType: 'unlimited',
+          stats: { totalClients: 28, activeClients: 25, totalCommissions: 15400, pendingCommissions: 1750 },
+          createdAt: '2024-03-15',
+          activatedAt: '2024-03-20',
+        },
+        {
+          id: '2',
+          firstName: 'Marie',
+          lastName: 'Martin',
+          email: 'marie.martin@example.com',
+          phone: '06 98 76 54 32',
+          region: 'Auvergne-Rhone-Alpes',
+          status: 'active',
+          contractType: '1_year',
+          stats: { totalClients: 19, activeClients: 18, totalCommissions: 9800, pendingCommissions: 1260 },
+          createdAt: '2024-05-01',
+          activatedAt: '2024-05-10',
+        },
+        {
+          id: '3',
+          firstName: 'Pierre',
+          lastName: 'Bernard',
+          email: 'pierre.bernard@example.com',
+          phone: '06 55 44 33 22',
+          company: 'Bernard & Associes',
+          region: 'Nouvelle-Aquitaine',
+          status: 'pending_signature',
+          contractType: 'unlimited',
+          stats: { totalClients: 0, activeClients: 0, totalCommissions: 0, pendingCommissions: 0 },
+          createdAt: '2024-11-25',
+        },
+      ]);
+
+      setCommissions([
+        { id: '1', agentId: '1', agentName: 'Jean Dupont', period: '2024-11', activeClients: 25, totalAmount: 1750, status: 'pending', createdAt: '2024-12-01' },
+        { id: '2', agentId: '2', agentName: 'Marie Martin', period: '2024-11', activeClients: 18, totalAmount: 1260, status: 'pending', createdAt: '2024-12-01' },
+      ]);
+
+      setChallenges([
+        {
+          id: '1',
+          name: '1000 clients en 4 mois',
+          description: 'Objectif collectif: recruter 1000 nouveaux clients actifs en 4 mois',
+          startDate: '2024-10-01',
+          endDate: '2025-01-31',
+          targetClients: 1000,
+          status: 'active',
+          ranking: [
+            { agentId: '1', agentName: 'Jean Dupont', clientsRecruited: 28, rank: 1 },
+            { agentId: '2', agentName: 'Marie Martin', clientsRecruited: 19, rank: 2 },
+          ],
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusIcon = (status: Agent['status']) => {

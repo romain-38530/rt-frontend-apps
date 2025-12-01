@@ -10,10 +10,29 @@
  * - Rapports et exports
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
+
+// Import dynamique des composants Palettes (SSR disabled)
+const QRScanner = dynamic<any>(
+  () => import('../../../packages/ui-components/src/components/Palettes/QRScanner').then(mod => mod.QRScanner),
+  { ssr: false, loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Chargement scanner...</div> }
+);
+const SitesMap = dynamic<any>(
+  () => import('../../../packages/ui-components/src/components/Palettes/SitesMap').then(mod => mod.SitesMap),
+  { ssr: false, loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Chargement carte...</div> }
+);
+const SignatureCapture = dynamic<any>(
+  () => import('../../../packages/ui-components/src/components/Palettes/SignatureCapture').then(mod => mod.SignatureCapture),
+  { ssr: false }
+);
+const ChequeExportButton = dynamic<any>(
+  () => import('../../../packages/ui-components/src/components/Palettes/ChequeExport').then(mod => mod.ChequeExportButton),
+  { ssr: false }
+);
 
 // Types
 interface PalletCheque {
@@ -119,7 +138,10 @@ export default function PalettesCircularPage() {
   const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'http://localhost:3000';
 
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'requests' | 'ledger' | 'disputes' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'requests' | 'ledger' | 'disputes' | 'reports' | 'scan' | 'map'>('dashboard');
+  const [showSignature, setShowSignature] = useState(false);
+  const [signatureForCheque, setSignatureForCheque] = useState<string | null>(null);
+  const [selectedCheque, setSelectedCheque] = useState<PalletCheque | null>(null);
   const [ledger, setLedger] = useState<PalletLedger | null>(null);
   const [cheques, setCheques] = useState<PalletCheque[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
@@ -290,6 +312,57 @@ export default function PalettesCircularPage() {
     }
   };
 
+  // Handle QR code scan
+  const handleQRScan = useCallback(async (data: string) => {
+    try {
+      const chequeId = data.includes('/') ? data.split('/').pop() : data;
+      const result = await apiCall(`/api/palettes/cheques/${chequeId}`);
+      if (result.data) {
+        setSelectedCheque(result.data);
+        setSuccess(`Cheque ${chequeId} trouve!`);
+        setActiveTab('dashboard');
+      }
+    } catch (err: any) {
+      setError(`Cheque non trouve: ${err.message}`);
+    }
+  }, []);
+
+  // Handle signature capture
+  const handleSignatureCapture = useCallback(async (signatureData: { imageBase64: string; timestamp: string }) => {
+    if (!signatureForCheque) return;
+    setIsLoading(true);
+    try {
+      await apiCall(`/api/palettes/cheques/${signatureForCheque}/sign`, 'POST', {
+        signature: signatureData.imageBase64,
+        signedAt: signatureData.timestamp,
+        signerRole: 'receiver'
+      });
+      setSuccess('Signature enregistree!');
+      setShowSignature(false);
+      setSignatureForCheque(null);
+      loadCheques();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [signatureForCheque]);
+
+  // Convert sites for map
+  const mapSites = nearbySites.map(site => ({
+    siteId: site.siteId,
+    siteName: site.siteName,
+    address: {
+      street: site.address.street,
+      city: site.address.city,
+      postalCode: site.address.postalCode,
+      coordinates: site.address.coordinates
+    },
+    priority: 'NETWORK' as const,
+    quotaRemaining: site.quota.maxDaily - site.quota.currentDaily,
+    isOpen: site.active
+  }));
+
   // Calculate KPIs
   const getTotalBalance = () => {
     if (!ledger) return 0;
@@ -447,6 +520,12 @@ export default function PalettesCircularPage() {
             </button>
             <button style={tabStyle(activeTab === 'reports')} onClick={() => setActiveTab('reports')}>
               Rapports
+            </button>
+            <button style={tabStyle(activeTab === 'scan')} onClick={() => setActiveTab('scan')}>
+              📷 Scanner
+            </button>
+            <button style={tabStyle(activeTab === 'map')} onClick={() => setActiveTab('map')}>
+              🗺️ Carte
             </button>
           </div>
         </div>
@@ -1052,7 +1131,99 @@ export default function PalettesCircularPage() {
             </div>
           )}
 
+          {/* Tab: Scanner */}
+          {activeTab === 'scan' && (
+            <div>
+              <h2 style={{ marginBottom: '24px' }}>📷 Scanner un Cheque-Palette</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '24px' }}>
+                <div style={cardStyle}>
+                  <QRScanner
+                    onScan={handleQRScan}
+                    onError={(err: string) => setError(err)}
+                    height={400}
+                    showGuide={true}
+                    autoClose={false}
+                  />
+                </div>
+                <div style={cardStyle}>
+                  <h3 style={{ marginBottom: '16px' }}>Cheque Scanne</h3>
+                  {selectedCheque ? (
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      <div><strong>ID:</strong> {selectedCheque.chequeId}</div>
+                      <div><strong>Type:</strong> {selectedCheque.palletType}</div>
+                      <div><strong>Quantite:</strong> {selectedCheque.quantity}</div>
+                      <div><strong>Statut:</strong> {selectedCheque.status}</div>
+                      <div><strong>Transporteur:</strong> {selectedCheque.transporterName}</div>
+                      <button
+                        style={buttonStyle}
+                        onClick={() => { setSignatureForCheque(selectedCheque.chequeId); setShowSignature(true); }}
+                      >
+                        ✍️ Signer la reception
+                      </button>
+                    </div>
+                  ) : (
+                    <p style={{ opacity: 0.7 }}>Scannez un QR code pour voir les details</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Map */}
+          {activeTab === 'map' && (
+            <div>
+              <h2 style={{ marginBottom: '24px' }}>🗺️ Carte des Sites</h2>
+              <SitesMap
+                sites={mapSites}
+                height={500}
+                showFilters={true}
+                showLegend={true}
+              />
+            </div>
+          )}
+
+          {/* Export Buttons */}
+          {cheques.length > 0 && (
+            <div style={{ position: 'fixed', bottom: '24px', right: '24px', display: 'flex', gap: '8px', zIndex: 100 }}>
+              <ChequeExportButton
+                cheques={cheques.map(c => ({
+                  chequeId: c.chequeId, qrCode: c.qrCode, orderId: c.orderId, palletType: c.palletType,
+                  quantity: c.quantity, transporterName: c.transporterName, vehiclePlate: c.vehiclePlate,
+                  driverName: c.driverName, destinationSiteName: c.destinationSiteName, status: c.status,
+                  emittedAt: c.timestamps.emittedAt, depositedAt: c.timestamps.depositedAt, receivedAt: c.timestamps.receivedAt,
+                }))}
+                format="csv" filename="cheques-industrie"
+                onExportComplete={(format: string, count: number) => setSuccess(`${count} cheques exportes`)}
+                buttonStyle={{ background: 'rgba(0,208,132,0.9)' }}
+              />
+              <ChequeExportButton
+                cheques={cheques.map(c => ({
+                  chequeId: c.chequeId, qrCode: c.qrCode, orderId: c.orderId, palletType: c.palletType,
+                  quantity: c.quantity, transporterName: c.transporterName, vehiclePlate: c.vehiclePlate,
+                  driverName: c.driverName, destinationSiteName: c.destinationSiteName, status: c.status,
+                  emittedAt: c.timestamps.emittedAt, depositedAt: c.timestamps.depositedAt, receivedAt: c.timestamps.receivedAt,
+                }))}
+                format="pdf" filename="cheques-industrie" includeQRCodes={true} companyName="Industriel"
+                onExportComplete={(format: string, count: number) => setSuccess(`${count} cheques exportes`)}
+              />
+            </div>
+          )}
+
         </div>
+
+        {/* Modal Signature */}
+        {showSignature && signatureForCheque && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <SignatureCapture
+              onCapture={handleSignatureCapture}
+              onCancel={() => { setShowSignature(false); setSignatureForCheque(null); }}
+              signerName="Recepteur Industriel"
+              signerRole="receiver"
+              width={450}
+              height={220}
+            />
+          </div>
+        )}
       </div>
     </>
   );
