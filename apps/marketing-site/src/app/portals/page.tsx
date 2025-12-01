@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { Factory, Truck, MapPin, Building, Ship, Package, ArrowRight, Check, Bot, Anchor, Calendar, MessageCircle, Sparkles, Shield } from 'lucide-react';
 
-// URLs des portails - hardcodées pour export statique
-const DOMAIN = 'symphonia-controltower.com';
-
+// URLs des portails - liens vers les pages de présentation internes
 const portals = [
   {
     id: 'industry',
@@ -13,7 +11,7 @@ const portals = [
     icon: Factory,
     description: 'Vigilance, planification, suivi et Affret.IA',
     gradient: 'from-purple-500 via-purple-600 to-indigo-600',
-    url: `https://industry.${DOMAIN}`,
+    url: '/industry',
     features: [
       'Tableau de bord intelligent',
       'Vigilance et alertes',
@@ -29,7 +27,7 @@ const portals = [
     icon: Truck,
     description: 'Gestion des transports et des livraisons',
     gradient: 'from-emerald-500 via-teal-500 to-cyan-600',
-    url: `https://transporter.${DOMAIN}`,
+    url: '/transporter',
     features: [
       'Planning intelligent',
       'Optimisation des routes IA',
@@ -45,7 +43,7 @@ const portals = [
     icon: MapPin,
     description: 'Suivi et réception de vos livraisons',
     gradient: 'from-green-500 via-emerald-500 to-teal-600',
-    url: `https://recipient.${DOMAIN}`,
+    url: '/recipient',
     features: [
       'Suivi en temps réel',
       'Notifications SMS/Email',
@@ -61,7 +59,7 @@ const portals = [
     icon: Building,
     description: 'Gestion de vos approvisionnements',
     gradient: 'from-pink-500 via-rose-500 to-red-500',
-    url: `https://supplier.${DOMAIN}`,
+    url: '/supplier',
     features: [
       'Gestion des commandes',
       'Créneaux de livraison',
@@ -77,7 +75,7 @@ const portals = [
     icon: Ship,
     description: 'Coordination des expéditions internationales',
     gradient: 'from-blue-500 via-indigo-500 to-purple-500',
-    url: `https://forwarder.${DOMAIN}`,
+    url: '/forwarder',
     features: [
       'Gestion multimodale',
       'Documentation douanière',
@@ -93,7 +91,7 @@ const portals = [
     icon: Package,
     description: 'Optimisation logistique et gestion des flux',
     gradient: 'from-amber-500 via-orange-500 to-red-500',
-    url: `https://logistician.${DOMAIN}`,
+    url: '/logistician',
     features: [
       'Tableau de bord analytique',
       'Gestion des stocks',
