@@ -126,8 +126,8 @@ export interface FreightRequest {
   closingDate?: Date;
 }
 
-// Bid Types
-export type BidStatus =
+// Bid Types (préfixé Maritime pour éviter conflits)
+export type MaritimeBidStatus =
   | 'submitted'
   | 'shortlisted'
   | 'accepted'
@@ -180,7 +180,7 @@ export interface BidTerms {
   conditions: string[];
 }
 
-export interface Bid {
+export interface MaritimeBid {
   id: string;
   reference: string;
   freightRequestId: string;
@@ -189,14 +189,14 @@ export interface Bid {
   vessel?: BidVessel;
   schedule: BidSchedule;
   terms: BidTerms;
-  status: BidStatus;
+  status: MaritimeBidStatus;
   submittedAt: Date;
   expiresAt: Date;
   updatedAt?: Date;
 }
 
-// Contract Types
-export type ContractStatus =
+// Contract Types (préfixé Maritime pour éviter conflits)
+export type MaritimeContractStatus =
   | 'draft'
   | 'pendingSignatures'
   | 'active'
@@ -204,7 +204,7 @@ export type ContractStatus =
   | 'disputed'
   | 'cancelled';
 
-export interface ContractParty {
+export interface MaritimeContractParty {
   companyId: string;
   companyName: string;
   registrationNumber: string;
@@ -214,14 +214,14 @@ export interface ContractParty {
   contactPhone?: string;
 }
 
-export interface ContractSignature {
+export interface MaritimeContractSignature {
   signedAt?: Date;
   signedBy?: string;
   signatureData?: string;
   ipAddress?: string;
 }
 
-export interface ContractPayment {
+export interface MaritimeContractPayment {
   dueDate: Date;
   amount: number;
   currency: string;
@@ -230,7 +230,7 @@ export interface ContractPayment {
   paidAt?: Date;
 }
 
-export interface ContractDocument {
+export interface MaritimeContractDocument {
   id: string;
   name: string;
   type: string;
@@ -239,13 +239,13 @@ export interface ContractDocument {
   uploadedBy: string;
 }
 
-export interface Contract {
+export interface MaritimeContract {
   id: string;
   reference: string;
   freightRequestId: string;
   bidId: string;
-  shipper: ContractParty;
-  carrier: ContractParty;
+  shipper: MaritimeContractParty;
+  carrier: MaritimeContractParty;
   cargo: FreightRequestCargo;
   route: {
     origin: Port;
@@ -253,20 +253,20 @@ export interface Contract {
   };
   schedule: BidSchedule;
   pricing: BidPricing;
-  paymentSchedule: ContractPayment[];
+  paymentSchedule: MaritimeContractPayment[];
   terms: string;
-  documents: ContractDocument[];
+  documents: MaritimeContractDocument[];
   signatures: {
-    shipper: ContractSignature;
-    carrier: ContractSignature;
+    shipper: MaritimeContractSignature;
+    carrier: MaritimeContractSignature;
   };
-  status: ContractStatus;
+  status: MaritimeContractStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
 // Carrier Types
-export interface CarrierVessel {
+export interface MaritimeCarrierVessel {
   name: string;
   imo: string;
   type: string;
@@ -276,20 +276,20 @@ export interface CarrierVessel {
   yearBuilt: number;
 }
 
-export interface CarrierCertification {
+export interface MaritimeCarrierCertification {
   type: string;
   number: string;
   issuedBy: string;
   validUntil: Date;
 }
 
-export interface CarrierRoute {
+export interface MaritimeCarrierRoute {
   origin: string;
   destination: string;
   frequency: 'weekly' | 'biweekly' | 'monthly' | 'irregular';
 }
 
-export interface CarrierRatings {
+export interface MaritimeCarrierRatings {
   overall: number;
   reliability: number;
   communication: number;
@@ -297,14 +297,14 @@ export interface CarrierRatings {
   totalReviews: number;
 }
 
-export interface CarrierStats {
+export interface MaritimeCarrierStats {
   completedJobs: number;
   totalVolume: number;
   volumeUnit: 'TEU' | 'tons';
   onTimeDelivery: number; // percentage
 }
 
-export interface Carrier {
+export interface MaritimeCarrier {
   id: string;
   companyId: string;
   company: {
@@ -318,23 +318,23 @@ export interface Carrier {
     totalCapacity: number;
     capacityUnit: 'TEU' | 'DWT';
     vesselTypes: string[];
-    vessels: CarrierVessel[];
+    vessels: MaritimeCarrierVessel[];
   };
-  certifications: CarrierCertification[];
-  routes: CarrierRoute[];
-  ratings: CarrierRatings;
+  certifications: MaritimeCarrierCertification[];
+  routes: MaritimeCarrierRoute[];
+  ratings: MaritimeCarrierRatings;
   verified: boolean;
   verifiedAt?: Date;
-  stats: CarrierStats;
+  stats: MaritimeCarrierStats;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Alert Types
-export type AlertType = 'route' | 'price' | 'carrier';
-export type AlertFrequency = 'instant' | 'daily' | 'weekly';
+// Alert Types (préfixé Maritime pour éviter conflits)
+export type MaritimeAlertType = 'route' | 'price' | 'carrier';
+export type MaritimeAlertFrequency = 'instant' | 'daily' | 'weekly';
 
-export interface AlertCriteria {
+export interface MaritimeAlertCriteria {
   origins?: string[];
   destinations?: string[];
   cargoTypes?: CargoType[];
@@ -342,13 +342,13 @@ export interface AlertCriteria {
   carriers?: string[];
 }
 
-export interface Alert {
+export interface MaritimeAlert {
   id: string;
   userId: string;
   companyId: string;
-  type: AlertType;
-  criteria: AlertCriteria;
-  frequency: AlertFrequency;
+  type: MaritimeAlertType;
+  criteria: MaritimeAlertCriteria;
+  frequency: MaritimeAlertFrequency;
   active: boolean;
   lastTriggered?: Date;
   triggeredCount: number;
@@ -356,8 +356,8 @@ export interface Alert {
   updatedAt: Date;
 }
 
-// Search & Matching Types
-export interface RouteSearchParams {
+// Search & Matching Types (préfixé Maritime pour éviter conflits)
+export interface MaritimeRouteSearchParams {
   origin?: string;
   destination?: string;
   cargoType?: CargoType;
@@ -366,7 +366,7 @@ export interface RouteSearchParams {
   maxPrice?: number;
 }
 
-export interface CarrierSearchParams {
+export interface MaritimeCarrierSearchParams {
   route?: {
     origin: string;
     destination: string;
@@ -376,7 +376,7 @@ export interface CarrierSearchParams {
   verified?: boolean;
 }
 
-export interface MatchingResult {
+export interface MaritimeMatchingResult {
   carrierId: string;
   carrierName: string;
   score: number;
@@ -395,7 +395,7 @@ export interface MatchingResult {
   recommendation: string;
 }
 
-export interface MarketStats {
+export interface MaritimeMarketStats {
   totalActiveRequests: number;
   totalBidsThisMonth: number;
   averagePrice: number;

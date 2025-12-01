@@ -130,7 +130,7 @@ export interface PriceBreakdown {
 
 // ========== OFFRES ==========
 
-export type OfferStatus =
+export type AffretOfferStatus =
   | 'pending' // En attente de réponse carrier
   | 'submitted' // Offre soumise
   | 'accepted' // Acceptée par shipper
@@ -146,7 +146,7 @@ export interface AffretOffer {
   carrierName: string;
   carrierLogo?: string;
 
-  status: OfferStatus;
+  status: AffretOfferStatus;
 
   // Prix
   price: {
@@ -515,7 +515,7 @@ export interface AffretEventOrderAssigned extends AffretEvent {
     carrierId: string;
     carrierName: string;
     assignmentId: string;
-    trackingLevel: TrackingLevel;
+    trackingLevel: AffretTrackingLevel;
     estimatedPickup: string;
     estimatedDelivery: string;
   };
@@ -525,7 +525,7 @@ export interface AffretEventTrackingStart extends AffretEvent {
   type: 'affretia.tracking.start';
   payload: {
     trackingId: string;
-    level: TrackingLevel;
+    level: AffretTrackingLevel;
     provider?: string; // 'tomtom', 'vehizen', 'gps_smartphone'
   };
 }
@@ -562,7 +562,7 @@ export interface AffretEventOrderClosed extends AffretEvent {
   payload: {
     success: boolean;
     finalPrice: number;
-    documentsReceived: DocumentType[];
+    documentsReceived: AffretDocumentType[];
     syncedToERP: boolean;
     archivedAt: string;
   };
@@ -572,7 +572,7 @@ export interface AffretEventDocumentsUploaded extends AffretEvent {
   type: 'documents.uploaded';
   payload: {
     documentId: string;
-    documentType: DocumentType;
+    documentType: AffretDocumentType;
     filename: string;
     ocrProcessed: boolean;
     extractedData?: Record<string, string>;
@@ -793,7 +793,7 @@ export interface AssignmentRequest {
   sessionId: string;
   carrierId: string;
   finalPrice: number;
-  trackingLevel: TrackingLevel;
+  trackingLevel: AffretTrackingLevel;
   notes?: string;
 }
 
@@ -807,7 +807,7 @@ export interface Assignment {
   finalPrice: number;
   currency: string;
 
-  trackingLevel: TrackingLevel;
+  trackingLevel: AffretTrackingLevel;
   trackingId?: string;
 
   vehicle?: {
@@ -848,11 +848,11 @@ export type AssignmentStatus =
 
 // ========== TRACKING ==========
 
-export type TrackingLevel = 'basic' | 'intermediate' | 'premium';
+export type AffretTrackingLevel = 'basic' | 'intermediate' | 'premium';
 
 export interface TrackingConfig {
   orderId: string;
-  level: TrackingLevel;
+  level: AffretTrackingLevel;
   provider?: 'email' | 'gps_smartphone' | 'tomtom' | 'vehizen' | 'other';
   updateFrequency?: number; // minutes
   alerts?: {
@@ -875,14 +875,14 @@ export interface TrackingUpdate {
     city?: string;
   };
 
-  status: TrackingStatus;
+  status: AffretTrackingStatus;
   eta?: string;
 
   source: 'manual' | 'gps' | 'api' | 'geofence';
   provider?: string;
 }
 
-export type TrackingStatus =
+export type AffretTrackingStatus =
   | 'pending'
   | 'picked_up'
   | 'in_transit'
@@ -893,14 +893,14 @@ export type TrackingStatus =
 
 // ========== DOCUMENTS ==========
 
-export type DocumentType = 'bl' | 'cmr' | 'pod' | 'invoice' | 'packing_list' | 'customs' | 'other';
+export type AffretDocumentType = 'bl' | 'cmr' | 'pod' | 'invoice' | 'packing_list' | 'customs' | 'other';
 
 export interface TransportDocument {
   id: string;
   orderId: string;
   sessionId?: string;
 
-  type: DocumentType;
+  type: AffretDocumentType;
   filename: string;
   mimeType: string;
   size: number; // bytes
@@ -964,7 +964,7 @@ export interface DocumentExtractedData {
 
 export interface DocumentUploadRequest {
   orderId: string;
-  type: DocumentType;
+  type: AffretDocumentType;
   file: File | Blob;
   filename?: string;
   processOCR?: boolean;
@@ -972,7 +972,7 @@ export interface DocumentUploadRequest {
 
 export interface DocumentReminderConfig {
   orderId: string;
-  documentTypes: DocumentType[];
+  documentTypes: AffretDocumentType[];
   reminderSchedule: {
     'J+1'?: boolean;
     'J+2'?: boolean;
@@ -984,7 +984,7 @@ export interface DocumentReminderConfig {
 
 // ========== VIGILANCE ==========
 
-export type VigilanceStatus = 'compliant' | 'warning' | 'non_compliant' | 'blacklisted' | 'pending';
+export type AffretVigilanceStatus = 'compliant' | 'warning' | 'non_compliant' | 'blacklisted' | 'pending';
 
 export type VigilanceRejectReason =
   | 'kbis_expired'
@@ -1006,15 +1006,15 @@ export interface VigilanceCheck {
   carrierId: string;
   carrierName: string;
 
-  overallStatus: VigilanceStatus;
+  overallStatus: AffretVigilanceStatus;
   complianceScore: number; // 0-100
 
   checks: {
-    kbis: VigilanceDocument;
-    urssaf: VigilanceDocument;
+    kbis: AffretVigilanceDocument;
+    urssaf: AffretVigilanceDocument;
     insurance: VigilanceInsurance;
-    license: VigilanceDocument;
-    identity: VigilanceDocument;
+    license: AffretVigilanceDocument;
+    identity: AffretVigilanceDocument;
     rib: VigilanceRib;
     incidents: VigilanceIncidents;
   };
@@ -1023,10 +1023,10 @@ export interface VigilanceCheck {
 
   lastCheckedAt: string;
   nextCheckDue: string;
-  alerts: VigilanceAlert[];
+  alerts: AffretVigilanceAlert[];
 }
 
-export interface VigilanceDocument {
+export interface AffretVigilanceDocument {
   status: 'valid' | 'expired' | 'expiring_soon' | 'missing' | 'invalid';
   documentId?: string;
   issuedAt?: string;
@@ -1066,7 +1066,7 @@ export interface VigilanceIncidents {
   status: 'clean' | 'warning' | 'blocked';
 }
 
-export interface VigilanceAlert {
+export interface AffretVigilanceAlert {
   id: string;
   type: 'expiry_j30' | 'expiry_j15' | 'expiry_j7' | 'expired' | 'document_invalid' | 'incident';
   message: string;
@@ -1116,7 +1116,7 @@ export interface TransportScoring {
 export interface OrderCloseRequest {
   sessionId: string;
   success: boolean;
-  documentsReceived: DocumentType[];
+  documentsReceived: AffretDocumentType[];
   finalNotes?: string;
   syncToERP?: boolean;
 }
@@ -1130,9 +1130,9 @@ export interface OrderCloseResult {
 
   // Documents
   documentsStatus: {
-    required: DocumentType[];
-    received: DocumentType[];
-    missing: DocumentType[];
+    required: AffretDocumentType[];
+    received: AffretDocumentType[];
+    missing: AffretDocumentType[];
   };
 
   // Sync

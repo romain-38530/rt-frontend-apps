@@ -332,7 +332,7 @@ export interface CheckpointCompletionRequest {
   proof: CheckpointProof;
 }
 
-export interface UploadDocumentRequest {
+export interface ChatbotUploadDocumentRequest {
   missionId: string;
   checkpointId?: string;
   type: MissionDocument['type'];

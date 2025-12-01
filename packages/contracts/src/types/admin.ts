@@ -102,7 +102,7 @@ export type SubscriptionPlan =
   | 'enterprise'
   | 'custom';
 
-export type SubscriptionStatus =
+export type AdminSubscriptionStatus =
   | 'active'
   | 'trial'
   | 'past_due'
@@ -116,7 +116,7 @@ export interface Subscription {
   companyId: string;
   companyName: string;
   plan: SubscriptionPlan;
-  status: SubscriptionStatus;
+  status: AdminSubscriptionStatus;
   billingCycle: BillingCycle;
   price: number;
   currency: string;

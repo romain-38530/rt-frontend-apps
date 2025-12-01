@@ -127,7 +127,7 @@ export interface TariffGrid {
 }
 
 // Invoice Types
-export interface OCRResult {
+export interface BillingOCRResult {
   invoiceNumber?: string;
   invoiceDate?: Date;
   totalAmount?: number;
@@ -163,7 +163,7 @@ export interface CarrierInvoice {
   fileUrl: string;
   fileSize: number;
   mimeType: string;
-  ocrResult?: OCRResult;
+  ocrResult?: BillingOCRResult;
   ocrStatus: 'pending' | 'processing' | 'completed' | 'failed';
   ocrError?: string;
   validation: {
@@ -352,7 +352,7 @@ export interface ERPExport {
 }
 
 // Vigilance Types
-export interface VigilanceDocument {
+export interface BillingVigilanceDocument {
   _id?: string;
   type: 'urssaf' | 'assurance' | 'licence' | 'kbis' | 'other';
   documentName: string;
@@ -383,7 +383,7 @@ export interface CarrierVigilance {
     name: string;
     siret: string;
   };
-  documents: VigilanceDocument[];
+  documents: BillingVigilanceDocument[];
   overallStatus: 'compliant' | 'warning' | 'non_compliant';
   compliance: {
     hasURSSAF: boolean;

@@ -37,7 +37,7 @@ export type NeedStatus =
   | 'ATTRIBUTED'     // Attribué à un logisticien
   | 'CANCELLED';     // Annulé
 
-export type OfferStatus =
+export type StorageOfferStatus =
   | 'SUBMITTED'      // Soumise
   | 'UNDER_REVIEW'   // En cours d'analyse
   | 'SHORTLISTED'    // Présélectionnée
@@ -46,20 +46,20 @@ export type OfferStatus =
   | 'WITHDRAWN'      // Retirée par le logisticien
   | 'EXPIRED';       // Expirée
 
-export type ContractStatus =
+export type StorageContractStatus =
   | 'PENDING'        // En attente de signature
   | 'ACTIVE'         // Actif
   | 'SUSPENDED'      // Suspendu
   | 'COMPLETED'      // Terminé
   | 'TERMINATED';    // Résilié
 
-export type SubscriptionStatus =
+export type StorageSubscriptionStatus =
   | 'PENDING'        // En attente de validation
   | 'APPROVED'       // Approuvé
   | 'REJECTED'       // Refusé
   | 'SUSPENDED';     // Suspendu
 
-export type AlertType =
+export type StorageAlertType =
   | 'stock_critical'       // Stock critique
   | 'rupture_imminent'     // Rupture imminente
   | 'quality_incident'     // Incident qualité
@@ -387,7 +387,7 @@ export interface StorageOffer {
   };
 
   // Status
-  status: OfferStatus;
+  status: StorageOfferStatus;
   submittedAt: string;
   reviewedAt?: string;
 
@@ -463,7 +463,7 @@ export interface StorageContract {
   };
 
   // Status
-  status: ContractStatus;
+  status: StorageContractStatus;
 
   // Dates
   createdAt: string;
@@ -500,7 +500,7 @@ export interface LogisticianSubscription {
   monthlyFee?: number;
 
   // Status
-  status: SubscriptionStatus;
+  status: StorageSubscriptionStatus;
   approvedAt?: string;
   approvedBy?: string;
   rejectionReason?: string;
@@ -574,7 +574,7 @@ export interface StorageAlert {
   contractId: string;
   siteId: string;
 
-  type: AlertType;
+  type: StorageAlertType;
   severity: 'info' | 'warning' | 'critical';
   title: string;
   message: string;
@@ -672,8 +672,8 @@ export interface StorageMarketStats {
 
   // Par status
   needsByStatus: Record<NeedStatus, number>;
-  offersByStatus: Record<OfferStatus, number>;
-  contractsByStatus: Record<ContractStatus, number>;
+  offersByStatus: Record<StorageOfferStatus, number>;
+  contractsByStatus: Record<StorageContractStatus, number>;
 
   // Actifs
   activeNeeds: number;
@@ -753,7 +753,7 @@ export interface StorageNeedFilters {
 
 export interface StorageOfferFilters {
   needId?: string;
-  status?: OfferStatus | OfferStatus[];
+  status?: StorageOfferStatus | StorageOfferStatus[];
   logisticianId?: string;
   minPrice?: number;
   maxPrice?: number;

@@ -17,7 +17,7 @@ export type CarrierStatus =
   | 'suspended'          // Suspendu temporairement
   | 'churned';           // Désactivé/parti
 
-export type VigilanceStatus = 'ok' | 'warning' | 'critical' | 'blocked';
+export type CarrierVigilanceStatus = 'ok' | 'warning' | 'critical' | 'blocked';
 
 // ========== TRANSPORTEUR RÉFÉRENCÉ ==========
 
@@ -37,7 +37,7 @@ export interface ReferencedCarrier {
   // Niveau et statut
   level: CarrierLevel;
   status: CarrierStatus;
-  vigilanceStatus: VigilanceStatus;
+  vigilanceStatus: CarrierVigilanceStatus;
 
   // Documents
   documents: CarrierDocument[];
@@ -172,7 +172,7 @@ export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'ignored';
 
-export interface VigilanceAlert {
+export interface CarrierVigilanceAlert {
   id: string;
   carrierId: string;
   carrierName: string;
@@ -441,7 +441,7 @@ export interface ReferencedCarrierFilters {
   search?: string;
   level?: CarrierLevel;
   status?: CarrierStatus;
-  vigilanceStatus?: VigilanceStatus;
+  vigilanceStatus?: CarrierVigilanceStatus;
   hasExpiredDocuments?: boolean;
   importedFromAffret?: boolean;
   page?: number;
@@ -476,7 +476,7 @@ export interface CarrierReferencingStats {
   total: number;
   byLevel: Record<CarrierLevel, number>;
   byStatus: Record<CarrierStatus, number>;
-  byVigilance: Record<VigilanceStatus, number>;
+  byVigilance: Record<CarrierVigilanceStatus, number>;
 
   // Documents
   documentsExpiringSoon: number;
