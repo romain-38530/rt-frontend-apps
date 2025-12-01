@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Factory, Truck, MapPin, Building, Ship, Package, ArrowRight, Check } from 'lucide-react';
+import { Factory, Truck, MapPin, Building, Ship, Package, ArrowRight, Check, Bot, Anchor, Calendar, MessageCircle, Sparkles, Shield } from 'lucide-react';
 
 // URLs des portails - hardcodées pour export statique
 const DOMAIN = 'symphonia-controltower.com';
@@ -19,7 +19,7 @@ const portals = [
       'Vigilance et alertes',
       'Planification avancée',
       'e-CMR intégré',
-      'Intelligence artificielle'
+      'AFFRET.IA - 38 endpoints IA'
     ],
     minTier: 'free'
   },
@@ -32,10 +32,10 @@ const portals = [
     url: `https://transporter.${DOMAIN}`,
     features: [
       'Planning intelligent',
-      'Optimisation des routes',
+      'Optimisation des routes IA',
       'Gestion de la flotte',
       'e-CMR électronique',
-      'App chauffeur'
+      'App chauffeur mobile'
     ],
     minTier: 'free'
   },
@@ -48,10 +48,10 @@ const portals = [
     url: `https://recipient.${DOMAIN}`,
     features: [
       'Suivi en temps réel',
-      'Notifications de livraison',
-      'Historique complet',
+      'Notifications SMS/Email',
+      'Signature électronique',
       'Gestion des retours',
-      'Preuves de livraison'
+      'Portail Lite gratuit'
     ],
     minTier: 'free'
   },
@@ -64,12 +64,12 @@ const portals = [
     url: `https://supplier.${DOMAIN}`,
     features: [
       'Gestion des commandes',
-      'Suivi des livraisons',
+      'Créneaux de livraison',
       'Catalogue produits',
       'Facturation automatique',
-      'Intégrations ERP'
+      'Portail Lite gratuit'
     ],
-    minTier: 'pro'
+    minTier: 'free'
   },
   {
     id: 'forwarder',
@@ -83,7 +83,7 @@ const portals = [
       'Documentation douanière',
       'Tracking international',
       'Gestion prestataires',
-      'Incoterms'
+      'Incoterms automatisés'
     ],
     minTier: 'pro'
   },
@@ -97,9 +97,108 @@ const portals = [
     features: [
       'Tableau de bord analytique',
       'Gestion des stocks',
-      'Optimisation des flux',
+      'Optimisation des flux IA',
       'Rapports personnalisés',
-      'WMS intégré'
+      'Portail Lite gratuit'
+    ],
+    minTier: 'pro'
+  }
+];
+
+const aiModules = [
+  {
+    id: 'affretia',
+    name: 'AFFRET.IA',
+    icon: Sparkles,
+    description: 'Intelligence artificielle pour l\'affrètement',
+    gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+    url: '#affretia',
+    features: [
+      '38 endpoints IA spécialisés',
+      'Prédiction de prix transport',
+      'Optimisation des routes',
+      'Matching transporteurs',
+      'Analyse documents automatique'
+    ],
+    minTier: 'pro'
+  },
+  {
+    id: 'helpbot',
+    name: 'HelpBot IA',
+    icon: MessageCircle,
+    description: 'Chatbot support client intelligent',
+    gradient: 'from-cyan-500 via-blue-500 to-indigo-500',
+    url: '#helpbot',
+    features: [
+      'Support 24/7 automatisé',
+      'Intégration Claude AI',
+      'Historique conversations',
+      'Escalade automatique',
+      'Multi-langue'
+    ],
+    minTier: 'pro'
+  },
+  {
+    id: 'rt-assistant',
+    name: 'RT Assistant',
+    icon: Bot,
+    description: 'Assistant IA pour opérations transport',
+    gradient: 'from-orange-500 via-red-500 to-pink-500',
+    url: '#rt-assistant',
+    features: [
+      'Optimisation opérationnelle',
+      'Suggestions intelligentes',
+      'Analyse prédictive',
+      'Alertes automatisées',
+      'Intégration complète'
+    ],
+    minTier: 'pro'
+  },
+  {
+    id: 'bourse-maritime',
+    name: 'Bourse Maritime',
+    icon: Anchor,
+    description: 'Marketplace fret maritime avec enchères',
+    gradient: 'from-sky-500 via-blue-500 to-indigo-600',
+    url: '#bourse-maritime',
+    features: [
+      'Demandes de fret',
+      'Système d\'enchères',
+      'Matching intelligent',
+      'Contrats digitaux',
+      'Scoring transporteurs'
+    ],
+    minTier: 'enterprise'
+  },
+  {
+    id: 'planning',
+    name: 'Planning Intelligent',
+    icon: Calendar,
+    description: 'Planification chargement et livraison',
+    gradient: 'from-teal-500 via-emerald-500 to-green-500',
+    url: '#planning',
+    features: [
+      'Créneaux de livraison',
+      'Notifications SMS',
+      'Optimisation temps',
+      'Gestion conflits',
+      'Multi-providers SMS'
+    ],
+    minTier: 'pro'
+  },
+  {
+    id: 'admin',
+    name: 'Admin Gateway',
+    icon: Shield,
+    description: 'Administration centralisée plateforme',
+    gradient: 'from-slate-500 via-gray-600 to-zinc-700',
+    url: '#admin',
+    features: [
+      'Gestion utilisateurs',
+      'Facturation & abonnements',
+      'Monitoring services',
+      'Audit logs',
+      'RGPD compliance'
     ],
     minTier: 'enterprise'
   }
@@ -107,80 +206,96 @@ const portals = [
 
 export default function PortalsPage() {
   const [hoveredPortal, setHoveredPortal] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'portals' | 'ai'>('portals');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                SYMPHONI.A
-              </h1>
-              <p className="text-xs text-gray-500 italic">L'IA qui orchestre vos flux transport.</p>
-            </div>
-          </div>
-          <a
-            href="/subscription"
-            className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-          >
-            Voir les abonnements
-          </a>
-        </div>
-      </header>
-
       {/* Hero Section */}
-      <section className="py-16 px-6">
+      <section className="py-16 px-6 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-5xl font-extrabold text-gray-900 mb-6">
-            Accédez à vos{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Portails SYMPHONI.A
+          <h1 className="text-5xl font-extrabold mb-6">
+            Solutions{' '}
+            <span className="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">
+              SYMPHONI.A
             </span>
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Une solution complète pour chaque acteur de la chaîne logistique. Choisissez le portail adapté à votre rôle et commencez à optimiser vos opérations.
+          </h1>
+          <p className="text-xl text-orange-100 max-w-3xl mx-auto mb-8">
+            6 portails métier + 6 modules IA pour une gestion logistique complète et intelligente.
           </p>
+
+          {/* Tab Selector */}
+          <div className="inline-flex items-center bg-white/20 backdrop-blur-sm rounded-full p-1">
+            <button
+              onClick={() => setActiveTab('portals')}
+              className={`px-8 py-3 rounded-full font-semibold transition-all ${
+                activeTab === 'portals'
+                  ? 'bg-white text-orange-600 shadow-lg'
+                  : 'text-white hover:text-orange-200'
+              }`}
+            >
+              Portails Métier
+            </button>
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`px-8 py-3 rounded-full font-semibold transition-all ${
+                activeTab === 'ai'
+                  ? 'bg-white text-orange-600 shadow-lg'
+                  : 'text-white hover:text-orange-200'
+              }`}
+            >
+              Modules IA
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* Portals Grid */}
-      <section className="pb-20 px-6">
+      {/* Portals/Modules Grid */}
+      <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              {activeTab === 'portals' ? 'Portails Métier' : 'Modules Intelligence Artificielle'}
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              {activeTab === 'portals'
+                ? 'Un portail dédié pour chaque acteur de la supply chain'
+                : '6 modules IA pour automatiser et optimiser vos opérations'}
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {portals.map((portal) => {
-              const Icon = portal.icon;
-              const isHovered = hoveredPortal === portal.id;
+            {(activeTab === 'portals' ? portals : aiModules).map((item) => {
+              const Icon = item.icon;
+              const isHovered = hoveredPortal === item.id;
 
               return (
                 <a
-                  key={portal.id}
-                  href={portal.url}
-                  onMouseEnter={() => setHoveredPortal(portal.id)}
+                  key={item.id}
+                  href={item.url}
+                  onMouseEnter={() => setHoveredPortal(item.id)}
                   onMouseLeave={() => setHoveredPortal(null)}
                   className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
                 >
                   {/* Gradient Top Bar */}
-                  <div className={`h-2 bg-gradient-to-r ${portal.gradient}`} />
+                  <div className={`h-2 bg-gradient-to-r ${item.gradient}`} />
 
                   <div className="p-8">
                     {/* Icon */}
-                    <div className={`w-20 h-20 bg-gradient-to-br ${portal.gradient} rounded-2xl flex items-center justify-center mb-6 transform transition-transform ${isHovered ? 'scale-110 rotate-3' : ''}`}>
+                    <div className={`w-20 h-20 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mb-6 transform transition-transform ${isHovered ? 'scale-110 rotate-3' : ''}`}>
                       <Icon className="text-white" size={40} />
                     </div>
 
                     {/* Title & Description */}
                     <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      {portal.name}
+                      {item.name}
                     </h3>
                     <p className="text-gray-600 mb-6 leading-relaxed">
-                      {portal.description}
+                      {item.description}
                     </p>
 
                     {/* Features */}
                     <ul className="space-y-2 mb-6">
-                      {portal.features.map((feature, idx) => (
+                      {item.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                           <Check className="text-green-500 w-5 h-5 flex-shrink-0 mt-0.5" />
                           <span>{feature}</span>
@@ -194,18 +309,18 @@ export default function PortalsPage() {
                         Requis :
                       </span>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        portal.minTier === 'free' ? 'bg-green-100 text-green-700' :
-                        portal.minTier === 'pro' ? 'bg-blue-100 text-blue-700' :
+                        item.minTier === 'free' ? 'bg-green-100 text-green-700' :
+                        item.minTier === 'pro' ? 'bg-blue-100 text-blue-700' :
                         'bg-purple-100 text-purple-700'
                       }`}>
-                        {portal.minTier === 'free' ? 'Gratuit' :
-                         portal.minTier === 'pro' ? 'Pro' : 'Enterprise'}
+                        {item.minTier === 'free' ? 'Gratuit' :
+                         item.minTier === 'pro' ? 'Pro' : 'Enterprise'}
                       </span>
                     </div>
 
                     {/* CTA */}
-                    <div className={`flex items-center justify-between px-4 py-3 bg-gradient-to-r ${portal.gradient} rounded-xl text-white font-semibold transition-all ${isHovered ? 'gap-4' : 'gap-2'}`}>
-                      <span>Accéder au portail</span>
+                    <div className={`flex items-center justify-between px-4 py-3 bg-gradient-to-r ${item.gradient} rounded-xl text-white font-semibold transition-all ${isHovered ? 'gap-4' : 'gap-2'}`}>
+                      <span>{activeTab === 'portals' ? 'Accéder au portail' : 'En savoir plus'}</span>
                       <ArrowRight className={`transition-transform ${isHovered ? 'translate-x-1' : ''}`} size={20} />
                     </div>
                   </div>
@@ -216,12 +331,30 @@ export default function PortalsPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-8 px-6">
-        <div className="max-w-7xl mx-auto text-center text-gray-600">
-          <p>&copy; 2024 SYMPHONI.A. Tous droits réservés.</p>
+      {/* CTA Section */}
+      <section className="py-20 px-6 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h3 className="text-4xl font-extrabold mb-6">Prêt à commencer ?</h3>
+          <p className="text-xl text-orange-100 mb-8">
+            Inscrivez-vous gratuitement et accédez à tous les portails et modules IA
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/onboarding"
+              className="px-10 py-5 bg-white text-orange-600 rounded-xl font-bold text-lg hover:shadow-2xl transition-all hover:scale-105 inline-flex items-center justify-center"
+            >
+              Commencer gratuitement
+              <ArrowRight className="ml-3" size={24} />
+            </a>
+            <a
+              href="/subscription"
+              className="px-10 py-5 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition-all inline-flex items-center justify-center"
+            >
+              Voir les tarifs
+            </a>
+          </div>
         </div>
-      </footer>
+      </section>
     </div>
   );
 }

@@ -14,16 +14,16 @@ const plans = [
     description: 'Parfait pour découvrir la plateforme',
     gradient: 'from-gray-500 to-gray-700',
     features: [
-      { text: 'Accès limité aux fonctionnalités de base', included: true },
-      { text: "Jusqu'à 10 expéditions par mois", included: true },
+      { text: '4 portails : Industrie, Transporteur, Destinataire, Fournisseur', included: true },
+      { text: 'Portails Lite Fournisseur & Destinataire', included: true },
+      { text: "Jusqu'à 50 expéditions par mois", included: true },
+      { text: 'e-CMR électronique basique', included: true },
       { text: 'Support par email', included: true },
-      { text: 'Tableaux de bord basiques', included: true },
       { text: '1 utilisateur', included: true },
-      { text: 'Accès : Industry, Recipient, Transporter', included: true },
-      { text: 'Notifications en temps réel', included: false },
-      { text: 'Rapports personnalisés', included: false },
-      { text: 'Intégrations API', included: false },
-      { text: 'Support prioritaire', included: false }
+      { text: 'AFFRET.IA (5 requêtes/jour)', included: false },
+      { text: 'Chatbots IA (HelpBot, RT Assistant)', included: false },
+      { text: 'Bourse Maritime', included: false },
+      { text: 'Planning intelligent', included: false }
     ],
     cta: 'Commencer gratuitement',
     popular: false
@@ -37,16 +37,16 @@ const plans = [
     description: 'Idéal pour les équipes en croissance',
     gradient: 'from-orange-500 to-red-600',
     features: [
-      { text: 'Toutes les fonctionnalités de base', included: true },
+      { text: '6 portails métier complets', included: true },
+      { text: 'AFFRET.IA - 38 endpoints IA illimités', included: true },
+      { text: 'Chatbots IA (HelpBot + RT Assistant)', included: true },
+      { text: 'Planning intelligent + Notifications SMS', included: true },
       { text: 'Expéditions illimitées', included: true },
-      { text: 'Support prioritaire', included: true },
-      { text: 'Tableaux de bord avancés', included: true },
       { text: "Jusqu'à 10 utilisateurs", included: true },
-      { text: 'Accès à tous les portails', included: true },
-      { text: 'Intégrations API', included: true },
-      { text: 'Rapports personnalisés', included: true },
-      { text: 'Notifications en temps réel', included: true },
-      { text: 'Gestionnaire de compte dédié', included: false }
+      { text: 'Intégrations API complètes', included: true },
+      { text: 'Support prioritaire', included: true },
+      { text: 'Bourse Maritime', included: false },
+      { text: 'Admin Gateway', included: false }
     ],
     cta: 'Démarrer Pro',
     popular: true
@@ -60,16 +60,16 @@ const plans = [
     description: 'Pour les grandes organisations',
     gradient: 'from-purple-500 to-indigo-600',
     features: [
-      { text: 'Toutes les fonctionnalités Pro', included: true },
+      { text: 'Tous les portails + modules IA', included: true },
+      { text: 'Bourse Maritime avec enchères', included: true },
+      { text: 'Admin Gateway centralisé', included: true },
       { text: 'Utilisateurs illimités', included: true },
       { text: 'Support dédié 24/7', included: true },
-      { text: 'Gestionnaire de compte dédié', included: true },
       { text: 'SLA garanti 99.9%', included: true },
-      { text: 'Personnalisation complète', included: true },
+      { text: 'Personnalisation white-label', included: true },
       { text: 'Formation sur site', included: true },
-      { text: 'Intégration sur mesure', included: true },
-      { text: 'Stockage illimité', included: true },
-      { text: 'API calls illimitées', included: true }
+      { text: 'API calls illimitées', included: true },
+      { text: 'Gestionnaire de compte dédié', included: true }
     ],
     cta: 'Contacter les ventes',
     popular: false
@@ -227,7 +227,7 @@ export default function SubscriptionPage() {
           {/* Additional Info */}
           <div className="mt-12 text-center">
             <p className="text-gray-600 mb-4">
-              Tous les plans incluent : e-CMR électronique • Signature conforme eIDAS • Support client
+              Tous les plans incluent : e-CMR électronique • Signature conforme eIDAS • Conformité RGPD • Support client
             </p>
             <Link
               href="/contact"
@@ -258,12 +258,15 @@ export default function SubscriptionPage() {
               </thead>
               <tbody>
                 {[
-                  { name: 'Expéditions mensuelles', free: '10', pro: 'Illimité', enterprise: 'Illimité' },
+                  { name: 'Expéditions mensuelles', free: '50', pro: 'Illimité', enterprise: 'Illimité' },
                   { name: 'Utilisateurs', free: '1', pro: '10', enterprise: 'Illimité' },
-                  { name: 'Portails disponibles', free: '3', pro: '6', enterprise: '6' },
+                  { name: 'Portails métier', free: '4', pro: '6', enterprise: '6' },
+                  { name: 'Modules IA', free: '-', pro: '4', enterprise: '6' },
+                  { name: 'AFFRET.IA', free: '5 req/jour', pro: 'Illimité', enterprise: 'Illimité' },
+                  { name: 'Chatbots IA', free: '-', pro: '✓', enterprise: '✓' },
+                  { name: 'Bourse Maritime', free: '-', pro: '-', enterprise: '✓' },
+                  { name: 'Planning + SMS', free: '-', pro: '✓', enterprise: '✓' },
                   { name: 'Support', free: 'Email', pro: 'Prioritaire', enterprise: '24/7 Dédié' },
-                  { name: 'API', free: '-', pro: '✓', enterprise: '✓' },
-                  { name: 'Rapports', free: 'Basiques', pro: 'Personnalisés', enterprise: 'Avancés' },
                   { name: 'SLA', free: '-', pro: '-', enterprise: '99.9%' }
                 ].map((row, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">

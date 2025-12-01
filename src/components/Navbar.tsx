@@ -22,7 +22,7 @@ export function Navbar() {
 
         {/* Menu desktop */}
         <div className="navbar-menu-desktop">
-          <a href="/portals" className="navbar-link">Portails</a>
+          <a href="/portals" className="navbar-link">Solutions</a>
           <a href="/select-account-type" className="navbar-link">Types de Comptes</a>
           <a href="/subscription" className="navbar-link">Tarifs</a>
           <a href="/onboarding" className="navbar-link">Inscription</a>
@@ -62,7 +62,7 @@ export function Navbar() {
       {/* Menu mobile */}
       {mobileMenuOpen && (
         <div className="navbar-menu-mobile">
-          <a href="/portals" className="navbar-link-mobile">Portails</a>
+          <a href="/portals" className="navbar-link-mobile">Solutions</a>
           <a href="/select-account-type" className="navbar-link-mobile">Types de Comptes</a>
           <a href="/subscription" className="navbar-link-mobile">Tarifs</a>
           <a href="/onboarding" className="navbar-link-mobile">Inscription</a>

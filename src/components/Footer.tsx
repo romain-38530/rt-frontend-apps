@@ -31,7 +31,7 @@ export function Footer() {
           <div className="footer-column">
             <h3 className="footer-title">Produit</h3>
             <ul className="footer-links">
-              <li><a href="/portals">Portails</a></li>
+              <li><a href="/portals">Solutions</a></li>
               <li><a href="/select-account-type">Types de Comptes</a></li>
               <li><a href="/subscription">Tarifs</a></li>
               <li><a href="/onboarding">Inscription</a></li>

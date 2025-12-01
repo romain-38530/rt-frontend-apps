@@ -29,31 +29,31 @@ export default function HomePage() {
     },
     {
       icon: TrendingUp,
-      title: 'Optimisation IA',
-      description: 'Intelligence artificielle pour optimiser vos routes et réduire vos coûts'
+      title: 'AFFRET.IA - 38 endpoints IA',
+      description: 'Prédiction prix, optimisation routes, matching transporteurs, analyse documents'
     },
     {
       icon: Users,
-      title: 'Support dédié',
-      description: 'Équipe support disponible 5j/7 par chat, email et téléphone'
+      title: 'Chatbots IA intégrés',
+      description: 'HelpBot support client et RT Assistant pour optimisation opérationnelle'
     },
     {
       icon: Globe,
-      title: 'Conformité européenne',
-      description: 'Compatible avec toutes les entreprises UE via API VIES officielle'
+      title: 'Bourse Maritime',
+      description: 'Marketplace fret maritime avec système d\'enchères et matching intelligent'
     },
     {
       icon: Sparkles,
-      title: 'Interface moderne',
-      description: 'Design intuitif et responsive sur tous vos appareils'
+      title: 'Planning intelligent',
+      description: 'Planification chargement/livraison avec notifications SMS multi-providers'
     }
   ];
 
   const stats = [
-    { value: '10K+', label: 'Utilisateurs actifs' },
-    { value: '1M+', label: 'Expéditions gérées' },
-    { value: '99.9%', label: 'Disponibilité' },
-    { value: '50+', label: 'Pays couverts' }
+    { value: '6', label: 'Portails métier' },
+    { value: '38+', label: 'Endpoints IA' },
+    { value: '100%', label: 'Conforme RGPD' },
+    { value: '27', label: 'Pays UE couverts' }
   ];
 
   return (
@@ -294,7 +294,7 @@ export default function HomePage() {
             Prêt à optimiser votre logistique ?
           </h2>
           <p className="text-xl text-orange-100 mb-8 leading-relaxed max-w-2xl mx-auto">
-            Rejoignez les milliers d'entreprises qui optimisent déjà leurs opérations avec SYMPHONI.A
+            Rejoignez les entreprises qui transforment leur logistique avec la puissance de l'IA
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
