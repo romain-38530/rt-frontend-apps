@@ -63,6 +63,38 @@ export default function HomePage() {
       route: '/orders'
     },
     {
+      icon: '🏪',
+      title: 'Bourse Fret',
+      desc: 'Consultez et répondez aux offres de transport AFFRET.IA',
+      locked: false,
+      route: '/bourse',
+      highlight: true
+    },
+    {
+      icon: '📋',
+      title: 'Mes Propositions',
+      desc: 'Suivez vos propositions et contre-offres en cours',
+      locked: false,
+      route: '/mes-propositions',
+      highlight: true
+    },
+    {
+      icon: '🛡️',
+      title: 'Vigilance',
+      desc: 'Gérez vos documents de conformité et devoir de vigilance',
+      locked: false,
+      route: '/vigilance',
+      highlight: true
+    },
+    {
+      icon: '📄',
+      title: 'Documents Transport',
+      desc: 'Uploadez vos BL, CMR et POD avec OCR automatique',
+      locked: false,
+      route: '/documents',
+      highlight: true
+    },
+    {
       icon: '📅',
       title: 'Planning & Itinéraires',
       desc: 'Planifiez vos livraisons et optimisez vos tournées',
@@ -77,7 +109,7 @@ export default function HomePage() {
       route: '/tracking'
     },
     {
-      icon: '📄',
+      icon: '📝',
       title: 'e-CMR Digital',
       desc: 'Gestion électronique des lettres de voiture',
       locked: false,
@@ -277,11 +309,15 @@ export default function HomePage() {
           }}>
             {features.map((item, i) => (
               <div key={i} style={{
-                background: 'rgba(255,255,255,0.15)',
+                background: (item as any).highlight
+                  ? 'linear-gradient(135deg, rgba(102,126,234,0.3) 0%, rgba(118,75,162,0.3) 100%)'
+                  : 'rgba(255,255,255,0.15)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '20px',
                 padding: '32px',
-                border: '1px solid rgba(255,255,255,0.2)',
+                border: (item as any).highlight
+                  ? '2px solid rgba(102,126,234,0.5)'
+                  : '1px solid rgba(255,255,255,0.2)',
                 cursor: 'pointer',
                 transition: 'all 0.3s',
                 position: 'relative',
@@ -308,6 +344,22 @@ export default function HomePage() {
                     fontSize: '24px'
                   }}>
                     🔒
+                  </div>
+                )}
+                {(item as any).highlight && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    padding: '4px 10px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: '12px',
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    AFFRET.IA
                   </div>
                 )}
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>{item.icon}</div>
