@@ -154,7 +154,7 @@ router.post('/receive', async (req: AuthRequest, res: Response): Promise<void> =
     });
 
     // Valider la signature
-    const validation = signature.validate();
+    const validation = signature.validateSignature();
     if (!validation.valid) {
       res.status(400).json({
         error: 'Signature validation failed',
@@ -426,7 +426,6 @@ router.post('/refuse', async (req: AuthRequest, res: Response): Promise<void> =>
     await delivery.save();
 
     // Créer un incident automatiquement
-    const { Incident } = await import('../models/Incident');
     const { IncidentService } = await import('../services/incident-service');
     const incidentService = new IncidentService();
 

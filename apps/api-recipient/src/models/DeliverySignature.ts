@@ -96,6 +96,9 @@ export interface IDeliverySignature extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  // Méthodes du schema
+  addPhoto(url: string, description?: string, location?: { lat: number; lng: number }): void;
+  validateSignature(): { valid: boolean; errors: string[] };
 }
 
 const SignaturePhotoSchema = new Schema<ISignaturePhoto>({
@@ -286,7 +289,7 @@ DeliverySignatureSchema.methods.addPhoto = function(
 };
 
 // Méthode pour valider la signature
-DeliverySignatureSchema.methods.validate = function(): { valid: boolean; errors: string[] } {
+DeliverySignatureSchema.methods.validateSignature = function(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!this.signatureData || this.signatureData.length < 100) {

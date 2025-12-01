@@ -98,6 +98,9 @@ export interface IDelivery extends Document {
   cargo: ICargoInfo;
   documents: IDocument[];
   timeline: ITimelineEvent[];
+  // Méthodes du schema
+  addTimelineEvent(event: ITimelineEvent['event'], actor: ITimelineEvent['actor'], notes?: string, location?: ITimelineEvent['location']): void;
+  updateETA(newETA: Date, source: IETA['source'], confidence: number, reason?: string): void;
   appointment?: {
     required: boolean;
     slotId?: string;

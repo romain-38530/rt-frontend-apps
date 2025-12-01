@@ -138,6 +138,12 @@ export interface IIncident extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  // Méthodes du schema
+  addTimelineEvent(event: string, actor: { id: string; type: string; name: string }, details?: string): void;
+  addPhoto(url: string, uploadedBy: string, description?: string, tags?: string[]): void;
+  acknowledge(acknowledgedBy: string, acknowledgedByType: IIncidentAcknowledgement['acknowledgedByType'], comment?: string, actionPlan?: string): void;
+  blockBilling(reason?: string): void;
+  unblockBilling(): void;
 }
 
 const AffectedItemSchema = new Schema<IAffectedItem>({
