@@ -3,15 +3,8 @@
 import { useState } from 'react';
 import { Factory, Truck, MapPin, Building, Ship, Package, ArrowRight, Check } from 'lucide-react';
 
-// URLs des portails depuis les variables d'environnement
-const PORTAL_URLS = {
-  industry: process.env.NEXT_PUBLIC_INDUSTRY_URL || 'https://industry.symphonia-controltower.com',
-  transporter: process.env.NEXT_PUBLIC_TRANSPORTER_URL || 'https://transporter.symphonia-controltower.com',
-  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL || 'https://recipient.symphonia-controltower.com',
-  supplier: process.env.NEXT_PUBLIC_SUPPLIER_URL || 'https://supplier.symphonia-controltower.com',
-  forwarder: process.env.NEXT_PUBLIC_FORWARDER_URL || 'https://forwarder.symphonia-controltower.com',
-  logistician: process.env.NEXT_PUBLIC_LOGISTICIAN_URL || 'https://logistician.symphonia-controltower.com',
-};
+// URLs des portails - hardcodées pour export statique
+const DOMAIN = 'symphonia-controltower.com';
 
 const portals = [
   {
@@ -20,7 +13,7 @@ const portals = [
     icon: Factory,
     description: 'Vigilance, planification, suivi et Affret.IA',
     gradient: 'from-purple-500 via-purple-600 to-indigo-600',
-    url: PORTAL_URLS.industry,
+    url: `https://industry.${DOMAIN}`,
     features: [
       'Tableau de bord intelligent',
       'Vigilance et alertes',
@@ -36,7 +29,7 @@ const portals = [
     icon: Truck,
     description: 'Gestion des transports et des livraisons',
     gradient: 'from-emerald-500 via-teal-500 to-cyan-600',
-    url: PORTAL_URLS.transporter,
+    url: `https://transporter.${DOMAIN}`,
     features: [
       'Planning intelligent',
       'Optimisation des routes',
@@ -52,7 +45,7 @@ const portals = [
     icon: MapPin,
     description: 'Suivi et réception de vos livraisons',
     gradient: 'from-green-500 via-emerald-500 to-teal-600',
-    url: PORTAL_URLS.recipient,
+    url: `https://recipient.${DOMAIN}`,
     features: [
       'Suivi en temps réel',
       'Notifications de livraison',
@@ -68,7 +61,7 @@ const portals = [
     icon: Building,
     description: 'Gestion de vos approvisionnements',
     gradient: 'from-pink-500 via-rose-500 to-red-500',
-    url: PORTAL_URLS.supplier,
+    url: `https://supplier.${DOMAIN}`,
     features: [
       'Gestion des commandes',
       'Suivi des livraisons',
@@ -84,7 +77,7 @@ const portals = [
     icon: Ship,
     description: 'Coordination des expéditions internationales',
     gradient: 'from-blue-500 via-indigo-500 to-purple-500',
-    url: PORTAL_URLS.forwarder,
+    url: `https://forwarder.${DOMAIN}`,
     features: [
       'Gestion multimodale',
       'Documentation douanière',
@@ -100,7 +93,7 @@ const portals = [
     icon: Package,
     description: 'Optimisation logistique et gestion des flux',
     gradient: 'from-amber-500 via-orange-500 to-red-500',
-    url: PORTAL_URLS.logistician,
+    url: `https://logistician.${DOMAIN}`,
     features: [
       'Tableau de bord analytique',
       'Gestion des stocks',
