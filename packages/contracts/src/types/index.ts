@@ -37,3 +37,6 @@ export * from './planning';
 
 // Préfacturation & Facturation Transport
 export * from './billing';
+
+// Agents Commerciaux & Commissions
+export * from './sales-agents';
