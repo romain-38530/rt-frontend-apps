@@ -154,7 +154,7 @@ router.post('/receive', async (req: AuthRequest, res: Response): Promise<void> =
     });
 
     // Valider la signature
-    const validation = signature.validateSignature();
+    const validation = (signature as any).validateSignature() as { valid: boolean; errors: string[] };
     if (!validation.valid) {
       res.status(400).json({
         error: 'Signature validation failed',
@@ -182,7 +182,7 @@ router.post('/receive', async (req: AuthRequest, res: Response): Promise<void> =
       );
     }
 
-    delivery.addTimelineEvent(
+    (delivery as any).addTimelineEvent(
       'delivered',
       {
         id: req.user!.id,
@@ -302,7 +302,7 @@ router.post('/receive-partial', async (req: AuthRequest, res: Response): Promise
       status: 'partial'
     };
 
-    delivery.addTimelineEvent(
+    (delivery as any).addTimelineEvent(
       'delivered',
       {
         id: req.user!.id,
@@ -413,7 +413,7 @@ router.post('/refuse', async (req: AuthRequest, res: Response): Promise<void> =>
       status: 'refused'
     };
 
-    delivery.addTimelineEvent(
+    (delivery as any).addTimelineEvent(
       'incident',
       {
         id: req.user!.id,
@@ -509,7 +509,7 @@ router.post('/photos', async (req: AuthRequest, res: Response): Promise<void> =>
 
     // Ajouter les photos
     for (const photo of photos) {
-      signature.addPhoto(photo.url, photo.description, photo.location);
+      (signature as any).addPhoto(photo.url, photo.description, photo.location);
     }
 
     await signature.save();

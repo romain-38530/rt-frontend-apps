@@ -66,11 +66,11 @@ export const OffersList: React.FC<OffersListProps> = ({
                   borderRadius: '12px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  backgroundColor: `${AffretIAService.getOfferStatusColor(offer.status)}15`,
-                  color: AffretIAService.getOfferStatusColor(offer.status),
+                  backgroundColor: `${AffretIAService.getAffretOfferStatusColor(offer.status)}15`,
+                  color: AffretIAService.getAffretOfferStatusColor(offer.status),
                 }}
               >
-                {AffretIAService.getOfferStatusLabel(offer.status)}
+                {AffretIAService.getAffretOfferStatusLabel(offer.status)}
               </span>
             </div>
           </div>

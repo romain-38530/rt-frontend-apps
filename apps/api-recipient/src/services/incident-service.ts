@@ -70,7 +70,7 @@ export class IncidentService {
       }
     });
 
-    incident.addTimelineEvent(
+    (incident as any).addTimelineEvent(
       'reported',
       {
         id: 'system',
