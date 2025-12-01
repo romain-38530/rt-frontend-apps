@@ -3,12 +3,12 @@ import './globals.css';
 import { Navbar, Footer } from '../../../../src/components';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://rttechnologie.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://symphonia-controltower.com'),
   title: {
     default: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     template: '%s | SYMPHONI.A'
   },
-  description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète pour industriels, transporteurs, logisticiens, fournisseurs et transitaires. Inscription en 5 minutes.',
+  description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète avec IA intégrée : e-CMR, AFFRET.IA, planification intelligente. 6 portails métier pour industriels, transporteurs, logisticiens.',
   keywords: [
     'TMS',
     'Transport Management System',
@@ -25,7 +25,17 @@ export const metadata: Metadata = {
     'supply chain',
     'chaîne logistique',
     'signature électronique',
-    'onboarding automatisé'
+    'onboarding automatisé',
+    'e-CMR',
+    'lettre de voiture électronique',
+    'AFFRET.IA',
+    'IA logistique',
+    'intelligence artificielle transport',
+    'optimisation route',
+    'planification chargement',
+    'bourse fret maritime',
+    'chatbot support',
+    'API transport'
   ],
   authors: [{ name: 'SYMPHONI.A' }],
   creator: 'SYMPHONI.A',
@@ -44,21 +54,34 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: '/',
+    url: 'https://symphonia-controltower.com',
     title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
-    description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
+    description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète avec IA intégrée pour industriels, transporteurs et logisticiens.',
     siteName: 'SYMPHONI.A',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SYMPHONI.A - Plateforme TMS avec IA',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
-    description: 'Digitalisez votre logistique avec SYMPHONI.A. Solution complète pour tous les acteurs de la supply chain.',
+    description: 'Digitalisez votre logistique avec SYMPHONI.A. Plateforme TMS complète avec IA intégrée.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://symphonia-controltower.com',
+    languages: {
+      'fr-FR': 'https://symphonia-controltower.com',
+    },
   },
   icons: {
     icon: '/favicon.ico',
-  },
-  verification: {
-    google: 'google-site-verification-code',
+    apple: '/apple-touch-icon.png',
   },
 };
 
@@ -69,9 +92,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <head>
-        <link rel="canonical" href="https://rttechnologie.com" />
-      </head>
       <body className="antialiased">
         <Navbar />
         <main>{children}</main>
