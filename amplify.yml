@@ -39,15 +39,38 @@ applications:
             value: 'public, max-age=0, must-revalidate'
     environment:
       variables:
-        # API URLs - AWS Elastic Beanstalk (Updated 2025-11-28)
+        # API URLs - AWS Elastic Beanstalk (Updated 2025-12-01)
+
+        # Core APIs
         NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
         NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+
+        # Service APIs (Deployed)
         NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+
+        # Business Services (TO BE DEPLOYED - Using localhost fallback)
+        # TODO: Deploy these services and update with production URLs
+        NEXT_PUBLIC_BILLING_API: 'http://localhost:3014'
+        NEXT_PUBLIC_KPI_API_URL: 'http://localhost:3400'
+        NEXT_PUBLIC_KPI_WS_URL: 'ws://localhost:3401'
+        NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'http://localhost:3014'
+        NEXT_PUBLIC_SALES_AGENTS_API_URL: 'http://localhost:3015'
+
+        # Specialized Services (TO BE DEPLOYED - Using localhost fallback)
+        # TODO: Deploy these services and update with production URLs
+        NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'http://localhost:3006'
+        NEXT_PUBLIC_PLANNING_API_URL: 'http://localhost:3030'
+        NEXT_PUBLIC_ECMR_API: 'http://localhost:3009'
+        NEXT_PUBLIC_PALETTE_API_URL: 'http://localhost:3011'
+        NEXT_PUBLIC_CHATBOT_API_URL: 'http://localhost:3019'
+        NEXT_PUBLIC_CHATBOT_WS_URL: 'ws://localhost:3019/chatbot/ws'
+
         # Build configuration
         NODE_VERSION: '20'
         PNPM_VERSION: '8.15.4'
