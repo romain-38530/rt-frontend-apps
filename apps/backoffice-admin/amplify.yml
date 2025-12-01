@@ -11,14 +11,27 @@ frontend:
         - pnpm install --no-frozen-lockfile
     build:
       commands:
-        - echo "Building backoffice-admin..."
-        - cd apps/backoffice-admin
-        - npm run build
+        - echo "Building backoffice-admin portal..."
+        - cd ../..
+        - pnpm turbo run build --filter=backoffice-admin
   artifacts:
-    baseDirectory: apps/backoffice-admin/out
+    baseDirectory: out
     files:
       - '**/*'
   cache:
     paths:
+      - ../../node_modules/**/*
       - node_modules/**/*
       - .next/cache/**/*
+  buildSpec:
+    env:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://admin.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'admin'
+        NEXT_PUBLIC_API_URL: 'http://rt-api-gateway-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_ADMIN_API_URL: 'http://rt-admin-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_BILLING_API: 'http://rt-billing-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_CHATBOT_API_URL: 'http://rt-chatbot-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_ARCHIVING_API_URL: 'http://rt-archiving-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'

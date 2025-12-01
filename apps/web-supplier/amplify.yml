@@ -1,23 +1,33 @@
 version: 1
-applications:
-  - appRoot: apps/web-supplier
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../..
-            - npm install -g pnpm@8.15.4
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - cd apps/web-supplier
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/web-supplier/out
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/web-supplier/node_modules/**/*
-          - apps/web-supplier/.next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing pnpm globally..."
+        - npm install -g pnpm@8.15.4
+        - echo "Going to repository root..."
+        - cd ../..
+        - echo "Installing all workspace dependencies..."
+        - pnpm install --no-frozen-lockfile
+    build:
+      commands:
+        - echo "Building web-supplier portal..."
+        - cd ../..
+        - pnpm turbo run build --filter=web-supplier
+  artifacts:
+    baseDirectory: out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ../../node_modules/**/*
+      - node_modules/**/*
+      - .next/cache/**/*
+  buildSpec:
+    env:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://supplier.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'supplier'
+        NEXT_PUBLIC_API_URL: 'http://rt-api-gateway-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_SMS_API_URL: 'http://rt-sms-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'

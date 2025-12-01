@@ -1,23 +1,36 @@
 version: 1
-applications:
-  - appRoot: apps/web-forwarder
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../..
-            - npm install -g pnpm@8.15.4
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - cd apps/web-forwarder
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/web-forwarder/out
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/web-forwarder/node_modules/**/*
-          - apps/web-forwarder/.next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing pnpm globally..."
+        - npm install -g pnpm@8.15.4
+        - echo "Going to repository root..."
+        - cd ../..
+        - echo "Installing all workspace dependencies..."
+        - pnpm install --no-frozen-lockfile
+    build:
+      commands:
+        - echo "Building web-forwarder portal..."
+        - cd ../..
+        - pnpm turbo run build --filter=web-forwarder
+  artifacts:
+    baseDirectory: out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ../../node_modules/**/*
+      - node_modules/**/*
+      - .next/cache/**/*
+  buildSpec:
+    env:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://forwarder.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'forwarder'
+        NEXT_PUBLIC_API_URL: 'http://rt-api-gateway-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_DISPATCH_API_URL: 'http://rt-dispatch-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_MARITIME_API_URL: 'http://rt-maritime-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_BILLING_API: 'http://rt-billing-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
