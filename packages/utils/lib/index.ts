@@ -36,3 +36,4 @@ export type { UseNotificationsOptions, Notification } from './hooks/useNotificat
 export { AffretIAService } from './services/affret-ia-service';
 export { StorageMarketService } from './services/storage-market-service';
 export type { PaginatedResponse, ApiResponse } from './services/storage-market-service';
+export { PlanningService, formatDuration, getBookingStatusLabel, getBookingStatusColor, getDriverStatusLabel, getDriverStatusColor, getSlotStatusLabel, getSlotStatusColor, getSiteTypeLabel, getDockTypeLabel, getEcmrStatusLabel, getEcmrStatusColor, generateTimeSlots, isSlotAvailable, calculateOccupancyRate } from './services/planning-service';
