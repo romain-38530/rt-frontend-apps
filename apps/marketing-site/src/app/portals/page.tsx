@@ -5,12 +5,12 @@ import { Factory, Truck, MapPin, Building, Ship, Package, ArrowRight, Check } fr
 
 // URLs des portails depuis les variables d'environnement
 const PORTAL_URLS = {
-  industry: process.env.NEXT_PUBLIC_INDUSTRY_URL || 'https://industry.rttechnologie.com',
-  transporter: process.env.NEXT_PUBLIC_TRANSPORTER_URL || 'https://transporter.rttechnologie.com',
-  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL || 'https://recipient.rttechnologie.com',
-  supplier: process.env.NEXT_PUBLIC_SUPPLIER_URL || 'https://supplier.rttechnologie.com',
-  forwarder: process.env.NEXT_PUBLIC_FORWARDER_URL || 'https://forwarder.rttechnologie.com',
-  logistician: process.env.NEXT_PUBLIC_LOGISTICIAN_URL || 'https://logistician.rttechnologie.com',
+  industry: process.env.NEXT_PUBLIC_INDUSTRY_URL || 'https://industry.symphonia-controltower.com',
+  transporter: process.env.NEXT_PUBLIC_TRANSPORTER_URL || 'https://transporter.symphonia-controltower.com',
+  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL || 'https://recipient.symphonia-controltower.com',
+  supplier: process.env.NEXT_PUBLIC_SUPPLIER_URL || 'https://supplier.symphonia-controltower.com',
+  forwarder: process.env.NEXT_PUBLIC_FORWARDER_URL || 'https://forwarder.symphonia-controltower.com',
+  logistician: process.env.NEXT_PUBLIC_LOGISTICIAN_URL || 'https://logistician.symphonia-controltower.com',
 };
 
 const portals = [
