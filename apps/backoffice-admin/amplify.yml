@@ -1,22 +1,24 @@
 version: 1
-applications:
-  - appRoot: apps/backoffice-admin
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../..
-            - npm install -g pnpm@8.15.4
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - pnpm run build
-      artifacts:
-        baseDirectory: out
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/backoffice-admin/node_modules/**/*
-          - apps/backoffice-admin/.next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing pnpm globally..."
+        - npm install -g pnpm@8.15.4
+        - echo "Going to repository root..."
+        - cd ../..
+        - echo "Installing all workspace dependencies..."
+        - pnpm install --no-frozen-lockfile
+    build:
+      commands:
+        - echo "Building backoffice-admin..."
+        - cd apps/backoffice-admin
+        - npm run build
+  artifacts:
+    baseDirectory: apps/backoffice-admin/out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

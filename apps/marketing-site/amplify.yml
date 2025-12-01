@@ -1,23 +1,24 @@
 version: 1
-applications:
-  - appRoot: apps/marketing-site
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../..
-            - npm install -g pnpm@8.15.4
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - cd apps/marketing-site
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/marketing-site/out
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/marketing-site/node_modules/**/*
-          - apps/marketing-site/.next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing pnpm globally..."
+        - npm install -g pnpm@8.15.4
+        - echo "Going to repository root..."
+        - cd ../..
+        - echo "Installing all workspace dependencies..."
+        - pnpm install --no-frozen-lockfile
+    build:
+      commands:
+        - echo "Building marketing-site..."
+        - cd apps/marketing-site
+        - npm run build
+  artifacts:
+    baseDirectory: apps/marketing-site/out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

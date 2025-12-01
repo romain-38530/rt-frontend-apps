@@ -1,23 +1,24 @@
 version: 1
-applications:
-  - appRoot: apps/web-logistician
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../..
-            - npm install -g pnpm@8.15.4
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - cd apps/web-logistician
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/web-logistician/out
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/web-logistician/node_modules/**/*
-          - apps/web-logistician/.next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing pnpm globally..."
+        - npm install -g pnpm@8.15.4
+        - echo "Going to repository root..."
+        - cd ../..
+        - echo "Installing all workspace dependencies..."
+        - pnpm install --no-frozen-lockfile
+    build:
+      commands:
+        - echo "Building web-logistician..."
+        - cd apps/web-logistician
+        - npm run build
+  artifacts:
+    baseDirectory: apps/web-logistician/out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
