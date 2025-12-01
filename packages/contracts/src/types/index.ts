@@ -43,3 +43,12 @@ export * from './sales-agents';
 
 // Chatbots IA (HelpBot, Planif-IA, Routier, Copilote, etc.)
 export * from './chatbot';
+
+// Types communs
+export * from './common';
+
+// Fournisseurs (Supplier Management)
+export * from './supplier';
+
+// Destinataires (Recipient Management)
+export * from './recipient';

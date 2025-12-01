@@ -3,6 +3,8 @@
  * Support HelpBot, Planif-IA, Routier, Quai-WMS, Livraisons, Expedition, Freight-IA, Copilote
  */
 
+import { CargoInfo as CommonCargoInfo } from './common';
+
 // Types de bot
 export type ChatbotType =
   | 'helpbot'
@@ -205,7 +207,7 @@ export interface CopiloteMission {
   status: 'pending' | 'active' | 'paused' | 'completed' | 'cancelled';
   origin: Location;
   destination: Location;
-  cargo: CargoInfo;
+  cargo: CommonCargoInfo;
   route: RouteInfo;
   checkpoints: Checkpoint[];
   documents: MissionDocument[];
@@ -231,14 +233,8 @@ export interface Location {
   };
 }
 
-export interface CargoInfo {
-  type: string;
-  weight: number;
-  volume?: number;
-  pallets?: number;
-  description: string;
-  specialInstructions?: string;
-}
+// Re-export CargoInfo from common with chatbot-specific alias
+export type ChatbotCargoInfo = CommonCargoInfo;
 
 export interface RouteInfo {
   distance: number; // km
