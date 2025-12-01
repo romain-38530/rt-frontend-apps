@@ -1,23 +1,20 @@
 version: 1
 applications:
+  # ============================================
+  # MARKETING SITE - symphonia-controltower.com
+  # ============================================
   - appRoot: apps/marketing-site
     frontend:
       phases:
         preBuild:
           commands:
-            - echo "Installing pnpm globally..."
             - npm install -g pnpm@8.15.4
-            - echo "Going to repository root..."
             - cd ../..
-            - echo "Installing all workspace dependencies..."
             - pnpm install
-            - echo "Building all dependencies with Turbo (handles package dependencies automatically)..."
             - pnpm turbo build --filter=@rt/marketing-site^...
-            - echo "Returning to app directory..."
             - cd apps/marketing-site
         build:
           commands:
-            - echo "Building marketing-site app..."
             - pnpm run build
       artifacts:
         baseDirectory: out
@@ -39,38 +36,375 @@ applications:
             value: 'public, max-age=0, must-revalidate'
     environment:
       variables:
-        # API URLs - AWS Elastic Beanstalk (Updated 2025-12-01)
-
-        # Core APIs
+        NEXT_PUBLIC_SITE_URL: 'https://symphonia-controltower.com'
         NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
         NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
-
-        # Service APIs (Deployed)
         NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
         NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
 
-        # Business Services (TO BE DEPLOYED - Using localhost fallback)
-        # TODO: Deploy these services and update with production URLs
-        NEXT_PUBLIC_BILLING_API: 'http://localhost:3014'
-        NEXT_PUBLIC_KPI_API_URL: 'http://localhost:3400'
-        NEXT_PUBLIC_KPI_WS_URL: 'ws://localhost:3401'
-        NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'http://localhost:3014'
-        NEXT_PUBLIC_SALES_AGENTS_API_URL: 'http://localhost:3015'
+  # ============================================
+  # WEB INDUSTRY - industry.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-industry
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-industry^...
+            - cd apps/web-industry
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://industry.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'industry'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_PLANNING_API_URL: 'http://rt-planning-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_BILLING_API: 'http://rt-billing-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'http://rt-storage-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
 
-        # Specialized Services (TO BE DEPLOYED - Using localhost fallback)
-        # TODO: Deploy these services and update with production URLs
-        NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'http://localhost:3006'
-        NEXT_PUBLIC_PLANNING_API_URL: 'http://localhost:3030'
-        NEXT_PUBLIC_ECMR_API: 'http://localhost:3009'
-        NEXT_PUBLIC_PALETTE_API_URL: 'http://localhost:3011'
-        NEXT_PUBLIC_CHATBOT_API_URL: 'http://localhost:3019'
-        NEXT_PUBLIC_CHATBOT_WS_URL: 'ws://localhost:3019/chatbot/ws'
+  # ============================================
+  # WEB TRANSPORTER - transporter.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-transporter
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-transporter^...
+            - cd apps/web-transporter
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://transporter.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'transporter'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_ECMR_API: 'http://rt-ecmr-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_PLANNING_API_URL: 'http://rt-planning-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_CHATBOT_API_URL: 'http://rt-chatbot-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
 
-        # Build configuration
+  # ============================================
+  # WEB LOGISTICIAN - logistician.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-logistician
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-logistician^...
+            - cd apps/web-logistician
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://logistician.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'logistician'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'http://rt-storage-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_PLANNING_API_URL: 'http://rt-planning-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
+
+  # ============================================
+  # WEB RECIPIENT - recipient.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-recipient
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-recipient^...
+            - cd apps/web-recipient
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://recipient.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'recipient'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_RECIPIENT_API_URL: 'http://rt-recipient-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
+
+  # ============================================
+  # WEB SUPPLIER - supplier.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-supplier
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-supplier^...
+            - cd apps/web-supplier
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://supplier.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'supplier'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SUPPLIER_API_URL: 'http://rt-supplier-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
+
+  # ============================================
+  # WEB FORWARDER - forwarder.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/web-forwarder
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/web-forwarder^...
+            - cd apps/web-forwarder
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://forwarder.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'forwarder'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_BOURSE_MARITIME_API_URL: 'http://rt-bourse-maritime-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NODE_VERSION: '20'
+        PNPM_VERSION: '8.15.4'
+
+  # ============================================
+  # BACKOFFICE ADMIN - admin.symphonia-controltower.com
+  # ============================================
+  - appRoot: apps/backoffice-admin
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm@8.15.4
+            - cd ../..
+            - pnpm install
+            - pnpm turbo build --filter=@rt/backoffice-admin^...
+            - cd apps/backoffice-admin
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
+          - ../../.turbo/**/*
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=31536000, immutable'
+      - pattern: '*.html'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+    environment:
+      variables:
+        NEXT_PUBLIC_SITE_URL: 'https://admin.symphonia-controltower.com'
+        NEXT_PUBLIC_PORTAL_TYPE: 'admin'
+        NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
+        NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_ADMIN_API_URL: 'http://rt-admin-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_BILLING_API: 'http://rt-billing-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+        NEXT_PUBLIC_SALES_AGENTS_API_URL: 'http://rt-sales-agents-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
         NODE_VERSION: '20'
         PNPM_VERSION: '8.15.4'
