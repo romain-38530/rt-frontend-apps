@@ -1,0 +1,118 @@
+BOURSE MARITIME API - PROJECT STRUCTURE
+========================================
+
+Directory Structure:
+--------------------
+apps/api-bourse-maritime/
+├── src/
+│   ├── models/              # MongoDB/Mongoose models
+│   │   ├── Alert.ts         # Price/route alerts
+│   │   ├── Bid.ts           # Carrier bids on freight requests
+│   │   ├── Carrier.ts       # Carrier profiles and fleet info
+│   │   ├── Contract.ts      # Digital contracts
+│   │   └── FreightRequest.ts # Shipper freight requests
+│   │
+│   ├── routes/              # Express route handlers
+│   │   ├── alerts.ts        # Alert management endpoints
+│   │   ├── bids.ts          # Bidding endpoints
+│   │   ├── carriers.ts      # Carrier profile endpoints
+│   │   ├── contracts.ts     # Contract management
+│   │   ├── freight-requests.ts # Freight request CRUD
+│   │   └── search.ts        # Search, matching, and stats
+│   │
+│   ├── middleware/          # Express middleware
+│   │   └── auth.ts          # JWT authentication
+│   │
+│   ├── services/            # Business logic services
+│   │   └── matching-service.ts # AI carrier matching
+│   │
+│   ├── index.ts             # Main Express application
+│   └── seed.ts              # Database seeding script
+│
+├── package.json             # Dependencies and scripts
+├── tsconfig.json            # TypeScript configuration
+├── .env                     # Environment variables
+├── .env.example             # Environment template
+├── .gitignore               # Git ignore rules
+├── SETUP.md                 # Installation and setup guide
+├── API_ENDPOINTS.md         # Complete API reference
+└── AI_MATCHING.md           # AI matching documentation
+
+Key Features:
+-------------
+1. Freight Request Management
+   - Create, update, publish, and close freight requests
+   - Detailed cargo, route, and schedule information
+   - Status tracking through lifecycle
+
+2. Bidding System
+   - Carriers submit competitive bids
+   - Detailed pricing breakdowns
+   - Bid acceptance/rejection workflow
+   - Automatic contract generation
+
+3. AI Matching Engine
+   - Intelligent carrier scoring (0-100)
+   - Multi-factor analysis:
+     * Route expertise (25%)
+     * Price competitiveness (20%)
+     * Reliability (25%)
+     * Fleet suitability (20%)
+     * Schedule compatibility (10%)
+   - Personalized recommendations
+
+4. Contract Management
+   - Digital contract creation
+   - Electronic signatures
+   - Document management
+   - Multi-party signing workflow
+
+5. Carrier Profiles
+   - Fleet information
+   - Certifications
+   - Route expertise
+   - Performance ratings
+   - Statistics tracking
+
+6. Search & Discovery
+   - Route search
+   - Carrier search with filters
+   - Market statistics
+   - Pricing trends
+
+7. Alerts & Notifications
+   - Price alerts
+   - Route availability alerts
+   - Carrier availability
+   - Configurable frequencies
+
+Database Collections:
+---------------------
+- freightrequests  # Freight requests from shippers
+- bids             # Carrier bids
+- contracts        # Awarded contracts
+- carriers         # Carrier profiles
+- alerts           # User alerts
+
+API Endpoints: 40+ RESTful endpoints
+Port: 3019
+Technology Stack: Node.js, Express, TypeScript, MongoDB, Mongoose
+
+Sample Data:
+------------
+After running 'npm run seed':
+- 3 verified carriers (MSC, Maersk, CMA CGM)
+- 2 published freight requests
+- Complete fleet and certification data
+- Ready for testing and development
+
+Quick Start:
+------------
+1. npm install
+2. Configure .env
+3. npm run seed
+4. npm run dev
+5. Visit http://localhost:3019
+
+Files Created: 20
+Total Size: ~168KB (excluding node_modules)

@@ -41,3 +41,13 @@ export { BillingService } from './services/billing-service';
 export { ChatbotService } from './services/chatbot-service';
 export { SupplierService } from './services/supplier-service';
 export { RecipientService } from './services/recipient-service';
+
+// SMS Service
+export { SmsService, getSmsService, createSmsService, SMS_TEMPLATES } from './services/sms-service';
+export type { SmsConfig, SmsMessage, SmsSendResult, SmsTemplate, SmsProvider } from './services/sms-service';
+
+// Admin Service
+export { AdminService, getAdminService, createAdminService } from './services/admin-service';
+
+// Bourse Maritime Service
+export { BourseMaritimeService, getBourseMaritimeService, createBourseMaritimeService } from './services/bourse-maritime-service';

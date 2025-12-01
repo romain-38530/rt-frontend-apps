@@ -52,3 +52,12 @@ export * from './supplier';
 
 // Destinataires (Recipient Management)
 export * from './recipient';
+
+// SMS Notifications
+export * from './sms';
+
+// Bourse Maritime
+export * from './bourse-maritime';
+
+// Admin Gateway
+export * from './admin';
