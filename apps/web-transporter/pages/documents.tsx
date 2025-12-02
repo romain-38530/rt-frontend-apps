@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { documentsApi, ordersApi } from '../lib/api';
 
 interface TransportDocument {
   id: string;
@@ -44,7 +45,25 @@ export default function DocumentsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Simulation - en prod: appels API
+      // Appel API
+      const [docsData, ordersData] = await Promise.all([
+        documentsApi.list(),
+        ordersApi.list({ status: 'pending_documents' }),
+      ]);
+
+      if (docsData.documents || Array.isArray(docsData)) {
+        setDocuments(docsData.documents || docsData);
+      }
+      if (ordersData.orders || Array.isArray(ordersData)) {
+        setPendingOrders(ordersData.orders || ordersData);
+      }
+
+      if (!docsData.documents && !Array.isArray(docsData)) {
+        throw new Error('Invalid API response');
+      }
+    } catch (err) {
+      console.error('Error loading documents from API:', err);
+      // Fallback mock data
       const mockPendingOrders: OrderForUpload[] = [
         {
           id: 'ord-1',
@@ -135,8 +154,6 @@ export default function DocumentsPage() {
 
       setPendingOrders(mockPendingOrders);
       setDocuments(mockDocuments);
-    } catch (err) {
-      console.error('Error loading data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -148,11 +165,7 @@ export default function DocumentsPage() {
     setUploadingType(docType);
 
     try {
-      // En production: appel API POST /api/v1/affretia/documents/upload
-      console.log('Uploading document:', { orderId, docType, fileName: file.name });
-
-      // Simuler upload + OCR
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await documentsApi.upload(file, { type: docType, orderId });
 
       alert(`Document ${docType.toUpperCase()} téléversé avec succès !\nOCR en cours de traitement...`);
       loadData();

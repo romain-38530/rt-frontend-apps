@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Building2, Plus, Filter, Download, Eye } from 'lucide-react';
-
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'http://localhost:3008';
+import { adminApi } from '../../lib/api';
 
 interface OrgItem { id: string; name: string; role: string; status: string; plan?: string; addons?: string[] }
 
@@ -14,16 +13,16 @@ export default function OrgsList() {
   const search = async () => {
     setLoading(true); setError(null);
     try {
-      const headers: any = {};
-      if (typeof window !== 'undefined') {
-        const t = window.localStorage.getItem('admin_jwt');
-        if (t) headers['authorization'] = `Bearer ${t}`;
-      }
-      const res = await fetch(`${ADMIN_GATEWAY}/admin/orgs?query=${encodeURIComponent(query)}`, { headers });
-      const json = await res.json();
-      setItems(json.items || []);
+      const data = await adminApi.getOrgs(query);
+      setItems(data.items || []);
     } catch (e: any) {
       setError(e.message || 'Erreur réseau');
+      // Fallback mock data
+      setItems([
+        { id: 'org-001', name: 'Acme Corp', role: 'industry', status: 'active', plan: 'Premium' },
+        { id: 'org-002', name: 'Transport Express', role: 'transporter', status: 'active', plan: 'Standard' },
+        { id: 'org-003', name: 'LogiTech SA', role: 'logistician', status: 'pending', plan: 'Basic' },
+      ]);
     } finally {
       setLoading(false);
     }

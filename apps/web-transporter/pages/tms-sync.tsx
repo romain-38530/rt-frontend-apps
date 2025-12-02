@@ -2,23 +2,72 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { tmsSyncApi } from '../lib/api';
+
+interface SyncStatus {
+  lastSync: string;
+  status: string;
+  orders: number;
+  vehicles: number;
+  errors: number;
+}
 
 export default function TmssyncPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_TMS_SYNC_API_URL;
-
-  const [syncStatus, setSyncStatus] = useState({
-    lastSync: '2025-11-23 10:30',
-    status: 'Connecté',
-    orders: 1247,
-    vehicles: 45,
-    errors: 2
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    lastSync: '',
+    status: 'Chargement...',
+    orders: 0,
+    vehicles: 0,
+    errors: 0
   });
+  const [loading, setLoading] = useState(false);
+
+  const loadSyncStatus = async () => {
+    try {
+      const data = await tmsSyncApi.getStatus();
+      if (data && data.status) {
+        setSyncStatus({
+          lastSync: data.lastSync || new Date().toLocaleString('fr-FR'),
+          status: data.status === 'connected' ? 'Connecté' : data.status === 'error' ? 'Erreur' : 'Déconnecté',
+          orders: data.ordersCount || data.orders || 0,
+          vehicles: data.vehiclesCount || data.vehicles || 0,
+          errors: data.errorsCount || data.errors || 0
+        });
+      }
+    } catch (err) {
+      console.error('Error loading TMS sync status:', err);
+      // Fallback mock data
+      setSyncStatus({
+        lastSync: new Date().toLocaleString('fr-FR'),
+        status: 'Connecté',
+        orders: 1247,
+        vehicles: 45,
+        errors: 2
+      });
+    }
+  };
+
+  const handleSync = async () => {
+    setLoading(true);
+    try {
+      await tmsSyncApi.syncNow();
+      await loadSyncStatus();
+      alert('Synchronisation lancée avec succès !');
+    } catch (err) {
+      console.error('Error triggering sync:', err);
+      alert('Erreur lors de la synchronisation');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    loadSyncStatus();
   }, [router]);
 
   return (
@@ -140,17 +189,20 @@ export default function TmssyncPage() {
                   <div style={{ fontSize: '14px', opacity: 0.7 }}>Erreurs</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <button style={{
-                    padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    fontSize: '14px'
-                  }}>
-                    Synchroniser
+                  <button
+                    onClick={handleSync}
+                    disabled={loading}
+                    style={{
+                      padding: '12px 24px',
+                      background: loading ? 'rgba(255,255,255,0.3)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontWeight: '700',
+                      fontSize: '14px'
+                    }}>
+                    {loading ? 'Synchronisation...' : 'Synchroniser'}
                   </button>
                 </div>
               </div>

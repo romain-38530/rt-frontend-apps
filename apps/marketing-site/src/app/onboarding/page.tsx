@@ -211,7 +211,9 @@ export default function OnboardingPage() {
           phone: formData.representativePhone || undefined,
           address: fullAddress || undefined,
           subscriptionType: formData.subscriptionType || 'basic',
+          duration: formData.duration || '12',
           paymentMethod: formData.paymentMethod || 'card',
+          options: formData.options,
           source: 'WEB'
         })
       });

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { affretIaApi } from '../lib/api';
 
 interface BourseOffer {
   id: string;
@@ -68,7 +69,30 @@ export default function BoursePage() {
   const loadOffers = async () => {
     setIsLoading(true);
     try {
-      // Simulation - en prod: appel API
+      // Appel API
+      const data = await affretIaApi.getOffers({
+        origin: filters.pickupCity || undefined,
+        destination: filters.deliveryCity || undefined,
+      });
+
+      if (data.offers && Array.isArray(data.offers)) {
+        let filtered = data.offers;
+        if (filters.maxPrice) {
+          filtered = filtered.filter((o: BourseOffer) => o.estimatedPrice <= Number(filters.maxPrice));
+        }
+        setOffers(filtered);
+      } else if (Array.isArray(data)) {
+        let filtered = data;
+        if (filters.maxPrice) {
+          filtered = filtered.filter((o: BourseOffer) => o.estimatedPrice <= Number(filters.maxPrice));
+        }
+        setOffers(filtered);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (err) {
+      console.error('Error loading offers from API:', err);
+      // Fallback mock data
       const mockOffers: BourseOffer[] = Array.from({ length: 12 }, (_, i) => ({
         id: `offer-${i + 1}`,
         sessionId: `session-${i + 1}`,
@@ -122,8 +146,6 @@ export default function BoursePage() {
       }
 
       setOffers(filtered);
-    } catch (err) {
-      console.error('Error loading offers:', err);
     } finally {
       setIsLoading(false);
     }
@@ -134,11 +156,10 @@ export default function BoursePage() {
     if (!selectedOffer || !proposalData.proposedPrice) return;
 
     try {
-      // En production: appel API POST /api/v1/affretia/proposals
-      console.log('Submitting proposal:', {
-        offerId: selectedOffer.id,
-        sessionId: selectedOffer.sessionId,
-        ...proposalData,
+      await affretIaApi.submitProposal(selectedOffer.id, {
+        price: Number(proposalData.proposedPrice),
+        availableDate: proposalData.pickupDate || new Date().toISOString(),
+        message: proposalData.message,
       });
 
       alert('Proposition envoyée avec succès !');

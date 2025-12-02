@@ -2,21 +2,44 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { ecmrApi } from '../lib/api';
+
+interface EcmrDocument {
+  id: string;
+  date: string;
+  transporteur: string;
+  status: string;
+}
 
 export default function EcmrPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_ECMR_API_URL;
+  const [documents, setDocuments] = useState<EcmrDocument[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [documents, setDocuments] = useState([
-    { id: 'CMR-2025-001', date: '2025-11-23', transporteur: 'Transport A', status: 'Signé' },
-    { id: 'CMR-2025-002', date: '2025-11-22', transporteur: 'Transport B', status: 'En attente' },
-    { id: 'CMR-2025-003', date: '2025-11-21', transporteur: 'Transport C', status: 'Signé' },
-  ]);
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const data = await ecmrApi.list();
+      if (data.documents) setDocuments(data.documents);
+      else if (Array.isArray(data)) setDocuments(data);
+    } catch (err) {
+      console.error('Error fetching eCMR documents:', err);
+      setDocuments([
+        { id: 'CMR-2025-001', date: '2025-11-23', transporteur: 'Transport A', status: 'Signé' },
+        { id: 'CMR-2025-002', date: '2025-11-22', transporteur: 'Transport B', status: 'En attente' },
+        { id: 'CMR-2025-003', date: '2025-11-21', transporteur: 'Transport C', status: 'Signé' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchDocuments();
   }, [router]);
 
   return (

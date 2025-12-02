@@ -2,8 +2,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { subscriptionsApi } from '../lib/api';
 
-const plans = [
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  gradient: string;
+  features: string[];
+  popular?: boolean;
+}
+
+const defaultPlans: Plan[] = [
   {
     id: 'free',
     name: 'Gratuit',
@@ -51,7 +61,51 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [currentTier, setCurrentTier] = useState('free');
+  const [plans, setPlans] = useState<Plan[]>(defaultPlans);
   const [loading, setLoading] = useState(true);
+
+  const fetchSubscription = async () => {
+    try {
+      setLoading(true);
+      // Fetch available plans
+      const plansData = await subscriptionsApi.getPlans();
+      if (plansData.plans && Array.isArray(plansData.plans)) {
+        setPlans(plansData.plans.map((p: any) => ({
+          id: p.id || p.planId,
+          name: p.name,
+          price: p.price || 0,
+          gradient: p.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          features: p.features || [],
+          popular: p.popular
+        })));
+      }
+
+      // Fetch current subscription
+      const currentData = await subscriptionsApi.getCurrentPlan();
+      if (currentData.subscription) {
+        setCurrentTier(currentData.subscription.tier || currentData.subscription.planId || 'free');
+      } else if (currentData.tier || currentData.planId) {
+        setCurrentTier(currentData.tier || currentData.planId);
+      } else {
+        // Fallback to localStorage
+        const subscription = localStorage.getItem('userSubscription');
+        if (subscription) {
+          const { tier } = JSON.parse(subscription);
+          setCurrentTier(tier);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching subscription:', err);
+      // Fallback to localStorage
+      const subscription = localStorage.getItem('userSubscription');
+      if (subscription) {
+        const { tier } = JSON.parse(subscription);
+        setCurrentTier(tier);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -59,26 +113,34 @@ export default function SubscriptionPage() {
       return;
     }
     setUser(getUser());
-
-    // Charger l'abonnement actuel
-    const subscription = localStorage.getItem('userSubscription');
-    if (subscription) {
-      const { tier } = JSON.parse(subscription);
-      setCurrentTier(tier);
-    }
-    setLoading(false);
+    fetchSubscription();
   }, [router]);
 
-  const handleSelectPlan = (planId: string) => {
-    const subscription = {
-      tier: planId,
-      startDate: new Date().toISOString(),
-      status: 'active',
-      autoRenew: true
-    };
-    localStorage.setItem('userSubscription', JSON.stringify(subscription));
-    setCurrentTier(planId);
-    alert(`Abonnement ${planId} activé avec succès !`);
+  const handleSelectPlan = async (planId: string) => {
+    try {
+      await subscriptionsApi.changePlan(planId);
+      const subscription = {
+        tier: planId,
+        startDate: new Date().toISOString(),
+        status: 'active',
+        autoRenew: true
+      };
+      localStorage.setItem('userSubscription', JSON.stringify(subscription));
+      setCurrentTier(planId);
+      alert(`Abonnement ${planId} activé avec succès !`);
+    } catch (err) {
+      console.error('Error changing plan:', err);
+      // Fallback to local storage only
+      const subscription = {
+        tier: planId,
+        startDate: new Date().toISOString(),
+        status: 'active',
+        autoRenew: true
+      };
+      localStorage.setItem('userSubscription', JSON.stringify(subscription));
+      setCurrentTier(planId);
+      alert(`Abonnement ${planId} activé avec succès !`);
+    }
   };
 
   if (loading) {

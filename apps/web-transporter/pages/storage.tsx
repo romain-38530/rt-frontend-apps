@@ -2,21 +2,49 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { storageMarketApi } from '../lib/api';
+
+interface StorageSpace {
+  id: string;
+  location: string;
+  size: string;
+  price: string;
+  available: boolean;
+}
 
 export default function StoragePage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL;
+  const [spaces, setSpaces] = useState<StorageSpace[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [spaces, setSpaces] = useState([
-    { id: 'STO-001', location: 'Paris - Zone Nord', size: '500 m²', price: '2 500 €/mois', available: true },
-    { id: 'STO-002', location: 'Lyon - Zone Est', size: '1000 m²', price: '4 200 €/mois', available: true },
-    { id: 'STO-003', location: 'Marseille - Port', size: '750 m²', price: '3 100 €/mois', available: false },
-  ]);
+  const fetchSpaces = async () => {
+    try {
+      setLoading(true);
+      const data = await storageMarketApi.listSpaces();
+      if (data.spaces) {
+        setSpaces(data.spaces);
+      } else if (Array.isArray(data)) {
+        setSpaces(data);
+      }
+    } catch (err) {
+      console.error('Error fetching storage spaces:', err);
+      // Fallback mock data
+      setSpaces([
+        { id: 'STO-001', location: 'Paris - Zone Nord', size: '500 m²', price: '2 500 €/mois', available: true },
+        { id: 'STO-002', location: 'Lyon - Zone Est', size: '1000 m²', price: '4 200 €/mois', available: true },
+        { id: 'STO-003', location: 'Marseille - Port', size: '750 m²', price: '3 100 €/mois', available: false },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchSpaces();
   }, [router]);
 
   return (

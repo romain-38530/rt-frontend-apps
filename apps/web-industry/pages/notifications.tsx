@@ -2,18 +2,23 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { notificationsApi } from '../lib/api';
+
+interface Notification {
+  id: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  message: string;
+  createdAt: string;
+  read: boolean;
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'info', message: 'Nouvelle commande CMD-004 reçue', time: 'Il y a 5 min', read: false },
-    { id: 2, type: 'warning', message: 'Retard prévu sur livraison TRK-002', time: 'Il y a 15 min', read: false },
-    { id: 3, type: 'success', message: 'Livraison TRK-003 complétée', time: 'Il y a 1h', read: true },
-  ]);
-
-  const getNotifColor = (type) => {
+  const getNotifColor = (type: 'info' | 'warning' | 'success' | 'error' | string): string => {
     switch(type) {
       case 'info': return '#667eea';
       case 'warning': return '#FFA500';
@@ -23,11 +28,71 @@ export default function NotificationsPage() {
     }
   };
 
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'A l\'instant';
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    if (diffHours < 24) return `Il y a ${diffHours}h`;
+    return `Il y a ${diffDays}j`;
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const data = await notificationsApi.list();
+      if (data.notifications) {
+        setNotifications(data.notifications);
+      } else if (Array.isArray(data)) {
+        setNotifications(data);
+      }
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('Impossible de charger les notifications');
+      // Fallback data for demo
+      setNotifications([
+        { id: '1', type: 'info', message: 'Nouvelle commande CMD-004 recue', createdAt: new Date(Date.now() - 5*60000).toISOString(), read: false },
+        { id: '2', type: 'warning', message: 'Retard prevu sur livraison TRK-002', createdAt: new Date(Date.now() - 15*60000).toISOString(), read: false },
+        { id: '3', type: 'success', message: 'Livraison TRK-003 completee', createdAt: new Date(Date.now() - 60*60000).toISOString(), read: true },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchNotifications();
   }, [router]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <>
@@ -81,22 +146,54 @@ export default function NotificationsPage() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
-              ← Retour
+              &#8592; Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '32px' }}>🔔</span>
-              <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Notifications</h1>
+              <span style={{ fontSize: '32px' }}>&#128276;</span>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>
+                Notifications
+                {unreadCount > 0 && (
+                  <span style={{
+                    marginLeft: '12px',
+                    background: '#FF4444',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}>
+                    {unreadCount} non lues
+                  </span>
+                )}
+              </h1>
             </div>
           </div>
-          <div style={{
-            padding: '8px 20px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '700',
-            border: '1px solid rgba(255,255,255,0.3)'
-          }}>
-            🏭 Industry
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                style={{
+                  background: 'rgba(0,208,132,0.2)',
+                  border: '1px solid rgba(0,208,132,0.5)',
+                  color: '#00D084',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600'
+                }}
+              >
+                Tout marquer comme lu
+              </button>
+            )}
+            <div style={{
+              padding: '8px 20px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '20px',
+              fontSize: '13px',
+              fontWeight: '700',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }}>
+              &#127981; Industry
+            </div>
           </div>
         </div>
 
@@ -108,32 +205,87 @@ export default function NotificationsPage() {
           maxWidth: '1400px',
           margin: '0 auto'
         }}>
-
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {notifications.map(notif => (
-                <div key={notif.id} style={{
-                  background: notif.read ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '12px',
-                  padding: '16px 20px',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center'
-                }}>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: notif.read ? 'transparent' : getNotifColor(notif.type)
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>{notif.message}</div>
-                    <div style={{ fontSize: '12px', opacity: 0.6 }}>{notif.time}</div>
-                  </div>
-                </div>
-              ))}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#8987;</div>
+              <p>Chargement des notifications...</p>
             </div>
+          ) : error && notifications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#9888;&#65039;</div>
+              <p>{error}</p>
+              <button
+                onClick={fetchNotifications}
+                style={{
+                  marginTop: '16px',
+                  background: '#667eea',
+                  border: 'none',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reessayer
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {notifications.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '16px'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#128173;</div>
+                  <p>Aucune notification</p>
+                </div>
+              ) : (
+                notifications.map(notif => (
+                  <div
+                    key={notif.id}
+                    onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                    style={{
+                      background: notif.read ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      gap: '16px',
+                      alignItems: 'center',
+                      cursor: notif.read ? 'default' : 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: notif.read ? 'transparent' : getNotifColor(notif.type),
+                      flexShrink: 0
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>{notif.message}</div>
+                      <div style={{ fontSize: '12px', opacity: 0.6 }}>{formatTime(notif.createdAt)}</div>
+                    </div>
+                    <div style={{
+                      padding: '4px 10px',
+                      background: `${getNotifColor(notif.type)}30`,
+                      color: getNotifColor(notif.type),
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {notif.type}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

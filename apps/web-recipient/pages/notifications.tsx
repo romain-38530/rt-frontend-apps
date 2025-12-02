@@ -2,18 +2,52 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { notificationsApi } from '../lib/api';
+
+interface Notification {
+  id: string | number;
+  type: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'info', message: 'Nouvelle commande CMD-004 reçue', time: 'Il y a 5 min', read: false },
-    { id: 2, type: 'warning', message: 'Retard prévu sur livraison TRK-002', time: 'Il y a 15 min', read: false },
-    { id: 3, type: 'success', message: 'Livraison TRK-003 complétée', time: 'Il y a 1h', read: true },
-  ]);
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const data = await notificationsApi.list();
+      if (data.notifications) {
+        setNotifications(data.notifications);
+      } else if (Array.isArray(data)) {
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setNotifications([
+        { id: 1, type: 'info', message: 'Nouvelle commande CMD-004 reçue', time: 'Il y a 5 min', read: false },
+        { id: 2, type: 'warning', message: 'Retard prévu sur livraison TRK-002', time: 'Il y a 15 min', read: false },
+        { id: 3, type: 'success', message: 'Livraison TRK-003 complétée', time: 'Il y a 1h', read: true },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const getNotifColor = (type) => {
+  const handleMarkAsRead = async (id: string | number) => {
+    try {
+      await notificationsApi.markAsRead(String(id));
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const getNotifColor = (type: string) => {
     switch(type) {
       case 'info': return '#667eea';
       case 'warning': return '#FFA500';
@@ -26,7 +60,9 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchNotifications();
   }, [router]);
 
   return (

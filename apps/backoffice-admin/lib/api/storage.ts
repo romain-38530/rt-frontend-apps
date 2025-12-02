@@ -1,7 +1,7 @@
-// Client API pour le service Storage Market (port 3013)
+// Client API pour le service Storage Market
 // Module d'administration du marché de stockage - Admin backend
 
-const STORAGE_API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://localhost:3013';
+const STORAGE_API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d1ea8wbaf6ws9i.cloudfront.net';
 
 // Helper pour les requêtes API
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {

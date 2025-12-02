@@ -2,21 +2,49 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { trainingApi } from '../lib/api';
+
+interface TrainingModule {
+  id: string | number;
+  title: string;
+  duration: string;
+  completed: number;
+  status: string;
+}
 
 export default function TrainingPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_TRAINING_API_URL;
+  const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [modules, setModules] = useState([
-    { id: 1, title: 'Sécurité routière', duration: '2h', completed: 100, status: 'Complété' },
-    { id: 2, title: 'Gestion documentaire', duration: '1h30', completed: 60, status: 'En cours' },
-    { id: 3, title: 'Utilisation TMS', duration: '3h', completed: 0, status: 'Non commencé' },
-  ]);
+  const fetchModules = async () => {
+    try {
+      setLoading(true);
+      const data = await trainingApi.getModules();
+      if (data.modules) {
+        setModules(data.modules);
+      } else if (Array.isArray(data)) {
+        setModules(data);
+      }
+    } catch (err) {
+      console.error('Error fetching training modules:', err);
+      // Fallback mock data
+      setModules([
+        { id: 1, title: 'Sécurité routière', duration: '2h', completed: 100, status: 'Complété' },
+        { id: 2, title: 'Gestion documentaire', duration: '1h30', completed: 60, status: 'En cours' },
+        { id: 3, title: 'Utilisation TMS', duration: '3h', completed: 0, status: 'Non commencé' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchModules();
   }, [router]);
 
   return (

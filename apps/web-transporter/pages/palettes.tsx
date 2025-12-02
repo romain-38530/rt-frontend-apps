@@ -151,7 +151,19 @@ export default function PalettesCircularPage() {
     radiusKm: 30
   });
 
-  const companyId = 'TRANS-001'; // TODO: Get from auth context
+  // Get companyId from auth context
+  const getCompanyId = (): string => {
+    if (typeof window === 'undefined') return '';
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        return parsed.carrierId || parsed.companyId || parsed.id || '';
+      } catch { return ''; }
+    }
+    return '';
+  };
+  const companyId = getCompanyId() || 'TRANS-001'; // Fallback for development
 
   useEffect(() => {
     if (!isAuthenticated()) {

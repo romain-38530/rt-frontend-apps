@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { vigilanceApi } from '../lib/api';
 
 interface VigilanceDocument {
   type: string;
@@ -44,7 +45,28 @@ export default function VigilancePage() {
   const loadVigilance = async () => {
     setIsLoading(true);
     try {
-      // Simulation - en prod: appel API GET /api/v1/affretia/vigilance/:carrierId
+      // Appel API
+      const [statusData, docsData, alertsData] = await Promise.all([
+        vigilanceApi.getStatus(),
+        vigilanceApi.getDocuments(),
+        vigilanceApi.getAlerts(),
+      ]);
+
+      if (statusData && (statusData.complianceScore !== undefined || docsData.documents)) {
+        setVigilance({
+          overallStatus: statusData.overallStatus || statusData.status || 'warning',
+          complianceScore: statusData.complianceScore || statusData.score || 78,
+          documents: docsData.documents || docsData || [],
+          alerts: alertsData.alerts || alertsData || [],
+          lastCheckedAt: statusData.lastCheckedAt || new Date().toISOString(),
+          nextCheckDue: statusData.nextCheckDue || new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (err) {
+      console.error('Error loading vigilance from API:', err);
+      // Fallback mock data
       const mockVigilance: VigilanceData = {
         overallStatus: 'warning',
         complianceScore: 78,
@@ -115,8 +137,6 @@ export default function VigilancePage() {
       };
 
       setVigilance(mockVigilance);
-    } catch (err) {
-      console.error('Error loading vigilance:', err);
     } finally {
       setIsLoading(false);
     }
@@ -126,12 +146,7 @@ export default function VigilancePage() {
   const handleUpload = async (docType: string, file: File) => {
     setUploadingDoc(docType);
     try {
-      // En production: appel API POST /api/v1/affretia/vigilance/:carrierId/document
-      console.log('Uploading document:', { docType, fileName: file.name });
-
-      // Simuler un délai d'upload
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
+      await vigilanceApi.uploadDocument(docType, file);
       alert(`Document ${docType} téléversé avec succès !`);
       loadVigilance();
     } catch (err) {

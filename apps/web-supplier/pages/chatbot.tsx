@@ -2,23 +2,49 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { chatbotApi } from '../lib/api';
+
+interface Message {
+  id: number;
+  sender: 'user' | 'bot';
+  text: string;
+}
 
 export default function ChatbotPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL;
-
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { id: 1, sender: 'bot', text: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' },
   ]);
   const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setMessages([...messages,
-      { id: messages.length + 1, sender: 'user', text: input },
-      { id: messages.length + 2, sender: 'bot', text: 'Merci pour votre message. Notre équipe va traiter votre demande.' }
-    ]);
+  const sendMessage = async () => {
+    if (!input.trim() || sending) return;
+
+    const userMessage: Message = { id: messages.length + 1, sender: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setSending(true);
+
+    try {
+      const response = await chatbotApi.sendMessage(input);
+      const botMessage: Message = {
+        id: messages.length + 2,
+        sender: 'bot',
+        text: response.message || response.response || 'Merci pour votre message. Notre équipe va traiter votre demande.'
+      };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        sender: 'bot',
+        text: 'Merci pour votre message. Notre équipe va traiter votre demande.'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setSending(false);
+    }
   };
 
   useEffect(() => {

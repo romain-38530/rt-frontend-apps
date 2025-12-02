@@ -19,7 +19,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
-import kpiApi, { CarrierScore as APICarrierScore } from '@shared/services/kpi-api';
+import { scoringApi } from '../lib/api';
 
 interface CarrierScore {
   score: number;
@@ -71,20 +71,19 @@ export default function TransporterKPIPage() {
   const loadScore = async () => {
     setLoading(true);
     try {
-      // Récupérer le carrierId depuis l'utilisateur connecté
-      const carrierId = user?.carrierId || user?.id || 'default';
-      const apiData = await kpiApi.carriers.getScore(carrierId, period);
+      // Appel API scoring
+      const apiData = await scoringApi.getScoreDetails();
 
       // Transformer les données API en format attendu par l'UI
-      const scoreDetails = apiData.scoreDetails || {};
+      const scoreDetails = apiData.scoreDetails || apiData.criteria || {};
       setScoreData({
         score: apiData.score || 87,
         ranking: {
           global: apiData.ranking?.global || 12,
           percentile: apiData.ranking?.percentile || 88,
         },
-        evolution: apiData.trends?.evolution || 'up',
-        lastMonthChange: parseFloat(apiData.trends?.lastMonth || '3.2'),
+        evolution: apiData.trends?.evolution || apiData.evolution || 'up',
+        lastMonthChange: parseFloat(apiData.trends?.lastMonth || apiData.lastMonthChange || '3.2'),
         criteria: {
           slotRespect: { value: parseFloat(scoreDetails.slotRespect?.value || '92'), score: parseFloat(scoreDetails.slotRespect?.score || '13.8') },
           documentDelay: { value: parseFloat(scoreDetails.documentDelay?.value || '88'), score: parseFloat(scoreDetails.documentDelay?.score || '8.8') },
@@ -101,7 +100,7 @@ export default function TransporterKPIPage() {
           onTimeDeliveries: apiData.metrics?.onTimeDeliveries || 298,
           averageDelay: apiData.metrics?.averageDelay || 12,
           documentsOnTime: parseFloat(apiData.metrics?.documentsOnTime || '88'),
-          cancellations: apiData.metrics?.totalCancellations || 8,
+          cancellations: apiData.metrics?.totalCancellations || apiData.metrics?.cancellations || 8,
           averageResponseTime: apiData.metrics?.averageResponseTime || 18,
         },
         comparisons: {

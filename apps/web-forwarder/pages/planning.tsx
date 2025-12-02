@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { planningApi } from '../lib/api';
+
+interface PlanningEvent {
+  time: string;
+  title: string;
+  type: string;
+}
 
 export default function PlanningPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL;
+  const [events, setEvents] = useState<PlanningEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [events, setEvents] = useState([
-    { time: '08:00', title: 'Livraison Paris Nord', type: 'delivery' },
-    { time: '10:30', title: 'Collecte Entrepôt A', type: 'pickup' },
-    { time: '14:00', title: 'Maintenance véhicule', type: 'maintenance' },
-  ]);
-
-  const getEventColor = (type) => {
+  const getEventColor = (type: string) => {
     switch(type) {
       case 'delivery': return '#00D084';
       case 'pickup': return '#667eea';
@@ -22,10 +24,45 @@ export default function PlanningPage() {
     }
   };
 
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await planningApi.getSites();
+      if (data.events) {
+        setEvents(data.events);
+      } else if (data.slots) {
+        setEvents(data.slots.map((slot: any) => ({
+          time: slot.time || slot.startTime || '00:00',
+          title: slot.title || slot.name || 'Événement',
+          type: slot.type || 'delivery'
+        })));
+      } else if (Array.isArray(data)) {
+        setEvents(data);
+      } else {
+        setEvents([
+          { time: '08:00', title: 'Livraison Paris Nord', type: 'delivery' },
+          { time: '10:30', title: 'Collecte Entrepôt A', type: 'pickup' },
+          { time: '14:00', title: 'Maintenance véhicule', type: 'maintenance' },
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching planning events:', err);
+      setEvents([
+        { time: '08:00', title: 'Livraison Paris Nord', type: 'delivery' },
+        { time: '10:30', title: 'Collecte Entrepôt A', type: 'pickup' },
+        { time: '14:00', title: 'Maintenance véhicule', type: 'maintenance' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchEvents();
   }, [router]);
 
   return (

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { affretIaApi } from '../lib/api';
 
 interface Proposal {
   id: string;
@@ -47,7 +48,19 @@ export default function MesPropositionsPage() {
   const loadProposals = async () => {
     setIsLoading(true);
     try {
-      // Simulation - en prod: appel API GET /api/v1/affretia/proposals/carrier/:carrierId
+      // Appel API
+      const data = await affretIaApi.getMyProposals(filter === 'all' ? undefined : filter);
+
+      if (data.proposals && Array.isArray(data.proposals)) {
+        setProposals(data.proposals);
+      } else if (Array.isArray(data)) {
+        setProposals(data);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (err) {
+      console.error('Error loading proposals from API:', err);
+      // Fallback mock data
       const mockProposals: Proposal[] = [
         {
           id: 'prop-1',
@@ -139,8 +152,6 @@ export default function MesPropositionsPage() {
       }
 
       setProposals(filtered);
-    } catch (err) {
-      console.error('Error loading proposals:', err);
     } finally {
       setIsLoading(false);
     }
@@ -151,11 +162,11 @@ export default function MesPropositionsPage() {
     if (!selectedProposal) return;
 
     try {
-      // En production: appel API
-      console.log('Counter offer response:', {
-        proposalId: selectedProposal.id,
-        accept,
-      });
+      if (accept) {
+        await affretIaApi.confirmAttribution(selectedProposal.id);
+      } else {
+        await affretIaApi.withdrawProposal(selectedProposal.id);
+      }
 
       alert(accept ? 'Contre-offre acceptée !' : 'Contre-offre refusée');
       setSelectedProposal(null);
@@ -171,12 +182,12 @@ export default function MesPropositionsPage() {
     if (!confirm('Voulez-vous vraiment retirer cette proposition ?')) return;
 
     try {
-      // En production: appel API DELETE
-      console.log('Withdrawing proposal:', proposalId);
+      await affretIaApi.withdrawProposal(proposalId);
       alert('Proposition retirée');
       loadProposals();
     } catch (err) {
       console.error('Error withdrawing proposal:', err);
+      alert('Erreur lors du retrait de la proposition');
     }
   };
 

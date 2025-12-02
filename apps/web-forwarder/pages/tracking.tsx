@@ -2,21 +2,45 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { trackingApi } from '../lib/api';
+
+interface Shipment {
+  id: string;
+  destination: string;
+  progress: number;
+  eta: string;
+  status: string;
+}
 
 export default function TrackingPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_TRACKING_API_URL;
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [shipments, setShipments] = useState([
-    { id: 'TRK-001', destination: 'Paris', progress: 75, eta: '2h30', status: 'En transit' },
-    { id: 'TRK-002', destination: 'Lyon', progress: 40, eta: '5h00', status: 'En transit' },
-    { id: 'TRK-003', destination: 'Marseille', progress: 100, eta: 'Arrivé', status: 'Livré' },
-  ]);
+  const fetchShipments = async () => {
+    try {
+      setLoading(true);
+      const data = await trackingApi.getShipments();
+      if (data.shipments) setShipments(data.shipments);
+      else if (Array.isArray(data)) setShipments(data);
+    } catch (err) {
+      console.error('Error fetching shipments:', err);
+      setShipments([
+        { id: 'TRK-001', destination: 'Paris', progress: 75, eta: '2h30', status: 'En transit' },
+        { id: 'TRK-002', destination: 'Lyon', progress: 40, eta: '5h00', status: 'En transit' },
+        { id: 'TRK-003', destination: 'Marseille', progress: 100, eta: 'Arrivé', status: 'Livré' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchShipments();
   }, [router]);
 
   return (

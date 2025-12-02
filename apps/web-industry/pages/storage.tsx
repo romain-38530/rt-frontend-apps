@@ -2,21 +2,70 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { storageMarketApi } from '../lib/api';
+
+interface StorageSpace {
+  id: string;
+  location: string;
+  size: string;
+  price: string;
+  available: boolean;
+  type?: string;
+  features?: string[];
+}
 
 export default function StoragePage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL;
+  const [spaces, setSpaces] = useState<StorageSpace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reserving, setReserving] = useState<string | null>(null);
 
-  const [spaces, setSpaces] = useState([
-    { id: 'STO-001', location: 'Paris - Zone Nord', size: '500 m²', price: '2 500 €/mois', available: true },
-    { id: 'STO-002', location: 'Lyon - Zone Est', size: '1000 m²', price: '4 200 €/mois', available: true },
-    { id: 'STO-003', location: 'Marseille - Port', size: '750 m²', price: '3 100 €/mois', available: false },
-  ]);
+  const fetchSpaces = async () => {
+    try {
+      setLoading(true);
+      const data = await storageMarketApi.listSpaces();
+      if (data.spaces) {
+        setSpaces(data.spaces);
+      } else if (Array.isArray(data)) {
+        setSpaces(data);
+      }
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching storage spaces:', err);
+      setError('Impossible de charger les espaces de stockage');
+      // Fallback data
+      setSpaces([
+        { id: 'STO-001', location: 'Paris - Zone Nord', size: '500 m2', price: '2 500 EUR/mois', available: true },
+        { id: 'STO-002', location: 'Lyon - Zone Est', size: '1000 m2', price: '4 200 EUR/mois', available: true },
+        { id: 'STO-003', location: 'Marseille - Port', size: '750 m2', price: '3 100 EUR/mois', available: false },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReserve = async (spaceId: string) => {
+    try {
+      setReserving(spaceId);
+      await storageMarketApi.createReservation({ spaceId, startDate: new Date().toISOString() });
+      // Update local state
+      setSpaces(prev => prev.map(s => s.id === spaceId ? { ...s, available: false } : s));
+      alert('Reservation effectuee avec succes!');
+    } catch (err) {
+      console.error('Error creating reservation:', err);
+      alert('Erreur lors de la reservation');
+    } finally {
+      setReserving(null);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchSpaces();
   }, [router]);
 
   return (
@@ -71,10 +120,10 @@ export default function StoragePage() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
-              ← Retour
+              &#8592; Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '32px' }}>📦</span>
+              <span style={{ fontSize: '32px' }}>&#128230;</span>
               <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Storage Market</h1>
             </div>
           </div>
@@ -86,7 +135,7 @@ export default function StoragePage() {
             fontWeight: '700',
             border: '1px solid rgba(255,255,255,0.3)'
           }}>
-            🏭 Industry
+            &#127981; Industry
           </div>
         </div>
 
@@ -98,7 +147,31 @@ export default function StoragePage() {
           maxWidth: '1400px',
           margin: '0 auto'
         }}>
-
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#8987;</div>
+              <p>Chargement des espaces...</p>
+            </div>
+          ) : error && spaces.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#9888;&#65039;</div>
+              <p>{error}</p>
+              <button
+                onClick={fetchSpaces}
+                style={{
+                  marginTop: '16px',
+                  background: '#667eea',
+                  border: 'none',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reessayer
+              </button>
+            </div>
+          ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
               {spaces.map(space => (
                 <div key={space.id} style={{
@@ -114,7 +187,8 @@ export default function StoragePage() {
                 }}>
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{space.location}</div>
-                    <div style={{ fontSize: '14px', opacity: 0.7 }}>Réf: {space.id}</div>
+                    <div style={{ fontSize: '14px', opacity: 0.7 }}>Ref: {space.id}</div>
+                    {space.type && <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>Type: {space.type}</div>}
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: '800' }}>{space.size}</div>
@@ -124,23 +198,27 @@ export default function StoragePage() {
                     <div style={{ fontSize: '20px', fontWeight: '800', color: '#00D084' }}>{space.price}</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <button style={{
-                      padding: '10px 20px',
-                      background: space.available ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.2)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: space.available ? 'pointer' : 'not-allowed',
-                      fontWeight: '700',
-                      fontSize: '14px',
-                      opacity: space.available ? 1 : 0.5
-                    }}>
-                      {space.available ? 'Réserver' : 'Indisponible'}
+                    <button
+                      onClick={() => space.available && handleReserve(space.id)}
+                      disabled={!space.available || reserving === space.id}
+                      style={{
+                        padding: '10px 20px',
+                        background: space.available ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.2)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: space.available ? 'pointer' : 'not-allowed',
+                        fontWeight: '700',
+                        fontSize: '14px',
+                        opacity: space.available ? 1 : 0.5
+                      }}>
+                      {reserving === space.id ? 'Reservation...' : space.available ? 'Reserver' : 'Indisponible'}
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+          )}
         </div>
       </div>
     </>

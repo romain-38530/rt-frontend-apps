@@ -2,22 +2,60 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { kpiApi } from '../lib/api';
+
+interface ProductionLine {
+  id: string;
+  ligne: string;
+  produit: string;
+  objectif: number;
+  realise: number;
+  taux: number;
+}
 
 export default function ProductionPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL;
+  const [production, setProduction] = useState<ProductionLine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [production, setProduction] = useState([
-    { ligne: 'Ligne A', produit: 'Produit X', objectif: 1000, realise: 850, taux: 85 },
-    { ligne: 'Ligne B', produit: 'Produit Y', objectif: 500, realise: 520, taux: 104 },
-    { ligne: 'Ligne C', produit: 'Produit Z', objectif: 750, realise: 680, taux: 91 },
-  ]);
+  const fetchProduction = async () => {
+    try {
+      setLoading(true);
+      const data = await kpiApi.getMetrics('production');
+      if (data.lines) {
+        setProduction(data.lines);
+      } else if (Array.isArray(data)) {
+        setProduction(data);
+      }
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching production data:', err);
+      setError('Impossible de charger les donnees de production');
+      // Fallback data
+      setProduction([
+        { id: '1', ligne: 'Ligne A', produit: 'Produit X', objectif: 1000, realise: 850, taux: 85 },
+        { id: '2', ligne: 'Ligne B', produit: 'Produit Y', objectif: 500, realise: 520, taux: 104 },
+        { id: '3', ligne: 'Ligne C', produit: 'Produit Z', objectif: 750, realise: 680, taux: 91 },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchProduction();
   }, [router]);
+
+  const getTauxColor = (taux: number): string => {
+    if (taux >= 100) return '#00D084';
+    if (taux >= 80) return '#FFA500';
+    return '#FF4444';
+  };
 
   return (
     <>
@@ -71,22 +109,39 @@ export default function ProductionPage() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
-              ← Retour
+              &#8592; Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '32px' }}>🏭</span>
+              <span style={{ fontSize: '32px' }}>&#127981;</span>
               <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Production & Planning</h1>
             </div>
           </div>
-          <div style={{
-            padding: '8px 20px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '700',
-            border: '1px solid rgba(255,255,255,0.3)'
-          }}>
-            🏭 Industry
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              onClick={fetchProduction}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}
+            >
+              &#8635; Actualiser
+            </button>
+            <div style={{
+              padding: '8px 20px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '20px',
+              fontSize: '13px',
+              fontWeight: '700',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }}>
+              &#127981; Industry
+            </div>
           </div>
         </div>
 
@@ -98,10 +153,34 @@ export default function ProductionPage() {
           maxWidth: '1400px',
           margin: '0 auto'
         }}>
-
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#8987;</div>
+              <p>Chargement des donnees...</p>
+            </div>
+          ) : error && production.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#9888;&#65039;</div>
+              <p>{error}</p>
+              <button
+                onClick={fetchProduction}
+                style={{
+                  marginTop: '16px',
+                  background: '#667eea',
+                  border: 'none',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reessayer
+              </button>
+            </div>
+          ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
-              {production.map((ligne, i) => (
-                <div key={i} style={{
+              {production.map((ligne) => (
+                <div key={ligne.id} style={{
                   background: 'rgba(255,255,255,0.1)',
                   backdropFilter: 'blur(10px)',
                   borderRadius: '12px',
@@ -117,20 +196,21 @@ export default function ProductionPage() {
                     <div style={{ fontSize: '14px', opacity: 0.7 }}>{ligne.produit}</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '800' }}>{ligne.objectif}</div>
+                    <div style={{ fontSize: '24px', fontWeight: '800' }}>{ligne.objectif.toLocaleString()}</div>
                     <div style={{ fontSize: '12px', opacity: 0.7 }}>Objectif</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '800', color: ligne.taux >= 100 ? '#00D084' : '#FFA500' }}>{ligne.realise}</div>
-                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Réalisé</div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: getTauxColor(ligne.taux) }}>{ligne.realise.toLocaleString()}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>Realise</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: ligne.taux >= 100 ? '#00D084' : ligne.taux >= 80 ? '#FFA500' : '#FF4444' }}>{ligne.taux}%</div>
+                    <div style={{ fontSize: '28px', fontWeight: '800', color: getTauxColor(ligne.taux) }}>{ligne.taux}%</div>
                     <div style={{ fontSize: '12px', opacity: 0.7 }}>Taux</div>
                   </div>
                 </div>
               ))}
             </div>
+          )}
         </div>
       </div>
     </>

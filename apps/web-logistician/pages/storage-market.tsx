@@ -24,7 +24,7 @@ interface MyCapacity {
   temperature: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://localhost:3006';
+const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d1ea8wbaf6ws9i.cloudfront.net';
 
 const STORAGE_TYPES: Record<string, string> = {
   LONG_TERM: 'Stockage long terme',

@@ -22,3 +22,13 @@ export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('authToken');
 };
+
+export const getRecipientId = (): string | null => {
+  const user = getUser();
+  return user?.recipientId || user?.recipient_id || user?.id || null;
+};
+
+export const getCompanyId = (): string | null => {
+  const user = getUser();
+  return user?.companyId || user?.company_id || null;
+};

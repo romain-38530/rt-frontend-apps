@@ -2,21 +2,54 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { palettesApi } from '../lib/api';
+
+interface Palette {
+  id: string;
+  type: string;
+  qty: number;
+  location: string;
+  status: string;
+}
 
 export default function PalettesPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL;
+  const [palettes, setPalettes] = useState<Palette[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [palettes, setPalettes] = useState([
-    { id: 'PAL-EUR-001', type: 'Europe', qty: 150, location: 'Entrepôt A', status: 'Disponible' },
-    { id: 'PAL-EUR-002', type: 'Europe', qty: 75, location: 'En transit', status: 'En mouvement' },
-    { id: 'PAL-US-001', type: 'Américaine', qty: 50, location: 'Entrepôt B', status: 'Disponible' },
-  ]);
+  const fetchPalettes = async () => {
+    try {
+      setLoading(true);
+      const data = await palettesApi.getBalance();
+      if (data.palettes) {
+        setPalettes(data.palettes);
+      } else if (Array.isArray(data)) {
+        setPalettes(data);
+      } else {
+        setPalettes([
+          { id: 'PAL-EUR-001', type: 'Europe', qty: 150, location: 'Entrepôt A', status: 'Disponible' },
+          { id: 'PAL-EUR-002', type: 'Europe', qty: 75, location: 'En transit', status: 'En mouvement' },
+          { id: 'PAL-US-001', type: 'Américaine', qty: 50, location: 'Entrepôt B', status: 'Disponible' },
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching palettes:', err);
+      setPalettes([
+        { id: 'PAL-EUR-001', type: 'Europe', qty: 150, location: 'Entrepôt A', status: 'Disponible' },
+        { id: 'PAL-EUR-002', type: 'Europe', qty: 75, location: 'En transit', status: 'En mouvement' },
+        { id: 'PAL-US-001', type: 'Américaine', qty: 50, location: 'Entrepôt B', status: 'Disponible' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
+    fetchPalettes();
   }, [router]);
 
   return (

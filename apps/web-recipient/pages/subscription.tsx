@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { subscriptionsApi } from '../lib/api';
 
 const plans = [
   {
@@ -53,32 +54,58 @@ export default function SubscriptionPage() {
   const [currentTier, setCurrentTier] = useState('free');
   const [loading, setLoading] = useState(true);
 
+  const fetchCurrentPlan = async () => {
+    try {
+      const data = await subscriptionsApi.getCurrentPlan();
+      if (data.subscription?.tier) {
+        setCurrentTier(data.subscription.tier);
+      } else if (data.tier) {
+        setCurrentTier(data.tier);
+      }
+    } catch (err) {
+      console.error('Error fetching subscription:', err);
+      const subscription = localStorage.getItem('userSubscription');
+      if (subscription) {
+        const { tier } = JSON.parse(subscription);
+        setCurrentTier(tier);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
     setUser(getUser());
-
-    // Charger l'abonnement actuel
-    const subscription = localStorage.getItem('userSubscription');
-    if (subscription) {
-      const { tier } = JSON.parse(subscription);
-      setCurrentTier(tier);
-    }
+    fetchCurrentPlan();
     setLoading(false);
   }, [router]);
 
-  const handleSelectPlan = (planId: string) => {
-    const subscription = {
-      tier: planId,
-      startDate: new Date().toISOString(),
-      status: 'active',
-      autoRenew: true
-    };
-    localStorage.setItem('userSubscription', JSON.stringify(subscription));
-    setCurrentTier(planId);
-    alert(`Abonnement ${planId} activé avec succès !`);
+  const handleSelectPlan = async (planId: string) => {
+    try {
+      await subscriptionsApi.changePlan(planId);
+      const subscription = {
+        tier: planId,
+        startDate: new Date().toISOString(),
+        status: 'active',
+        autoRenew: true
+      };
+      localStorage.setItem('userSubscription', JSON.stringify(subscription));
+      setCurrentTier(planId);
+      alert(`Abonnement ${planId} activé avec succès !`);
+    } catch (err) {
+      console.error('Error changing plan:', err);
+      const subscription = {
+        tier: planId,
+        startDate: new Date().toISOString(),
+        status: 'active',
+        autoRenew: true
+      };
+      localStorage.setItem('userSubscription', JSON.stringify(subscription));
+      setCurrentTier(planId);
+      alert(`Abonnement ${planId} activé avec succès !`);
+    }
   };
 
   if (loading) {

@@ -143,7 +143,7 @@ interface SiteStats {
 
 export default function PalettesCircularPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'http://localhost:3000';
+  const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State
   const [activeTab, setActiveTab] = useState<'receive' | 'sites' | 'ledger' | 'disputes' | 'stats' | 'scan' | 'map'>('receive');

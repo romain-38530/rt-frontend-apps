@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { billingApi } from '../lib/api';
 import {
   Euro,
   FileText,
@@ -130,7 +131,7 @@ interface Stats {
   activeBlocks: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'http://localhost:3014';
+const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'https://d1ciol606nbfs0.cloudfront.net';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: 'Brouillon', color: 'text-gray-800', bg: 'bg-gray-100' },

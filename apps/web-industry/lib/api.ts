@@ -1,18 +1,60 @@
 // API Configuration for SYMPHONI.A Industry
-// Backend Services URLs
+// Backend Services URLs (HTTPS via CloudFront)
 
 export const API_CONFIG = {
+  // Authentication
+  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jfg8ri.cloudfront.net',
+
   // Planning Sites API - Sites, Docks, Slots, Driver Check-in
-  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://rt-planning-api-prod.eba-gbhspa2p.eu-central-1.elasticbeanstalk.com',
+  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net',
 
   // eCMR Signature API - Electronic CMR with eIDAS compliance
-  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || 'http://rt-ecmr-api-prod.eba-43ngua6v.eu-central-1.elasticbeanstalk.com',
+  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d28q05cx5hmg9q.cloudfront.net',
 
   // Appointments API - RDV Transporteurs
-  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com',
+  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'https://d28uezz0327lfm.cloudfront.net',
 
-  // Core API - Orders, Tracking, etc.
-  CORE_API: process.env.NEXT_PUBLIC_API_URL || 'http://rt-api-prod.eba-mwaprcin.eu-central-1.elasticbeanstalk.com'
+  // Orders API
+  ORDERS_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net',
+
+  // Tracking API
+  TRACKING_API: process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net',
+
+  // Notifications API
+  NOTIFICATIONS_API: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2t9age53em7o5.cloudfront.net',
+
+  // KPI API
+  KPI_API: process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d57lw7v3zgfpy.cloudfront.net',
+
+  // Storage Market API
+  STORAGE_MARKET_API: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d1ea8wbaf6ws9i.cloudfront.net',
+
+  // Training API
+  TRAINING_API: process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d39f1h56c4jwz4.cloudfront.net',
+
+  // Subscriptions API
+  SUBSCRIPTIONS_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
+
+  // Billing API
+  BILLING_API: process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net',
+
+  // Scoring API
+  SCORING_API: process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net',
+
+  // Vigilance API
+  VIGILANCE_API: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d23m3oa6ef3tr1.cloudfront.net',
+
+  // Palettes API
+  PALETTES_API: process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net',
+
+  // AFFRET.IA API
+  AFFRET_IA_API: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || 'https://d393yiia4ig3bw.cloudfront.net',
+
+  // Chatbot API
+  CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net',
+
+  // Dispatch API (Orders API handles dispatch)
+  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net'
 };
 
 // Helper to get auth headers
@@ -410,4 +452,490 @@ export const chatbotApi = {
     });
     return res.json();
   }
+};
+
+// ============================================
+// ORDERS API - Gestion des commandes
+// ============================================
+
+export const ordersApi = {
+  list: async (filters?: { status?: string; date?: string; clientId?: string }) => {
+    const params = new URLSearchParams(filters as any);
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  get: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  create: async (data: any) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  delete: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getTracking: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.TRACKING_API}/api/v1/tracking/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// NOTIFICATIONS API - Centre de notifications
+// ============================================
+
+export const notificationsApi = {
+  list: async (filters?: { read?: boolean; type?: string }) => {
+    const params = new URLSearchParams(filters as any);
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  markAsRead: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  markAllAsRead: async () => {
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/read-all`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  delete: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getPreferences: async () => {
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/preferences`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  updatePreferences: async (data: any) => {
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/preferences`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// KPI API - Tableaux de bord et indicateurs
+// ============================================
+
+export const kpiApi = {
+  getDashboard: async (period?: string) => {
+    const params = period ? `?period=${period}` : '';
+    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/dashboard${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getMetrics: async (type: string, filters?: any) => {
+    const params = new URLSearchParams(filters as any);
+    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/metrics/${type}?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getTransportKpis: async (period?: string) => {
+    const params = period ? `?period=${period}` : '';
+    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/transport${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getDeliveryKpis: async (period?: string) => {
+    const params = period ? `?period=${period}` : '';
+    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/delivery${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// STORAGE MARKET API - Bourse de stockage
+// ============================================
+
+export const storageMarketApi = {
+  listSpaces: async (filters?: { type?: string; location?: string; available?: boolean }) => {
+    const params = new URLSearchParams(filters as any);
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/spaces?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getSpace: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/spaces/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  createSpace: async (data: any) => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/spaces`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  updateSpace: async (id: string, data: any) => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/spaces/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  deleteSpace: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/spaces/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  createReservation: async (data: any) => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/reservations`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  getReservations: async () => {
+    const res = await fetch(`${API_CONFIG.STORAGE_MARKET_API}/api/v1/storage/reservations`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// TRAINING API - Formation et e-learning
+// ============================================
+
+export const trainingApi = {
+  getModules: async () => {
+    const res = await fetch(`${API_CONFIG.TRAINING_API}/api/v1/training/modules`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getModule: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.TRAINING_API}/api/v1/training/modules/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getProgress: async () => {
+    const res = await fetch(`${API_CONFIG.TRAINING_API}/api/v1/training/progress`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  updateProgress: async (moduleId: string, data: { completed: boolean; score?: number }) => {
+    const res = await fetch(`${API_CONFIG.TRAINING_API}/api/v1/training/progress/${moduleId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  getCertificates: async () => {
+    const res = await fetch(`${API_CONFIG.TRAINING_API}/api/v1/training/certificates`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// SUBSCRIPTIONS API - Abonnements SaaS
+// ============================================
+
+export const subscriptionsApi = {
+  getCurrent: async () => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/current`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getPlans: async () => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/plans`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  subscribe: async (planId: string) => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/subscribe`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ planId })
+    });
+    return res.json();
+  },
+
+  cancel: async () => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/cancel`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getInvoices: async () => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/invoices`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getUsage: async () => {
+    const res = await fetch(`${API_CONFIG.SUBSCRIPTIONS_API}/api/v1/subscriptions/usage`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// DISPATCH API - Configuration chaine d'affectation
+// ============================================
+
+// Types
+export interface DispatchConfig {
+  industrielId: string;
+  carrierResponseTimeout: number;
+  escalationDelay: number;
+  maxCarriersInChain: number;
+  reminderEnabled: boolean;
+  reminderDelayMinutes: number;
+  notificationChannels: ('email' | 'sms' | 'push' | 'webhook')[];
+  eligibilityRules: {
+    minScore: number;
+    requireVigilanceCompliant: boolean;
+    requireActiveInsurance: boolean;
+    requirePricingGrid: boolean;
+    excludeBlocked: boolean;
+  };
+  autoEscalateToAffretIA: boolean;
+  affretIAConfig?: {
+    maxPrice?: number;
+    minScore: number;
+  };
+}
+
+export interface CarrierChainEntry {
+  carrierId: string;
+  carrierName: string;
+  position: number;
+  priority: 'high' | 'medium' | 'low';
+  score: number;
+  onTimeRate: number;
+  acceptanceRate: number;
+  isActive: boolean;
+}
+
+export interface TransportLane {
+  id: string;
+  industrielId: string;
+  name: string;
+  origin: { country: string; region: string; city: string };
+  destination: { country: string; region: string; city: string };
+  carrierChain: CarrierChainEntry[];
+  stats: {
+    totalOrders: number;
+    avgTransitDays: number;
+    avgPrice: number;
+    successRate: number;
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DispatchStats {
+  totalOrders: number;
+  acceptanceRate: number;
+  avgResponseTime: number;
+  escalationRate: number;
+}
+
+// Tracking Pricing Constants
+export const TRACKING_PRICING = {
+  basic: {
+    level: 'basic',
+    name: 'Tracking Basic',
+    description: 'Suivi standard par etapes',
+    pricingType: 'per_transport' as const,
+    pricePerTransport: 0.5,
+    priceMonthly: 0,
+    features: {
+      updateFrequency: 'Toutes les 2h',
+      gpsTracking: false,
+      geofencing: false,
+      etaPrediction: false,
+      realtimeMap: false,
+      autoRescheduling: false,
+    },
+  },
+  premium: {
+    level: 'premium',
+    name: 'Tracking Premium',
+    description: 'Suivi GPS temps reel avec IA',
+    pricingType: 'monthly' as const,
+    pricePerTransport: 0,
+    priceMonthly: 199,
+    features: {
+      updateFrequency: 'Temps reel',
+      gpsTracking: true,
+      geofencing: true,
+      etaPrediction: true,
+      realtimeMap: true,
+      autoRescheduling: false,
+    },
+  },
+  enterprise: {
+    level: 'enterprise',
+    name: 'Tracking Enterprise',
+    description: 'Solution complete avec replanification auto',
+    pricingType: 'monthly' as const,
+    pricePerTransport: 0,
+    priceMonthly: 499,
+    features: {
+      updateFrequency: 'Temps reel',
+      gpsTracking: true,
+      geofencing: true,
+      etaPrediction: true,
+      realtimeMap: true,
+      autoRescheduling: true,
+    },
+  },
+};
+
+// API Functions
+export const getDispatchConfig = async (industrielId: string): Promise<DispatchConfig> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/config/${industrielId}`, {
+    headers: getAuthHeaders()
+  });
+  return res.json();
+};
+
+export const updateDispatchConfig = async (industrielId: string, config: Partial<DispatchConfig>): Promise<DispatchConfig> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/config/${industrielId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(config)
+  });
+  return res.json();
+};
+
+export const getLanes = async (industrielId: string): Promise<{ lanes: TransportLane[] }> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/lanes/${industrielId}`, {
+    headers: getAuthHeaders()
+  });
+  return res.json();
+};
+
+export const createLane = async (industrielId: string, lane: Partial<TransportLane>): Promise<TransportLane> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/lanes/${industrielId}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(lane)
+  });
+  return res.json();
+};
+
+export const updateLane = async (laneId: string, lane: Partial<TransportLane>): Promise<TransportLane> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/lanes/${laneId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(lane)
+  });
+  return res.json();
+};
+
+export const deleteLane = async (laneId: string): Promise<void> => {
+  await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/lanes/${laneId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+};
+
+export const getDispatchStats = async (industrielId: string): Promise<DispatchStats> => {
+  const res = await fetch(`${API_CONFIG.DISPATCH_API}/api/v1/dispatch/stats/${industrielId}`, {
+    headers: getAuthHeaders()
+  });
+  return res.json();
+};
+
+// Dispatch API namespace export for compatibility
+export const dispatchApi = {
+  getDispatchConfig,
+  updateDispatchConfig,
+  getLanes,
+  createLane,
+  updateLane,
+  deleteLane,
+  getDispatchStats,
+  TRACKING_PRICING,
 };

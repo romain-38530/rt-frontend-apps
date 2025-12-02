@@ -108,7 +108,7 @@ interface Stats {
   parTransporteur: { transporterId: string; transporterName: string; count: number; montant: number }[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'http://localhost:3014';
+const API_BASE = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: 'Brouillon', color: 'text-gray-800', bg: 'bg-gray-100' },

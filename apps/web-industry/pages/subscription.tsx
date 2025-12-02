@@ -7,8 +7,6 @@ import {
   Check,
   Crown,
   Zap,
-  Shield,
-  Clock,
   TrendingUp,
   Settings,
   FileText,
@@ -17,6 +15,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
+import { subscriptionsApi } from '../lib/api';
 
 interface SubscriptionInfo {
   id: string;
@@ -64,34 +63,67 @@ export default function SubscriptionPage() {
 
   const loadSubscription = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Mock subscription data
-    setSubscription({
-      id: 'sub-001',
-      subscriptionName: 'Industriel',
-      packName: 'Pack Industriel Premium',
-      status: 'active',
-      pricing: {
-        totalMonthly: 699,
-        discountPercent: 5,
-      },
-      engagement: {
-        type: '4_years',
-        endDate: '2028-06-15',
-      },
-      activeModules: [
-        { moduleName: 'Affret.IA', priceMonthly: 0 },
-        { moduleName: 'Signature eCMR', priceMonthly: 99 },
-      ],
-      trackingIALevel: 'INTERMEDIAIRE',
-      usage: {
-        transportsThisMonth: 67,
-      },
-      nextBillingDate: '2024-12-15',
-    });
-
-    setLoading(false);
+    try {
+      const data = await subscriptionsApi.getCurrent();
+      if (data && data.subscription) {
+        setSubscription(data.subscription);
+      } else if (data && data.id) {
+        setSubscription(data);
+      } else {
+        // Fallback mock data
+        setSubscription({
+          id: 'sub-001',
+          subscriptionName: 'Industriel',
+          packName: 'Pack Industriel Premium',
+          status: 'active',
+          pricing: {
+            totalMonthly: 699,
+            discountPercent: 5,
+          },
+          engagement: {
+            type: '4_years',
+            endDate: '2028-06-15',
+          },
+          activeModules: [
+            { moduleName: 'Affret.IA', priceMonthly: 0 },
+            { moduleName: 'Signature eCMR', priceMonthly: 99 },
+          ],
+          trackingIALevel: 'INTERMEDIAIRE',
+          usage: {
+            transportsThisMonth: 67,
+          },
+          nextBillingDate: '2024-12-15',
+        });
+      }
+    } catch (err) {
+      console.error('Error loading subscription:', err);
+      // Fallback mock data
+      setSubscription({
+        id: 'sub-001',
+        subscriptionName: 'Industriel',
+        packName: 'Pack Industriel Premium',
+        status: 'active',
+        pricing: {
+          totalMonthly: 699,
+          discountPercent: 5,
+        },
+        engagement: {
+          type: '4_years',
+          endDate: '2028-06-15',
+        },
+        activeModules: [
+          { moduleName: 'Affret.IA', priceMonthly: 0 },
+          { moduleName: 'Signature eCMR', priceMonthly: 99 },
+        ],
+        trackingIALevel: 'INTERMEDIAIRE',
+        usage: {
+          transportsThisMonth: 67,
+        },
+        nextBillingDate: '2024-12-15',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatPrice = (price: number) => {

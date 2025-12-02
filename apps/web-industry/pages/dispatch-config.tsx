@@ -13,7 +13,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
-import * as dispatchApi from '@shared/services/order-dispatch-api';
+import {
+  dispatchApi,
+  getDispatchConfig,
+  updateDispatchConfig,
+  getLanes,
+  getDispatchStats,
+  TRACKING_PRICING,
+  type DispatchConfig,
+  type TransportLane,
+} from '../lib/api';
 
 export default function DispatchConfigPage() {
   const router = useRouter();
@@ -22,8 +31,8 @@ export default function DispatchConfigPage() {
   const industrielId = 'IND-001';
 
   // State
-  const [config, setConfig] = useState<dispatchApi.DispatchConfig | null>(null);
-  const [lanes, setLanes] = useState<dispatchApi.TransportLane[]>([]);
+  const [config, setConfig] = useState<DispatchConfig | null>(null);
+  const [lanes, setLanes] = useState<TransportLane[]>([]);
   const [stats, setStats] = useState<{
     totalOrders: number;
     acceptanceRate: number;
@@ -191,7 +200,7 @@ export default function DispatchConfigPage() {
     return `${minutes}min`;
   };
 
-  const getMockLanes = (): dispatchApi.TransportLane[] => [
+  const getMockLanes = (): TransportLane[] => [
     {
       id: 'LANE-001',
       industrielId,

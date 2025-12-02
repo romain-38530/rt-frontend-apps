@@ -39,8 +39,8 @@ interface Conversation {
 
 export default function ChatbotPage() {
   const router = useRouter();
-  // L'API Chatbot IA est dans le bundle subscriptions-contracts
-  const apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'http://rt-subscriptions-api-prod.eba-pwrpmmxu.eu-central-1.elasticbeanstalk.com';
+  // L'API Chatbot IA est dans le bundle subscriptions-contracts (via CloudFront HTTPS)
+  const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
 
   const [activeTab, setActiveTab] = useState<'chat' | 'orders' | 'documents' | 'tracking'>('chat');
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
