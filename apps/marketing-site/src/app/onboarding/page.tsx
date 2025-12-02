@@ -52,9 +52,6 @@ export default function OnboardingPage() {
     cardCvv: ''
   });
 
-  // URL de l'API CloudFront (production)
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
-
   // Auto-validation TVA avec debounce
   useEffect(() => {
     const validateVAT = async () => {
@@ -68,8 +65,8 @@ export default function OnboardingPage() {
       setError('');
 
       try {
-        // Appeler directement l'API CloudFront
-        const response = await fetch(`${API_BASE_URL}/api/vat/validate`, {
+        // Utiliser le proxy Amplify pour éviter les problèmes CORS
+        const response = await fetch('/api/vat/validate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -138,8 +135,8 @@ export default function OnboardingPage() {
       // Nom complet du représentant
       const representativeName = `${formData.representativeFirstName} ${formData.representativeLastName}`.trim();
 
-      // Appeler directement l'API CloudFront
-      const response = await fetch(`${API_BASE_URL}/api/onboarding/submit`, {
+      // Utiliser le proxy Amplify pour éviter les problèmes CORS
+      const response = await fetch('/api/onboarding/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
