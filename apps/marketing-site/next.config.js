@@ -4,7 +4,7 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // SSR mode pour supporter les API routes (proxy CORS)
+  // Mode SSR pour API routes
 
   images: {
     unoptimized: true,
