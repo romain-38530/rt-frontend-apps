@@ -65,8 +65,8 @@ export default function OnboardingPage() {
       setError('');
 
       try {
-        const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
-        const response = await fetch(`${vatApiUrl}/api/vat/validate`, {
+        // Utiliser la route API locale (proxy) pour éviter les problèmes CORS
+        const response = await fetch('/api/vat/validate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -79,7 +79,7 @@ export default function OnboardingPage() {
 
           // Vérifier si ce numéro de TVA existe déjà dans notre système
           try {
-            const checkResponse = await fetch(`${vatApiUrl}/api/onboarding/check-vat`, {
+            const checkResponse = await fetch('/api/onboarding/check-vat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -144,8 +144,6 @@ export default function OnboardingPage() {
     setError('');
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
-
       // Format de l'adresse complète avec tous les champs
       const fullAddress = [
         formData.companyAddress,
@@ -158,7 +156,8 @@ export default function OnboardingPage() {
       // Nom complet du représentant
       const representativeName = `${formData.representativeFirstName} ${formData.representativeLastName}`.trim();
 
-      const response = await fetch(`${apiUrl}/api/onboarding/submit`, {
+      // Utiliser la route API locale (proxy) pour éviter les problèmes CORS
+      const response = await fetch('/api/onboarding/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

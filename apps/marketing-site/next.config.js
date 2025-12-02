@@ -4,7 +4,7 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export', // Static export restored - backend now uses HTTPS via CloudFront
+  // SSR mode pour supporter les API routes (proxy CORS)
 
   images: {
     unoptimized: true,
