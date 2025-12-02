@@ -41,7 +41,15 @@ export default function OnboardingPage() {
       afretIA: false,
       sms: false,
       telematics: false,
-      thirdPartyConnection: false
+      thirdPartyConnection: false,
+      eCmr: false,
+      geofencing: false,
+      ocrDocuments: false,
+      trackingPremium: false,
+      boursePrivee: false,
+      webhooks: false,
+      signatureQualifiee: false,
+      archivageLegal: false
     },
     // Étape 5 : Paiement
     paymentMethod: 'card',
@@ -1063,6 +1071,230 @@ export default function OnboardingPage() {
                           Intégration bidirectionnelle avec vos outils existants (ERP, TMS, WMS, comptabilité).
                           API REST complète + webhooks. Synchronisation temps réel des commandes, stocks, factures.
                           Connecteurs pré-configurés : SAP, Sage, Odoo, Microsoft Dynamics, Oracle.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* e-CMR */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.eCmr ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.eCmr}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, eCmr: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">e-CMR (Lettre de voiture électronique)</h4>
+                          <span className="text-orange-600 font-bold">49€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Génération automatique des lettres de voiture électroniques conformes au protocole e-CMR.
+                          Signatures électroniques expéditeur, transporteur et destinataire. QR code de vérification.
+                          Conforme Convention CMR et protocole additionnel 2008.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Geofencing */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.geofencing ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.geofencing}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, geofencing: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Geofencing (Alertes zones)</h4>
+                          <span className="text-orange-600 font-bold">29€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Définissez des zones géographiques personnalisées et recevez des alertes automatiques
+                          à l'entrée/sortie de vos sites. Idéal pour le suivi des arrivées, départs et temps de chargement.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* OCR Documents */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.ocrDocuments ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.ocrDocuments}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, ocrDocuments: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">OCR automatique documents</h4>
+                          <span className="text-orange-600 font-bold">39€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Reconnaissance optique automatique des CMR, bons de livraison, factures et POD.
+                          Extraction des données clés (expéditeur, destinataire, poids, réserves).
+                          Technologie AWS Textract + Google Vision pour une précision optimale.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Tracking Premium GPS */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.trackingPremium ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.trackingPremium}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, trackingPremium: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Tracking Premium GPS temps réel</h4>
+                          <span className="text-orange-600 font-bold">4€/véhicule/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Suivi GPS haute fréquence via TomTom Telematics. Position temps réel, historique des trajets,
+                          calcul automatique des ETA avec trafic. Alertes retard et déviation d'itinéraire.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Bourse privée transporteurs */}
+                  {formData.subscriptionType === 'industriel' && (
+                    <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      formData.options.boursePrivee ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={formData.options.boursePrivee}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            options: { ...formData.options, boursePrivee: e.target.checked }
+                          })}
+                          className="mt-1 w-5 h-5 text-orange-600 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold">Bourse privée transporteurs</h4>
+                            <span className="text-orange-600 font-bold">149€/mois</span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Accès à votre marketplace privé de transporteurs référencés. Diffusion automatique
+                            des commandes à votre réseau, réponses en temps réel, scoring qualité intégré.
+                            Réseau de 40 000+ transporteurs européens en fallback via AFFRET.IA.
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  )}
+
+                  {/* Webhooks */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.webhooks ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.webhooks}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, webhooks: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Webhooks temps réel</h4>
+                          <span className="text-orange-600 font-bold">59€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Recevez des notifications instantanées sur vos systèmes pour 20+ événements :
+                          création commande, changement statut, position GPS, POD, anomalies...
+                          WebSocket disponible pour mises à jour push en temps réel.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Signature qualifiée */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.signatureQualifiee ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.signatureQualifiee}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, signatureQualifiee: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Signature électronique qualifiée</h4>
+                          <span className="text-orange-600 font-bold">2€/signature</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Signatures eIDAS qualifiées via Yousign pour vos e-CMR et contrats.
+                          Valeur juridique équivalente à la signature manuscrite. Horodatage certifié
+                          et piste d'audit complète pour les contrôles.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Archivage légal */}
+                  <label className={`block border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    formData.options.archivageLegal ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.options.archivageLegal}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          options: { ...formData.options, archivageLegal: e.target.checked }
+                        })}
+                        className="mt-1 w-5 h-5 text-orange-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">Archivage légal 10 ans</h4>
+                          <span className="text-orange-600 font-bold">19€/mois</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Conservation sécurisée de vos documents pendant 10 ans (obligation légale CMR).
+                          Stockage AWS S3 + Glacier avec redondance multi-zones. Accès instantané
+                          aux archives, recherche par numéro de commande ou transporteur.
                         </p>
                       </div>
                     </div>
