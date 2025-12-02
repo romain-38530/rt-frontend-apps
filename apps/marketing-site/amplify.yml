@@ -10,7 +10,7 @@ frontend:
         - cd ../.. && pnpm turbo build --filter=@rt/marketing-site^... && cd apps/marketing-site
         - pnpm run build
   artifacts:
-    baseDirectory: .next
+    baseDirectory: out
     files:
       - '**/*'
   cache:

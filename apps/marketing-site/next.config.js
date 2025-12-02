@@ -4,7 +4,7 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // Mode SSR pour API routes
+  output: 'export', // Static export + Amplify rewrites pour API proxy
 
   images: {
     unoptimized: true,
