@@ -35,16 +35,19 @@ frontend:
       NEXT_PUBLIC_SITE_URL: 'https://symphonia-controltower.com'
       NEXT_PUBLIC_PORTAL_TYPE: 'marketing'
 
-      # Core APIs (Deployed)
-      NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
-      NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-      NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+      # VAT Validation API (CloudFront)
+      NEXT_PUBLIC_VAT_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+
+      # Core APIs (Deployed via CloudFront for HTTPS)
+      NEXT_PUBLIC_AUTHZ_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_ORDERS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net/api/v1'
+      NEXT_PUBLIC_TRACKING_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_SCORING_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_AFFRET_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_WS_URL: 'wss://d2i50a1vlg138w.cloudfront.net'
 
       # Build
       NODE_VERSION: '20'
