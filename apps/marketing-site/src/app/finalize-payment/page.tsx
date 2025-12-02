@@ -44,7 +44,7 @@ function FinalizePaymentContent() {
       }
 
       // Créer la session Stripe Setup
-      const response = await fetch(`${API_URL}/api/setup/create-session`, {
+      const response = await fetch(`${API_URL}/api/stripe/create-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
