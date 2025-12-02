@@ -1,279 +1,380 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, Sparkles, Zap, Crown, ArrowRight } from 'lucide-react';
+import { Check, Factory, Truck, Package, Ship, ArrowRight, Star } from 'lucide-react';
 import Link from 'next/link';
 
-const plans = [
+const profileOffers = [
   {
-    id: 'free',
-    name: 'Gratuit',
-    icon: Sparkles,
-    price: 0,
-    interval: 'mois',
-    description: 'Parfait pour découvrir la plateforme',
-    gradient: 'from-gray-500 to-gray-700',
+    id: 'industrie',
+    name: 'SYMPHONI.A Industrie',
+    icon: Factory,
+    price: 499,
+    originalPrice: 799,
+    isPromo: true,
+    description: 'Notre offre phare pour les industriels exigeants',
+    gradient: 'from-purple-500 to-indigo-600',
     features: [
-      { text: '4 portails : Industrie, Transporteur, Destinataire, Fournisseur', included: true },
-      { text: 'Portails Lite Fournisseur & Destinataire', included: true },
-      { text: "Jusqu'à 50 expéditions par mois", included: true },
-      { text: 'e-CMR électronique basique', included: true },
-      { text: 'Support par email', included: true },
-      { text: '1 utilisateur', included: true },
-      { text: 'AFFRET.IA (5 requêtes/jour)', included: false },
-      { text: 'Chatbots IA (HelpBot, RT Assistant)', included: false },
-      { text: 'Bourse Maritime', included: false },
-      { text: 'Planning intelligent', included: false }
+      'Gestion complète des transporteurs avec vigilance',
+      'Grilles tarifaires et affectation automatique',
+      'Bourse SYMPHONI.A (fret, stockage, maritime)',
+      'Portail destinataire et fournisseur gratuits',
+      'Dashboard KPI avec exports Excel/PDF',
+      'Alertes SLA automatiques',
+      'AFFRET.IA en fallback'
     ],
-    cta: 'Commencer gratuitement',
-    popular: false
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    icon: Zap,
-    price: 99,
-    interval: 'mois',
-    description: 'Idéal pour les équipes en croissance',
-    gradient: 'from-orange-500 to-red-600',
-    features: [
-      { text: '6 portails métier complets', included: true },
-      { text: 'AFFRET.IA - 38 endpoints IA illimités', included: true },
-      { text: 'Chatbots IA (HelpBot + RT Assistant)', included: true },
-      { text: 'Planning intelligent + Notifications SMS', included: true },
-      { text: 'Expéditions illimitées', included: true },
-      { text: "Jusqu'à 10 utilisateurs", included: true },
-      { text: 'Intégrations API complètes', included: true },
-      { text: 'Support prioritaire', included: true },
-      { text: 'Bourse Maritime', included: false },
-      { text: 'Admin Gateway', included: false }
-    ],
-    cta: 'Démarrer Pro',
     popular: true
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    icon: Crown,
+    id: 'transporteur-premium',
+    name: 'Transporteur Premium',
+    icon: Truck,
     price: 299,
-    interval: 'mois',
-    description: 'Pour les grandes organisations',
-    gradient: 'from-purple-500 to-indigo-600',
+    description: 'Accès complet aux opportunités',
+    gradient: 'from-emerald-500 to-teal-600',
     features: [
-      { text: 'Tous les portails + modules IA', included: true },
-      { text: 'Bourse Maritime avec enchères', included: true },
-      { text: 'Admin Gateway centralisé', included: true },
-      { text: 'Utilisateurs illimités', included: true },
-      { text: 'Support dédié 24/7', included: true },
-      { text: 'SLA garanti 99.9%', included: true },
-      { text: 'Personnalisation white-label', included: true },
-      { text: 'Formation sur site', included: true },
-      { text: 'API calls illimitées', included: true },
-      { text: 'Gestionnaire de compte dédié', included: true }
-    ],
-    cta: 'Contacter les ventes',
-    popular: false
+      'Bourse de fret SYMPHONI.A',
+      'AFFRET.IA pour missions automatiques',
+      'Réseau de sous-traitants',
+      'Planification avancée WebSocket',
+      'Dashboard performance et scoring'
+    ]
+  },
+  {
+    id: 'transporteur-do',
+    name: 'Transporteur Donneur d\'Ordre',
+    icon: Truck,
+    price: 499,
+    description: 'Équivalent industriel pour transporteurs',
+    gradient: 'from-teal-500 to-cyan-600',
+    features: [
+      'Module KPI + Scoring API complet',
+      'Planning API et Admin Gateway',
+      'Chatbot IA support 24/7',
+      'Documents API avec OCR POD',
+      'Formation initiale équipe incluse'
+    ]
+  },
+  {
+    id: 'logisticien',
+    name: 'Logisticien Premium',
+    icon: Package,
+    price: 499,
+    description: 'Gestion plannings multisites',
+    gradient: 'from-amber-500 to-orange-600',
+    features: [
+      'Configuration quais et contraintes',
+      'Borne Chauffeur check-in auto',
+      'WebSocket temps réel',
+      'Synchronisation WMS via API',
+      'Tableau KPI logistique complet'
+    ]
+  },
+  {
+    id: 'transitaire',
+    name: 'Transitaire Premium',
+    icon: Ship,
+    price: 299,
+    description: 'Bourse maritime et aérienne',
+    gradient: 'from-blue-500 to-indigo-600',
+    features: [
+      'Publication besoins exceptionnels',
+      'Réseau transporteurs routiers',
+      'Notifications multicanal',
+      'Documents API automatisés',
+      'KPI transitaire spécifiques'
+    ]
   }
 ];
 
-export default function SubscriptionPage() {
-  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
+const packs = [
+  {
+    id: 'industriel-premium',
+    name: 'Pack Industriel Premium',
+    price: 699,
+    description: 'Solution complète pour industriels exigeants',
+    gradient: 'from-purple-600 to-indigo-700',
+    includes: 'Industrie + KPI + WebSocket + OCR POD + Tracking IA Basic + Signature + Bourse + Support 24/7'
+  },
+  {
+    id: 'transporteur-do-pack',
+    name: 'Pack Transporteur DO',
+    price: 599,
+    description: 'Pack donneur d\'ordre optimisé',
+    gradient: 'from-emerald-600 to-teal-700',
+    includes: 'Transporteur DO + Tracking IA Basic + Signature eCMR + Bourse fret + WebSocket'
+  },
+  {
+    id: 'logisticien-premium',
+    name: 'Pack Logisticien Premium',
+    price: 599,
+    description: 'Gestion multisites avancée',
+    gradient: 'from-amber-600 to-orange-700',
+    includes: 'Planification + Borne Chauffeur + eCMR + WMS Sync + KPI Logistique'
+  },
+  {
+    id: 'ultimate',
+    name: 'Pack Ultimate',
+    price: 999,
+    description: 'Tout SYMPHONI.A inclus',
+    gradient: 'from-rose-600 to-pink-700',
+    includes: 'Industrie Premium + Tracking IA + Préfacturation + Palettes + eCMR + Chatbot + TMS Sync',
+    popular: true
+  }
+];
 
-  const handleSelectPlan = (planId: string) => {
-    localStorage.setItem('selectedPlan', planId);
-    window.location.href = '/onboarding';
-  };
+const modules = [
+  { name: 'Tracking IA Basic', price: '50', unit: '/mois', desc: 'Email + OCR POD' },
+  { name: 'Tracking IA Intermédiaire', price: '150', unit: '/mois', desc: 'GPS + App Chauffeur' },
+  { name: 'Tracking IA Premium', price: '4', unit: '/transport', desc: 'TomTom/Vehizen + ETA' },
+  { name: 'Signature eCMR', price: '99', unit: '/mois', desc: 'QR Code + eIDAS' },
+  { name: 'Préfacturation', price: '199', unit: '/mois', desc: 'OCR facture + litiges' },
+  { name: 'Palettes Europe', price: '199', unit: '/mois', desc: 'Gestion dettes' },
+  { name: 'TMS Sync Premium', price: '149', unit: '/mois', desc: 'Connecteurs TMS' },
+  { name: 'Chatbot IA', price: '49', unit: '/mois', desc: 'Support 24/7' },
+  { name: 'Formation', price: '299', unit: ' (unique)', desc: 'Onboarding équipe' },
+  { name: 'SMS', price: '0,04', unit: '/SMS', desc: 'Notifications' }
+];
+
+export default function SubscriptionPage() {
+  const [activeTab, setActiveTab] = useState<'profiles' | 'packs' | 'modules'>('profiles');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       {/* Hero Section */}
-      <section className="py-20 px-6 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white">
+      <section className="py-20 px-6 bg-gradient-to-r from-[#1e3a5f] via-[#2d4a6f] to-[#1e3a5f] text-white">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-extrabold mb-6">
-            Choisissez le plan{' '}
-            <span className="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">
-              parfait pour vous
+            Tarifs{' '}
+            <span className="bg-gradient-to-r from-orange-400 to-orange-300 bg-clip-text text-transparent">
+              SYMPHONI.A
             </span>
           </h1>
-          <p className="text-xl text-orange-100 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Des tarifs transparents et flexibles pour toutes les tailles d'entreprise.
-            Commencez gratuitement, évoluez quand vous êtes prêt.
+          <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8 leading-relaxed">
+            Des solutions adaptées à chaque profil. Commencez gratuitement en tant qu'invité ou choisissez l'offre qui correspond à vos ambitions.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-white/20 backdrop-blur-sm rounded-full p-1">
+          {/* Tab Selector */}
+          <div className="inline-flex items-center bg-white/10 backdrop-blur-sm rounded-full p-1">
             <button
-              onClick={() => setBillingInterval('monthly')}
-              className={`px-8 py-3 rounded-full font-semibold transition-all ${
-                billingInterval === 'monthly'
-                  ? 'bg-white text-orange-600 shadow-lg'
+              onClick={() => setActiveTab('profiles')}
+              className={`px-6 py-3 rounded-full font-semibold transition-all ${
+                activeTab === 'profiles'
+                  ? 'bg-white text-[#1e3a5f] shadow-lg'
                   : 'text-white hover:text-orange-200'
               }`}
             >
-              Mensuel
+              Par Profil
             </button>
             <button
-              onClick={() => setBillingInterval('yearly')}
-              className={`px-8 py-3 rounded-full font-semibold transition-all ${
-                billingInterval === 'yearly'
-                  ? 'bg-white text-orange-600 shadow-lg'
+              onClick={() => setActiveTab('packs')}
+              className={`px-6 py-3 rounded-full font-semibold transition-all ${
+                activeTab === 'packs'
+                  ? 'bg-white text-[#1e3a5f] shadow-lg'
                   : 'text-white hover:text-orange-200'
               }`}
             >
-              Annuel
-              <span className="ml-2 text-xs bg-green-400 text-green-900 px-2 py-0.5 rounded-full font-bold">
-                -20%
-              </span>
+              Packs Tout-en-un
+            </button>
+            <button
+              onClick={() => setActiveTab('modules')}
+              className={`px-6 py-3 rounded-full font-semibold transition-all ${
+                activeTab === 'modules'
+                  ? 'bg-white text-[#1e3a5f] shadow-lg'
+                  : 'text-white hover:text-orange-200'
+              }`}
+            >
+              Modules
             </button>
           </div>
         </div>
       </section>
 
-      {/* Pricing Cards */}
-      <section className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            {plans.map((plan) => {
-              const Icon = plan.icon;
-              const yearlyPrice = plan.price > 0 ? Math.round(plan.price * 12 * 0.8) : 0;
-              const displayPrice = billingInterval === 'yearly' ? yearlyPrice : plan.price;
+      {/* Profiles Section */}
+      {activeTab === 'profiles' && (
+        <section className="py-20 px-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Free invite notice */}
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-12 text-center">
+              <p className="text-green-800 font-semibold text-lg">
+                Transporteurs, Logisticiens et Transitaires invités par un industriel : <span className="text-green-600">Accès GRATUIT</span>
+              </p>
+              <p className="text-green-600 text-sm mt-1">Portail complet sans frais pour les partenaires invités</p>
+            </div>
 
-              return (
-                <div
-                  key={plan.id}
-                  className={`relative bg-white rounded-3xl overflow-hidden ${
-                    plan.popular
-                      ? 'shadow-2xl ring-4 ring-orange-500 transform scale-105'
-                      : 'shadow-lg hover:shadow-xl'
-                  } transition-all duration-300`}
-                >
-                  {/* Popular Badge */}
-                  {plan.popular && (
-                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 to-red-600" />
-                  )}
-                  {plan.popular && (
-                    <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-1 text-sm font-bold rounded-full shadow-lg">
-                      LE PLUS POPULAIRE
-                    </div>
-                  )}
-
-                  <div className="p-8 pt-12">
-                    {/* Icon & Name */}
-                    <div className="flex flex-col items-center text-center mb-6">
-                      <div className={`w-20 h-20 bg-gradient-to-br ${plan.gradient} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
-                        <Icon className="text-white" size={40} />
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {profileOffers.map((offer) => {
+                const Icon = offer.icon;
+                return (
+                  <div
+                    key={offer.id}
+                    className={`relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 ${
+                      offer.popular ? 'ring-4 ring-orange-500 transform scale-105' : ''
+                    }`}
+                  >
+                    {offer.popular && (
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+                    )}
+                    {offer.isPromo && (
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 text-xs font-bold rounded-full">
+                        PROMO LANCEMENT
                       </div>
-                      <h3 className="text-3xl font-bold text-gray-900">{plan.name}</h3>
-                      <p className="text-sm text-gray-500 mt-2">{plan.description}</p>
+                    )}
+
+                    <div className="p-8">
+                      <div className={`w-16 h-16 bg-gradient-to-br ${offer.gradient} rounded-2xl flex items-center justify-center mb-4`}>
+                        <Icon className="text-white" size={32} />
+                      </div>
+
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{offer.name}</h3>
+                      <p className="text-sm text-gray-500 mb-4">{offer.description}</p>
+
+                      <div className="mb-6">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-extrabold text-gray-900">{offer.price}€</span>
+                          <span className="text-gray-500">/mois</span>
+                        </div>
+                        {offer.originalPrice && (
+                          <p className="text-sm text-gray-400 line-through">au lieu de {offer.originalPrice}€</p>
+                        )}
+                      </div>
+
+                      <ul className="space-y-2 mb-6">
+                        {offer.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                            <Check className="text-green-500 w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Link
+                        href="/onboarding"
+                        className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
+                          offer.popular
+                            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
+                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        }`}
+                      >
+                        Commencer
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Packs Section */}
+      {activeTab === 'packs' && (
+        <section className="py-20 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Packs tout-en-un optimisés</h2>
+              <p className="text-gray-600">Solutions complètes à tarif avantageux</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {packs.map((pack) => (
+                <div
+                  key={pack.id}
+                  className={`relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${
+                    pack.popular ? 'ring-4 ring-orange-500' : ''
+                  }`}
+                >
+                  {pack.popular && (
+                    <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1">
+                      <Star size={12} /> RECOMMANDÉ
+                    </div>
+                  )}
+                  <div className={`h-2 bg-gradient-to-r ${pack.gradient}`} />
+                  <div className="p-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{pack.name}</h3>
+                    <p className="text-gray-500 mb-4">{pack.description}</p>
+
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-5xl font-extrabold text-gray-900">{pack.price}€</span>
+                      <span className="text-gray-500">/mois</span>
                     </div>
 
-                    {/* Price */}
-                    <div className="text-center mb-8">
-                      {plan.price === 0 ? (
-                        <div className="text-5xl font-extrabold text-gray-900">Gratuit</div>
-                      ) : (
-                        <>
-                          <div className="flex items-baseline justify-center gap-2">
-                            <span className="text-6xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                              {displayPrice}€
-                            </span>
-                            <span className="text-gray-500 font-semibold">
-                              /{billingInterval === 'yearly' ? 'an' : 'mois'}
-                            </span>
-                          </div>
-                          {billingInterval === 'yearly' && plan.price > 0 && (
-                            <p className="text-sm text-green-600 font-semibold mt-2">
-                              💰 Économisez {Math.round(plan.price * 12 * 0.2)}€ par an
-                            </p>
-                          )}
-                        </>
-                      )}
+                    <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold text-gray-900">Inclus : </span>
+                        {pack.includes}
+                      </p>
                     </div>
 
-                    {/* Features */}
-                    <ul className="space-y-3 mb-8">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          {feature.included ? (
-                            <Check className="text-green-500 w-5 h-5 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <X className="text-gray-300 w-5 h-5 flex-shrink-0 mt-0.5" />
-                          )}
-                          <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
-                            {feature.text}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* CTA Button */}
-                    <button
-                      onClick={() => handleSelectPlan(plan.id)}
-                      className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:-translate-y-1'
-                          : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                      }`}
+                    <Link
+                      href="/contact"
+                      className="block w-full py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d4a6f] text-white rounded-xl font-semibold text-center hover:shadow-lg transition-all"
                     >
-                      {plan.cta}
-                      <ArrowRight size={20} />
-                    </button>
+                      Demander un devis
+                    </Link>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
+        </section>
+      )}
 
-          {/* Additional Info */}
-          <div className="mt-12 text-center">
-            <p className="text-gray-600 mb-4">
-              Tous les plans incluent : e-CMR électronique • Signature conforme eIDAS • Conformité RGPD • Support client
-            </p>
-            <Link
-              href="/contact"
-              className="text-orange-600 hover:text-orange-700 font-semibold inline-flex items-center gap-2"
-            >
-              Des questions sur nos tarifs ?
-              <ArrowRight size={16} />
-            </Link>
+      {/* Modules Section */}
+      {activeTab === 'modules' && (
+        <section className="py-20 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Modules additionnels</h2>
+              <p className="text-gray-600">Personnalisez votre solution avec des fonctionnalités avancées</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {modules.map((module, idx) => (
+                <div key={idx} className="bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-all">
+                  <h3 className="font-bold text-gray-900 mb-1">{module.name}</h3>
+                  <p className="text-sm text-gray-500 mb-3">{module.desc}</p>
+                  <div className="flex items-baseline">
+                    <span className="text-2xl font-bold text-[#1e3a5f]">{module.price}€</span>
+                    <span className="text-gray-500 text-sm">{module.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Comparison Table */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-extrabold text-center text-gray-900 mb-12">
-            Comparatif détaillé des fonctionnalités
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Grille tarifaire récapitulative
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-4 px-4 text-gray-900 font-bold">Fonctionnalité</th>
-                  <th className="text-center py-4 px-4 text-gray-900 font-bold">Gratuit</th>
-                  <th className="text-center py-4 px-4 text-orange-600 font-bold">Pro</th>
-                  <th className="text-center py-4 px-4 text-gray-900 font-bold">Enterprise</th>
+                  <th className="text-left py-4 px-4 text-gray-900 font-bold">Offre</th>
+                  <th className="text-right py-4 px-4 text-gray-900 font-bold">Tarif mensuel</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { name: 'Expéditions mensuelles', free: '50', pro: 'Illimité', enterprise: 'Illimité' },
-                  { name: 'Utilisateurs', free: '1', pro: '10', enterprise: 'Illimité' },
-                  { name: 'Portails métier', free: '4', pro: '6', enterprise: '6' },
-                  { name: 'Modules IA', free: '-', pro: '4', enterprise: '6' },
-                  { name: 'AFFRET.IA', free: '5 req/jour', pro: 'Illimité', enterprise: 'Illimité' },
-                  { name: 'Chatbots IA', free: '-', pro: '✓', enterprise: '✓' },
-                  { name: 'Bourse Maritime', free: '-', pro: '-', enterprise: '✓' },
-                  { name: 'Planning + SMS', free: '-', pro: '✓', enterprise: '✓' },
-                  { name: 'Support', free: 'Email', pro: 'Prioritaire', enterprise: '24/7 Dédié' },
-                  { name: 'SLA', free: '-', pro: '-', enterprise: '99.9%' }
+                  { name: 'SYMPHONI.A Industrie', price: '499€', highlight: true },
+                  { name: 'Transporteur Invité', price: 'Gratuit', free: true },
+                  { name: 'Transporteur Premium', price: '299€' },
+                  { name: 'Transporteur Donneur d\'Ordre', price: '499€' },
+                  { name: 'Logisticien Invité', price: 'Gratuit', free: true },
+                  { name: 'Logisticien Premium', price: '499€' },
+                  { name: 'Transitaire Invité', price: 'Gratuit', free: true },
+                  { name: 'Transitaire Premium', price: '299€' }
                 ].map((row, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={idx} className={`border-b border-gray-100 ${row.highlight ? 'bg-orange-50' : ''}`}>
                     <td className="py-4 px-4 text-gray-700 font-medium">{row.name}</td>
-                    <td className="py-4 px-4 text-center text-gray-600">{row.free}</td>
-                    <td className="py-4 px-4 text-center text-orange-600 font-semibold">{row.pro}</td>
-                    <td className="py-4 px-4 text-center text-gray-600">{row.enterprise}</td>
+                    <td className={`py-4 px-4 text-right font-semibold ${row.free ? 'text-green-600' : row.highlight ? 'text-orange-600' : 'text-gray-900'}`}>
+                      {row.price}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -282,56 +383,12 @@ export default function SubscriptionPage() {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-20 px-6 bg-gradient-to-br from-gray-50 to-orange-50">
-        <div className="max-w-4xl mx-auto">
-          <h3 className="text-4xl font-bold text-center text-gray-900 mb-12">
-            Questions fréquentes
-          </h3>
-          <div className="space-y-4">
-            {[
-              {
-                q: 'Puis-je changer de plan à tout moment ?',
-                a: 'Oui, vous pouvez mettre à niveau ou rétrograder votre plan à tout moment. Les changements sont appliqués immédiatement et la facturation est ajustée au prorata.'
-              },
-              {
-                q: 'Y a-t-il un engagement ?',
-                a: 'Non, tous nos plans sont sans engagement. Vous pouvez annuler à tout moment sans frais supplémentaires ni pénalités.'
-              },
-              {
-                q: 'Puis-je essayer avant d\'acheter ?',
-                a: 'Absolument ! Le plan Gratuit vous permet de découvrir la plateforme sans limite de temps. Vous pouvez ensuite passer à un plan payant quand vous êtes prêt.'
-              },
-              {
-                q: 'Quels modes de paiement acceptez-vous ?',
-                a: 'Nous acceptons les cartes bancaires (Visa, Mastercard, American Express) et les virements bancaires pour les plans annuels.'
-              },
-              {
-                q: 'Offrez-vous des réductions pour les organisations à but non lucratif ?',
-                a: 'Oui, nous offrons 30% de réduction sur tous nos plans pour les organisations à but non lucratif. Contactez-nous pour en savoir plus.'
-              }
-            ].map((faq, idx) => (
-              <details
-                key={idx}
-                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group"
-              >
-                <summary className="font-bold text-lg text-gray-900 cursor-pointer list-none flex items-center justify-between">
-                  {faq.q}
-                  <span className="text-orange-600 group-open:rotate-180 transition-transform">▼</span>
-                </summary>
-                <p className="mt-4 text-gray-600 leading-relaxed">{faq.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Final */}
       <section className="py-20 px-6 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-4xl font-extrabold mb-6">Prêt à commencer ?</h3>
+          <h3 className="text-4xl font-extrabold mb-6">Prêt à transformer votre logistique ?</h3>
           <p className="text-xl text-orange-100 mb-8">
-            Inscrivez-vous gratuitement et démarrez votre transformation digitale dès aujourd'hui
+            Contactez-nous pour une démonstration personnalisée
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -345,7 +402,7 @@ export default function SubscriptionPage() {
               href="/contact"
               className="px-10 py-5 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition-all inline-flex items-center justify-center"
             >
-              Parler à un expert
+              Demander une démo
             </Link>
           </div>
         </div>

@@ -23,13 +23,15 @@ export function Navbar() {
         {/* Menu desktop */}
         <div className="navbar-menu-desktop">
           <a href="/portals" className="navbar-link">Solutions</a>
-          <a href="/select-account-type" className="navbar-link">Types de Comptes</a>
           <a href="/subscription" className="navbar-link">Tarifs</a>
           <a href="/onboarding" className="navbar-link">Inscription</a>
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Buttons */}
         <div className="navbar-cta">
+          <a href="/connexion" className="btn-secondary">
+            Connexion
+          </a>
           <a href="/onboarding" className="btn-primary">
             Commencer →
           </a>
@@ -63,12 +65,16 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="navbar-menu-mobile">
           <a href="/portals" className="navbar-link-mobile">Solutions</a>
-          <a href="/select-account-type" className="navbar-link-mobile">Types de Comptes</a>
           <a href="/subscription" className="navbar-link-mobile">Tarifs</a>
           <a href="/onboarding" className="navbar-link-mobile">Inscription</a>
-          <a href="/onboarding" className="btn-primary" style={{ marginTop: '16px' }}>
-            Commencer →
-          </a>
+          <div className="navbar-mobile-cta">
+            <a href="/connexion" className="btn-secondary">
+              Connexion
+            </a>
+            <a href="/onboarding" className="btn-primary">
+              Commencer →
+            </a>
+          </div>
         </div>
       )}
 
@@ -120,12 +126,32 @@ export function Navbar() {
 
         .navbar-cta {
           display: none;
+          gap: 12px;
+          align-items: center;
         }
 
         @media (min-width: 768px) {
           .navbar-cta {
-            display: block;
+            display: flex;
           }
+        }
+
+        .btn-secondary {
+          color: #1e3a5f;
+          padding: 10px 20px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 15px;
+          transition: all 0.3s;
+          display: inline-block;
+          border: 2px solid #e5e7eb;
+          background: white;
+        }
+
+        .btn-secondary:hover {
+          border-color: #f97316;
+          color: #f97316;
         }
 
         .btn-primary {
@@ -190,6 +216,20 @@ export function Navbar() {
 
         .navbar-link-mobile:last-child {
           border-bottom: none;
+        }
+
+        .navbar-mobile-cta {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .navbar-mobile-cta .btn-secondary,
+        .navbar-mobile-cta .btn-primary {
+          text-align: center;
         }
       `}</style>
     </nav>
