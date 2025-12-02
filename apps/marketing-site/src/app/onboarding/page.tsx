@@ -81,19 +81,57 @@ export default function OnboardingPage() {
           setVatValidated(true);
           setError('');
 
-          // Pré-remplir les données entreprise avec enrichissement INSEE
+          // Parser l'adresse pour extraire code postal et ville
+          // Format typique VIES: "123 RUE EXEMPLE\n75001 PARIS"
+          let streetAddress = responseData.streetAddress || '';
+          let postalCode = responseData.postalCode || '';
+          let city = responseData.city || '';
+
+          if (!streetAddress && !postalCode && responseData.companyAddress) {
+            const address = responseData.companyAddress;
+            const lines = address.split('\n');
+            if (lines.length >= 2) {
+              const lastLine = lines[lines.length - 1];
+              const match = lastLine.match(/^(\d{5})\s+(.+)$/);
+              if (match) {
+                streetAddress = lines.slice(0, -1).join(', ');
+                postalCode = match[1];
+                city = match[2];
+              } else {
+                streetAddress = address.replace(/\n/g, ', ');
+              }
+            } else {
+              // Essayer de trouver le code postal dans la chaîne
+              const cpMatch = address.match(/(\d{5})\s+([A-Z\s\-]+)$/);
+              if (cpMatch) {
+                const idx = address.indexOf(cpMatch[0]);
+                streetAddress = address.substring(0, idx).trim().replace(/\n/g, ', ');
+                postalCode = cpMatch[1];
+                city = cpMatch[2].trim();
+              } else {
+                streetAddress = address.replace(/\n/g, ', ');
+              }
+            }
+          }
+
+          // Extraire le SIREN du numéro de TVA français (9 derniers chiffres après les 2 de clé)
+          let siren = responseData.siren || '';
+          if (!siren && responseData.countryCode === 'FR' && responseData.vatNumber) {
+            siren = responseData.vatNumber.substring(2); // Enlever les 2 chiffres de clé
+          }
+
+          // Pré-remplir les données entreprise
           setFormData(prev => ({
             ...prev,
             companyName: responseData.companyName || responseData.name || '',
             legalForm: responseData.legalForm || '',
             capital: responseData.capital || '',
-            // Utiliser streetAddress si disponible (API enrichie), sinon companyAddress
-            companyAddress: responseData.streetAddress || responseData.companyAddress || responseData.address || '',
-            companyCity: responseData.city || responseData.registrationCity || '',
-            companyPostalCode: responseData.postalCode || '',
+            companyAddress: streetAddress || responseData.companyAddress || responseData.address || '',
+            companyCity: city || responseData.registrationCity || '',
+            companyPostalCode: postalCode,
             companyDepartment: responseData.department || '',
             siret: responseData.siret || '',
-            siren: responseData.siren || ''
+            siren: siren
           }));
         } else {
           setVatValidated(false);
