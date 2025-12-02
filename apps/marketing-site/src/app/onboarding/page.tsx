@@ -52,7 +52,10 @@ export default function OnboardingPage() {
     cardCvv: ''
   });
 
-  // Auto-validation TVA avec debounce + vérification duplicat
+  // URL de l'API CloudFront (production)
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+
+  // Auto-validation TVA avec debounce
   useEffect(() => {
     const validateVAT = async () => {
       if (!formData.vatNumber || formData.vatNumber.length < 5) {
@@ -65,8 +68,8 @@ export default function OnboardingPage() {
       setError('');
 
       try {
-        // Utiliser la route API locale (proxy) pour éviter les problèmes CORS
-        const response = await fetch('/api/vat/validate', {
+        // Appeler directement l'API CloudFront
+        const response = await fetch(`${API_BASE_URL}/api/vat/validate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ vatNumber: formData.vatNumber })
@@ -76,28 +79,6 @@ export default function OnboardingPage() {
 
         if (data.valid === true) {
           const responseData = data.data || data;
-
-          // Vérifier si ce numéro de TVA existe déjà dans notre système
-          try {
-            const checkResponse = await fetch('/api/onboarding/check-vat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ vatNumber: formData.vatNumber })
-            });
-
-            const checkData = await checkResponse.json();
-
-            if (checkData.exists) {
-              setVatValidated(false);
-              setCompanyInfo(null);
-              setError(`Ce numéro de TVA (${formData.vatNumber}) est déjà enregistré dans notre système. Si vous pensez qu'il s'agit d'une erreur, contactez notre support à support@symphonia-controltower.com`);
-              setVatValidating(false);
-              return;
-            }
-          } catch (checkErr) {
-            // Si l'API de vérification échoue, on continue (la vérification sera faite à la soumission)
-            console.warn('Vérification duplicat non disponible:', checkErr);
-          }
 
           setCompanyInfo(responseData);
           setVatValidated(true);
@@ -124,7 +105,8 @@ export default function OnboardingPage() {
       } catch (err) {
         setVatValidated(false);
         setCompanyInfo(null);
-        setError('Erreur de connexion au serveur');
+        setError('Erreur de connexion au serveur. Veuillez réessayer.');
+        console.error('Erreur validation TVA:', err);
       } finally {
         setVatValidating(false);
       }
@@ -156,8 +138,8 @@ export default function OnboardingPage() {
       // Nom complet du représentant
       const representativeName = `${formData.representativeFirstName} ${formData.representativeLastName}`.trim();
 
-      // Utiliser la route API locale (proxy) pour éviter les problèmes CORS
-      const response = await fetch('/api/onboarding/submit', {
+      // Appeler directement l'API CloudFront
+      const response = await fetch(`${API_BASE_URL}/api/onboarding/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,6 +174,7 @@ export default function OnboardingPage() {
       }
     } catch (err) {
       setError('Erreur de connexion au serveur. Vérifiez votre connexion internet.');
+      console.error('Erreur soumission:', err);
     } finally {
       setLoading(false);
     }
