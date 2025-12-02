@@ -81,14 +81,15 @@ export default function OnboardingPage() {
           setVatValidated(true);
           setError('');
 
-          // Pré-remplir les données entreprise
+          // Pré-remplir les données entreprise avec enrichissement INSEE
           setFormData(prev => ({
             ...prev,
             companyName: responseData.companyName || responseData.name || '',
             legalForm: responseData.legalForm || '',
             capital: responseData.capital || '',
-            companyAddress: responseData.companyAddress || responseData.address || '',
-            companyCity: responseData.registrationCity || responseData.city || '',
+            // Utiliser streetAddress si disponible (API enrichie), sinon companyAddress
+            companyAddress: responseData.streetAddress || responseData.companyAddress || responseData.address || '',
+            companyCity: responseData.city || responseData.registrationCity || '',
             companyPostalCode: responseData.postalCode || '',
             companyDepartment: responseData.department || '',
             siret: responseData.siret || '',
