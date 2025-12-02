@@ -52,7 +52,7 @@ export default function OnboardingPage() {
     cardCvv: ''
   });
 
-  // Auto-validation TVA avec debounce
+  // Auto-validation TVA avec debounce + vérification duplicat
   useEffect(() => {
     const validateVAT = async () => {
       if (!formData.vatNumber || formData.vatNumber.length < 5) {
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
       setError('');
 
       try {
-        const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+        const vatApiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
         const response = await fetch(`${vatApiUrl}/api/vat/validate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,6 +76,29 @@ export default function OnboardingPage() {
 
         if (data.valid === true) {
           const responseData = data.data || data;
+
+          // Vérifier si ce numéro de TVA existe déjà dans notre système
+          try {
+            const checkResponse = await fetch(`${vatApiUrl}/api/onboarding/check-vat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vatNumber: formData.vatNumber })
+            });
+
+            const checkData = await checkResponse.json();
+
+            if (checkData.exists) {
+              setVatValidated(false);
+              setCompanyInfo(null);
+              setError(`Ce numéro de TVA (${formData.vatNumber}) est déjà enregistré dans notre système. Si vous pensez qu'il s'agit d'une erreur, contactez notre support à support@symphonia-controltower.com`);
+              setVatValidating(false);
+              return;
+            }
+          } catch (checkErr) {
+            // Si l'API de vérification échoue, on continue (la vérification sera faite à la soumission)
+            console.warn('Vérification duplicat non disponible:', checkErr);
+          }
+
           setCompanyInfo(responseData);
           setVatValidated(true);
           setError('');
@@ -121,7 +144,7 @@ export default function OnboardingPage() {
     setError('');
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3020';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
       // Format de l'adresse complète avec tous les champs
       const fullAddress = [
