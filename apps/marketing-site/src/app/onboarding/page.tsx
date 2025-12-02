@@ -77,6 +77,23 @@ export default function OnboardingPage() {
         if (data.valid === true) {
           const responseData = data.data || data;
 
+          // Vérifier si ce numéro de TVA est déjà enregistré
+          try {
+            const checkResponse = await fetch(`/api/vat/check-registered/${formData.vatNumber}`);
+            const checkData = await checkResponse.json();
+
+            if (checkData.registered) {
+              setVatValidated(false);
+              setCompanyInfo(null);
+              setError(`Cette entreprise (TVA: ${formData.vatNumber}) est déjà enregistrée dans notre système. Si vous pensez qu'il s'agit d'une erreur, contactez notre support.`);
+              setVatValidating(false);
+              return;
+            }
+          } catch (checkErr) {
+            // En cas d'erreur de vérification, on continue quand même
+            console.log('Erreur vérification doublon:', checkErr);
+          }
+
           setCompanyInfo(responseData);
           setVatValidated(true);
           setError('');
