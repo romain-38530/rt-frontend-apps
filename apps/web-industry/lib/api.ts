@@ -360,7 +360,7 @@ export const appointmentsApi = {
 // ============================================
 
 // Chatbot API URL
-const CHATBOT_API = process.env.NEXT_PUBLIC_CHATBOT_API_URL || MAIN_API;
+const CHATBOT_API = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
 
 export type ChatBotType = 'helpbot' | 'planif-ia' | 'routier' | 'quai-wms' | 'livraisons' | 'expedition' | 'freight-ia' | 'copilote';
 
