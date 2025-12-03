@@ -131,7 +131,7 @@ interface Stats {
   activeBlocks: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'https://d1ciol606nbfs0.cloudfront.net';
+const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'https://d2i50a1vlg138w.cloudfront.net';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: 'Brouillon', color: 'text-gray-800', bg: 'bg-gray-100' },

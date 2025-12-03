@@ -2,21 +2,21 @@
 import { getAuthToken } from './auth';
 
 // Base URLs from environment variables with CloudFront HTTPS fallbacks
-const ADMIN_GATEWAY_URL = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
-const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jfg8ri.cloudfront.net';
-const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
-const NOTIFICATIONS_API_URL = process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2t9age53em7o5.cloudfront.net';
-const PLANNING_API_URL = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net';
-const TRACKING_API_URL = process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net';
-const ECMR_API_URL = process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d28q05cx5hmg9q.cloudfront.net';
-const BILLING_API_URL = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
-const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
-const KPI_API_URL = process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d57lw7v3zgfpy.cloudfront.net';
-const TRAINING_API_URL = process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d39f1h56c4jwz4.cloudfront.net';
-const CHATBOT_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
-const SALES_AGENTS_API_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'https://d3tr75b4e76icu.cloudfront.net';
-const VIGILANCE_API_URL = process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d23m3oa6ef3tr1.cloudfront.net';
-const SCORING_API_URL = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net';
+const ADMIN_GATEWAY_URL = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const NOTIFICATIONS_API_URL = process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const PLANNING_API_URL = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const TRACKING_API_URL = process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const ECMR_API_URL = process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const BILLING_API_URL = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
+const KPI_API_URL = process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const TRAINING_API_URL = process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const CHATBOT_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const SALES_AGENTS_API_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const VIGILANCE_API_URL = process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const SCORING_API_URL = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // Helper to get auth headers
 function getAuthHeaders(): HeadersInit {

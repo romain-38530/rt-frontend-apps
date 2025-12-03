@@ -1,7 +1,7 @@
 // Client API pour le service Palette
 // Module d'administration des palettes - Admin backend
 
-const PALETTE_API_URL = process.env.NEXT_PUBLIC_PALETTE_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
+const PALETTE_API_URL = process.env.NEXT_PUBLIC_PALETTE_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // Helper pour les requêtes API
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
