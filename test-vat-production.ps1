@@ -3,7 +3,7 @@ Write-Host "  Test VAT Validation - Production" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$apiUrl = "https://d2i50a1vlg138w.cloudfront.net/api/vat/validate"
+$apiUrl = "https://ddaywxps9n701.cloudfront.net/api/vat/validate"
 
 # Test 1: Belgique (Anheuser-Busch InBev)
 Write-Host "Test 1: BE0417497106 (Belgique - Anheuser-Busch)" -ForegroundColor Yellow

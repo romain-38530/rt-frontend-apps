@@ -39,7 +39,7 @@ interface Carrier {
   pricingGrids: any[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 const DOCUMENT_TYPES = {
   kbis: 'Kbis',

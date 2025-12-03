@@ -35,8 +35,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
-const SUBSCRIPTIONS_API = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
+const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
+const SUBSCRIPTIONS_API = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
 
 // Types
 interface Organization {

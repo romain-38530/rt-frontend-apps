@@ -284,6 +284,18 @@ export const ecmrApi = {
     return res.json();
   },
 
+  downloadPdf: async (id: string): Promise<Blob> => {
+    const res = await fetch(`${API_CONFIG.ECMR_API}/api/ecmr/${id}/pdf`, {
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+      }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to download PDF: ${res.status}`);
+    }
+    return res.blob();
+  },
+
   history: async (id: string) => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/history`, {
       headers: getAuthHeaders()

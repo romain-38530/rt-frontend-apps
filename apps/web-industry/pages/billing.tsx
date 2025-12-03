@@ -80,7 +80,7 @@ interface BillingStats {
 
 export default function BillingPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+  const apiUrl = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
 
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'prefacturations' | 'validation' | 'blocks' | 'export'>('dashboard');

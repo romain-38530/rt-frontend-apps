@@ -23,7 +23,7 @@ export class BillingService {
   private baseUrl: string;
   private apiKey?: string;
 
-  constructor(baseUrl: string = 'https://d2i50a1vlg138w.cloudfront.net/api/billing', apiKey?: string) {
+  constructor(baseUrl: string = 'https://d1ciol606nbfs0.cloudfront.net/api/billing', apiKey?: string) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
   }

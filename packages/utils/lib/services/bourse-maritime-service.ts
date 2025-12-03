@@ -3,7 +3,7 @@
  * Client API pour le marketplace fret maritime
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BOURSE_MARITIME_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BOURSE_MARITIME_API_URL || 'https://ddaywxps9n701.cloudfront.net/api/v1';
 
 export interface BourseMaritimeServiceConfig {
   baseUrl?: string;

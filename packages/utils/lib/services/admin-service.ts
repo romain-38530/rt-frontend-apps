@@ -3,7 +3,7 @@
  * Gestion centralisee de l'administration plateforme
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'https://ddaywxps9n701.cloudfront.net/api/v1';
 
 export interface AdminServiceConfig {
   baseUrl?: string;

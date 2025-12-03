@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 // Configuration API
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 export default function InviteCarrierPage() {
   const router = useRouter();

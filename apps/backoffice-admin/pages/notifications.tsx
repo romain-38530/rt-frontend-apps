@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Check, Trash2, Filter, CheckCheck } from 'lucide-react';
 
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 interface Notification {
   id: string;

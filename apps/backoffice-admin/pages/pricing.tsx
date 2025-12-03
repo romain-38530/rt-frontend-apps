@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 export default function Pricing() {
   const [data, setData] = useState<any>(null);

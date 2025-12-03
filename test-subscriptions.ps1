@@ -3,7 +3,7 @@ Write-Host "  Test Subscriptions Service" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$apiUrl = "https://dgze8l03lwl5h.cloudfront.net"
+$apiUrl = "https://d39uizi9hzozo8.cloudfront.net"
 
 # Test 1: Health Check
 Write-Host "Test 1: Health Check" -ForegroundColor Yellow

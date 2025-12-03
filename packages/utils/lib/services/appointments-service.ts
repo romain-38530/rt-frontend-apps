@@ -23,7 +23,7 @@ import type {
 
 // Client API pour les appointments
 const appointmentsApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'https://d28uezz0327lfm.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });

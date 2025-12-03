@@ -24,7 +24,7 @@ import type {
 
 // Client API pour le scoring
 const scoringApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });

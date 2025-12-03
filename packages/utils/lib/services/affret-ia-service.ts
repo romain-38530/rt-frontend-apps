@@ -24,7 +24,7 @@ import type {
 
 // Client API pour Affret.IA
 const affretApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d393yiia4ig3bw.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });

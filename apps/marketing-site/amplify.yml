@@ -38,19 +38,19 @@ frontend:
       NEXT_PUBLIC_PORTAL_TYPE: 'marketing'
 
       # VAT Validation API (CloudFront)
-      NEXT_PUBLIC_VAT_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_VAT_API_URL: 'https://ddaywxps9n701.cloudfront.net'
+      NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
 
       # Core APIs (Deployed via CloudFront for HTTPS)
-      NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://dgze8l03lwl5h.cloudfront.net'
-      NEXT_PUBLIC_AUTHZ_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_ORDERS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net/api/v1'
-      NEXT_PUBLIC_TRACKING_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_SCORING_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_AFFRET_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
-      NEXT_PUBLIC_WS_URL: 'wss://d2i50a1vlg138w.cloudfront.net'
+      NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
+      NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
+      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
+      NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
+      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
+      NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://d8987l284s9q4.cloudfront.net'
+      NEXT_PUBLIC_SCORING_API_URL: 'https://d1uyscmpcwc65a.cloudfront.net'
+      NEXT_PUBLIC_AFFRET_API_URL: 'https://d393yiia4ig3bw.cloudfront.net'
+      NEXT_PUBLIC_WS_URL: 'wss://d2aodzk1jwptdr.cloudfront.net'
 
       # Build
       NODE_VERSION: '20'

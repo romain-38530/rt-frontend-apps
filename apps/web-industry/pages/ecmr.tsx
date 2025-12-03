@@ -388,21 +388,19 @@ export default function ECMRPage() {
 
   const handleDownload = async (ecmr: ECMR) => {
     try {
-      const data = await ecmrApi.download(ecmr.id);
-      if (data.success && data.data) {
-        // Create download link
-        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${ecmr.id}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        alert(`Telechargement du eCMR ${ecmr.id}...`);
-      }
+      // Télécharger le PDF directement
+      const blob = await ecmrApi.downloadPdf(ecmr.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eCMR-${ecmr.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      alert(`Telechargement du eCMR ${ecmr.id}... (demo)`);
+      console.error('Error downloading PDF:', error);
+      alert(`Erreur lors du telechargement du PDF pour eCMR ${ecmr.id}`);
     }
   };
 

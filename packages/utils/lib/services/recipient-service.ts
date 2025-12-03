@@ -31,7 +31,7 @@ import type {
 
 // Client API pour Recipient
 const recipientApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://ddaywxps9n701.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
@@ -211,7 +211,7 @@ export class RecipientService {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1'}/recipients/${recipientId}/deliveries/${deliveryId}/photos`,
+      `${process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://ddaywxps9n701.cloudfront.net/api/v1'}/recipients/${recipientId}/deliveries/${deliveryId}/photos`,
       {
         method: 'POST',
         headers,
@@ -282,7 +282,7 @@ export class RecipientService {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1'}/recipients/${recipientId}/incidents/${incidentId}/photos`,
+      `${process.env.NEXT_PUBLIC_RECIPIENT_API_URL || 'https://ddaywxps9n701.cloudfront.net/api/v1'}/recipients/${recipientId}/incidents/${incidentId}/photos`,
       {
         method: 'POST',
         headers,

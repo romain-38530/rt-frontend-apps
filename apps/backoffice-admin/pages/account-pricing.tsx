@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import { usePricing, formatPrice, BackendAccountType, Pricing, Promotion } from '../../../src/hooks/usePricing';
 
 // Configuration API
-const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
+const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
 
 // Composant pour afficher/éditer un pricing
 function PricingEditor({ pricing, onUpdate }: { pricing: Pricing; onUpdate: () => void }) {

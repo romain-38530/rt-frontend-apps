@@ -23,7 +23,7 @@ import { useState, useEffect, useCallback } from 'react';
  * Hook pour gérer le pricing dynamique
  */
 export function usePricing(options = {}) {
-    const { apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net', autoLoad = true } = options;
+    const { apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net', autoLoad = true } = options;
     // État
     const [pricing, setPricing] = useState({});
     const [allPricing, setAllPricing] = useState([]);

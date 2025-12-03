@@ -135,7 +135,7 @@ interface RecoveryRequest {
 
 export default function PalettesCircularPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+  const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'requests' | 'ledger' | 'disputes' | 'reports' | 'scan' | 'map'>('dashboard');

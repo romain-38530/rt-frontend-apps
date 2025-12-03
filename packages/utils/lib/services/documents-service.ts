@@ -23,7 +23,7 @@ import type {
 
 // Client API pour les documents
 const documentsApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'https://d8987l284s9q4.cloudfront.net/api/v1',
   timeout: 60000, // 60s pour les uploads
   retries: 3,
 });

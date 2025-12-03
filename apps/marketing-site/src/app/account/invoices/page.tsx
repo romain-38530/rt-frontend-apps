@@ -12,7 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 // Configuration
-const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
 
 interface Invoice {
   _id: string;

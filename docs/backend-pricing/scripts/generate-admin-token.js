@@ -112,7 +112,7 @@ try {
 
   console.log('📦 EXEMPLE CURL:');
   console.log('─'.repeat(70));
-  console.log('curl -X POST https://dgze8l03lwl5h.cloudfront.net/api/pricing \\');
+  console.log('curl -X POST https://d39uizi9hzozo8.cloudfront.net/api/pricing \\');
   console.log('  -H "Content-Type: application/json" \\');
   console.log(`  -H "Authorization: Bearer ${token}" \\`);
   console.log('  -d \'{"accountType":"TRANSPORTEUR","displayName":"Transporteur","basePrice":49}\'');
@@ -180,7 +180,7 @@ UTILISATION:
 Authorization: Bearer ${token}
 
 CURL EXEMPLE:
-curl -X POST https://dgze8l03lwl5h.cloudfront.net/api/pricing \\
+curl -X POST https://d39uizi9hzozo8.cloudfront.net/api/pricing \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${token}" \\
   -d '{"accountType":"TRANSPORTEUR","displayName":"Transporteur","basePrice":49}'

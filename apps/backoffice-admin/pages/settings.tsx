@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Bell, Shield, Globe, Database, Mail } from 'lucide-react';
 
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 interface Settings {
   notifications: {

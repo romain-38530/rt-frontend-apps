@@ -27,7 +27,7 @@ interface Appointment {
 
 export default function RdvTransporteursPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net';
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);

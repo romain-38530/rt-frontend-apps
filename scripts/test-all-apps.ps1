@@ -159,9 +159,9 @@ if ($ApiTest -or $All) {
     Write-Host "─────────────────────────────────────────────────────────────`n" -ForegroundColor Gray
 
     $apiEndpoints = @(
-        @{Name="Health Check (CloudFront)"; Url="https://d2i50a1vlg138w.cloudfront.net/health"; Method="GET"},
+        @{Name="Health Check (CloudFront)"; Url="https://ddaywxps9n701.cloudfront.net/health"; Method="GET"},
         @{Name="Health Check (EB)"; Url="http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/health"; Method="GET"},
-        @{Name="VAT Validation"; Url="https://d2i50a1vlg138w.cloudfront.net/api/vat/validate"; Method="POST"; Body='{"vatNumber":"FR12345678901"}'}
+        @{Name="VAT Validation"; Url="https://ddaywxps9n701.cloudfront.net/api/vat/validate"; Method="POST"; Body='{"vatNumber":"FR12345678901"}'}
     )
 
     $apiResults = @()

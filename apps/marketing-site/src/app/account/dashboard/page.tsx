@@ -30,7 +30,7 @@ function DashboardContent() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://ddaywxps9n701.cloudfront.net';
       const response = await fetch(`${apiUrl}/api/account/info?userId=${userId}`, {
         method: 'GET',
         headers: {
