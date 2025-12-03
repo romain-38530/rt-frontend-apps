@@ -24,7 +24,7 @@ export function useVATValidation() {
     setResult(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+      const apiUrl = process.env.NEXT_PUBLIC_VAT_API_URL || 'https://ddaywxps9n701.cloudfront.net';
       const response = await fetch(`${apiUrl}/api/vat/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

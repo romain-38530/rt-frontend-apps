@@ -10,11 +10,11 @@
 
 export const API_CONFIG = {
   authz: {
-    baseUrl: process.env.NEXT_PUBLIC_AUTHZ_API_URL || 'https://d2i50a1vlg138w.cloudfront.net',
+    baseUrl: process.env.NEXT_PUBLIC_AUTHZ_API_URL || 'https://ddaywxps9n701.cloudfront.net',
     timeout: 10000,
   },
   subscriptions: {
-    baseUrl: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net',
+    baseUrl: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
     timeout: 15000,
   },
 } as const;

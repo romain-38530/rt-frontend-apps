@@ -20,7 +20,7 @@ import type {
 } from './frontend-types';
 
 // Importez votre configuration
-const API_BASE_URL = 'https://d2i50a1vlg138w.cloudfront.net';
+const API_BASE_URL = 'https://ddaywxps9n701.cloudfront.net';
 const API_TIMEOUT = 10000;
 
 // ==================== Gestion d'Erreurs ====================

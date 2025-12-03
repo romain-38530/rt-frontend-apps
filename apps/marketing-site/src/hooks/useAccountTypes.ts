@@ -30,7 +30,7 @@ export function useAccountTypes(userId?: string): UseAccountTypesReturn {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://ddaywxps9n701.cloudfront.net';
       const url = userId
         ? `${apiUrl}/api/account-types/available?userId=${userId}`
         : `${apiUrl}/api/account-types/available`;
@@ -71,7 +71,7 @@ export function useAccountTypes(userId?: string): UseAccountTypesReturn {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://ddaywxps9n701.cloudfront.net';
       const requestBody: SelectAccountTypeRequest = {
         userId,
         accountType: type

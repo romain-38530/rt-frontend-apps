@@ -55,7 +55,7 @@ export const API_CONFIG = {
   CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net',
 
   // Documents API
-  DOCUMENTS_API: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'https://d1fwu9s2oowx9v.cloudfront.net',
+  DOCUMENTS_API: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'https://d8987l284s9q4.cloudfront.net',
 
   // TMS Sync API
   TMS_SYNC_API: process.env.NEXT_PUBLIC_TMS_SYNC_API_URL || 'https://d1yk7yneclf57m.cloudfront.net',
