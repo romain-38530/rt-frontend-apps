@@ -119,7 +119,7 @@ export default function ChatBot({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const config = CHATBOT_CONFIG[type];
-  const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://rt-chatbot-api-prod.eba-xxx.eu-central-1.elasticbeanstalk.com';
+  const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {

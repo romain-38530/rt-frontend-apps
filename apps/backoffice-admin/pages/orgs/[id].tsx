@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'http://localhost:3008';
+const ADMIN_GATEWAY = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 const PLANS = [
   { value: 'INDUSTRY_BASE', label: 'Industrie — Base (499€)' },

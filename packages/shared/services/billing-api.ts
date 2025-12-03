@@ -3,7 +3,7 @@
  * Service partagé pour l'API de facturation SYMPHONI.A
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'http://localhost:3014';
+const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // Types
 export interface TariffGrid {

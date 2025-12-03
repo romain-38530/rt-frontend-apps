@@ -3,7 +3,7 @@
  * Service TypeScript pour la gestion des abonnements et tarification
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'http://localhost:3014';
+const API_BASE_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
 
 // =============================================================================
 // TYPES

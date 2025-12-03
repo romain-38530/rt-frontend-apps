@@ -3,8 +3,8 @@
  * Service TypeScript pour le chatbot IA avec support WebSocket
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://localhost:3019';
-const WS_URL = process.env.NEXT_PUBLIC_CHATBOT_WS_URL || 'ws://localhost:3019/chatbot/ws';
+const API_BASE_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const WS_URL = process.env.NEXT_PUBLIC_CHATBOT_WS_URL || 'wss://d2i50a1vlg138w.cloudfront.net/chatbot/ws';
 
 // =============================================================================
 // TYPES

@@ -30,7 +30,7 @@ import type {
 
 // Client API pour Chatbot
 const chatbotApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://localhost:3015/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });

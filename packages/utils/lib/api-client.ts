@@ -188,37 +188,37 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
 
 // Clients API par défaut pour chaque service
 export const ordersApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
 
 export const trackingApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_TRACKING_API_URL || 'http://localhost:3002/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
 
 export const documentsApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'http://localhost:3003/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_DOCUMENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 60000, // Plus long pour les uploads
   retries: 2,
 });
 
 export const notificationsApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'http://localhost:3004/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
 
 export const carriersApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'http://localhost:3005/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
 
 export const affretIaApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || 'http://localhost:3006/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 45000, // Plus long pour l'IA
   retries: 2,
 });

@@ -136,7 +136,7 @@ export class PlanningService {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3030';
+    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
   }
 
   private async request<T>(

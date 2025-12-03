@@ -31,7 +31,7 @@ import type {
 
 // Client API pour Supplier
 const supplierApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_SUPPLIER_API_URL || 'http://localhost:3020/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_SUPPLIER_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
@@ -139,7 +139,7 @@ export class SupplierService {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPPLIER_API_URL || 'http://localhost:3020/api/v1'}/suppliers/${supplierId}/orders/${orderId}/documents`,
+      `${process.env.NEXT_PUBLIC_SUPPLIER_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1'}/suppliers/${supplierId}/orders/${orderId}/documents`,
       {
         method: 'POST',
         headers,

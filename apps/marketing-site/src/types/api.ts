@@ -14,7 +14,7 @@ export const API_CONFIG = {
     timeout: 10000,
   },
   subscriptions: {
-    baseUrl: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'http://localhost:3005',
+    baseUrl: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net',
     timeout: 15000,
   },
 } as const;

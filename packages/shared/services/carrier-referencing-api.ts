@@ -4,7 +4,7 @@
  * Conforme au cahier des charges v4
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'http://localhost:3050';
+const API_BASE_URL = process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // =============================================================================
 // TYPES - NIVEAUX DE REFERENCEMENT

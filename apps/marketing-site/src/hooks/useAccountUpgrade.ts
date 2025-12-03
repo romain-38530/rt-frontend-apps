@@ -28,7 +28,7 @@ export function useAccountUpgrade(): UseAccountUpgradeReturn {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'http://localhost:8080';
+      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
       const requestBody: CheckEligibilityRequest = {
         userId,
         desiredType
@@ -68,7 +68,7 @@ export function useAccountUpgrade(): UseAccountUpgradeReturn {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'http://localhost:8080';
+      const apiUrl = process.env.NEXT_PUBLIC_ACCOUNT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
       const requestBody: UpgradeAccountRequest = {
         userId,
         fromType,

@@ -4,7 +4,7 @@
  * Conforme au cahier des charges "Fonctionnement d'une Commande de Transport"
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_DISPATCH_API_URL || 'http://localhost:3060';
+const API_BASE_URL = process.env.NEXT_PUBLIC_DISPATCH_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // =============================================================================
 // TYPES - STATUTS DE COMMANDE

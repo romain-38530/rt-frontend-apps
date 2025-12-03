@@ -47,7 +47,7 @@ interface NewNeedForm {
   };
 }
 
-const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://localhost:3006';
+const API_URL = process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // Constants
 const STORAGE_TYPES = [

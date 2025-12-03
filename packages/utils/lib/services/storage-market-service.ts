@@ -35,7 +35,7 @@ type SubscriptionUsage = { sitesUsed: number; offersSubmitted: number; contracts
 
 // Client API pour Storage Market
 const storageApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'http://localhost:3006/api/storage-market',
+  baseURL: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/storage-market',
   timeout: 30000,
   retries: 3,
 });

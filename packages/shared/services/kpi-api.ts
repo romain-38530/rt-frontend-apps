@@ -3,7 +3,7 @@
  * Client API pour le systeme de pilotage performance transport & logistique
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_KPI_API_URL || 'http://localhost:3400';
+const API_BASE_URL = process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // ============================================
 // TYPES
@@ -395,7 +395,7 @@ export function connectKPIWebSocket(
   onMessage: (data: { topic: string; data: any; timestamp: string }) => void,
   topics?: string[]
 ): WebSocket | null {
-  const wsUrl = process.env.NEXT_PUBLIC_KPI_WS_URL || 'ws://localhost:3401';
+  const wsUrl = process.env.NEXT_PUBLIC_KPI_WS_URL || 'wss://d2i50a1vlg138w.cloudfront.net';
 
   try {
     const ws = new WebSocket(wsUrl);

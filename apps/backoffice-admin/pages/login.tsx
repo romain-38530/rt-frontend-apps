@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const AUTHZ_URL = process.env.NEXT_PUBLIC_AUTHZ_URL || 'http://localhost:3007';
+const AUTHZ_URL = process.env.NEXT_PUBLIC_AUTHZ_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 export default function Login() {
   const [email, setEmail] = useState('admin@example.com');

@@ -3,7 +3,7 @@
  * Service TypeScript pour la gestion des agents commerciaux et commissions
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'http://localhost:3015';
+const API_BASE_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 
 // =============================================================================
 // TYPES
