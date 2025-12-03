@@ -132,7 +132,7 @@ export default function AgentPortalPage() {
     setLoginError('');
 
     try {
-      const response = await salesAgentsApi.portalLogin(loginEmail, loginPassword);
+      const response = await salesAgentsApi.portalLogin({ email: loginEmail, password: loginPassword });
       if (response.token) {
         localStorage.setItem('agentToken', response.token);
         setIsLoggedIn(true);
@@ -164,9 +164,9 @@ export default function AgentPortalPage() {
 
       // Charger les données depuis l'API
       const [dashboardData, clientsData, commissionsData] = await Promise.all([
-        salesAgentsApi.portalGetDashboard(token),
-        salesAgentsApi.portalGetClients(token),
-        salesAgentsApi.portalGetCommissions(token),
+        salesAgentsApi.getPortalDashboard(),
+        salesAgentsApi.getPortalClients(),
+        salesAgentsApi.getPortalCommissions(),
       ]);
 
       // Transformer les données pour le format attendu par le composant
