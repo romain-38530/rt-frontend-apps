@@ -60,7 +60,7 @@ interface TrackingSession {
 
 export default function TrackingPage() {
   const router = useRouter();
-  const trackingApiUrl = process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net/api/v1';
+  const trackingApiUrl = process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net/api/v1';
 
   const [activeTab, setActiveTab] = useState<'live' | 'history' | 'pair' | 'geofence'>('live');
   const [sessions, setSessions] = useState<TrackingSession[]>([]);

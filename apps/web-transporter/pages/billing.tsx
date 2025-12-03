@@ -140,7 +140,7 @@ export default function BillingPage() {
   const [contestationReason, setContestationReason] = useState('');
   const [uploadingInvoice, setUploadingInvoice] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_BILLING_API || 'https://d2i50a1vlg138w.cloudfront.net';
+  const API_BASE = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
 
   useEffect(() => {
     fetchData();

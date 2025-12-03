@@ -239,7 +239,7 @@ export function createWebSocketClient(config: WebSocketConfig): WebSocketClient 
 }
 
 export function initializeWebSocket(url?: string): WebSocketClient {
-  const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || 'wss://d2i50a1vlg138w.cloudfront.net';
+  const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || 'wss://d2aodzk1jwptdr.cloudfront.net';
   return createWebSocketClient({ url: wsUrl });
 }
 

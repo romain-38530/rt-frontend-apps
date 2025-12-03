@@ -178,7 +178,7 @@ export interface UsePricingReturn {
  */
 export function usePricing(options: UsePricingOptions = {}): UsePricingReturn {
   const {
-    apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net',
+    apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_PRICING_API_URL || 'https://d35kjzzin322yz.cloudfront.net',
     autoLoad = true
   } = options;
 

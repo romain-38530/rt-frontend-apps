@@ -78,8 +78,8 @@ interface KnowledgeArticle {
 
 export default function ChatbotPage() {
   const router = useRouter();
-  // L'API Chatbot IA est dans le bundle subscriptions-contracts
-  const apiUrl = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://dgze8l03lwl5h.cloudfront.net';
+  // L'API Chatbot IA
+  const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
 
   const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'tickets' | 'knowledge' | 'faq'>('chat');
   const [conversations, setConversations] = useState<Conversation[]>([]);
