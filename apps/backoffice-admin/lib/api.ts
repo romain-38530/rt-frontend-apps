@@ -14,7 +14,7 @@ const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || '
 const KPI_API_URL = process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 const TRAINING_API_URL = process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 const CHATBOT_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
-const SALES_AGENTS_API_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
+const SALES_AGENTS_API_URL = process.env.NEXT_PUBLIC_SALES_AGENTS_API_URL || 'https://d3tr75b4e76icu.cloudfront.net';
 const VIGILANCE_API_URL = process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 const SCORING_API_URL = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
 

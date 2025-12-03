@@ -29,6 +29,7 @@ import {
   Award,
   BarChart3,
 } from 'lucide-react';
+import * as salesAgentsApi from '@shared/services/sales-agents-api';
 
 // Types
 interface Agent {
@@ -130,13 +131,18 @@ export default function AgentPortalPage() {
     e.preventDefault();
     setLoginError('');
 
-    // Mock login - in production this would call the API
-    if (loginEmail === 'agent@example.com' && loginPassword === 'password') {
-      localStorage.setItem('agentToken', 'mock-agent-token');
-      setIsLoggedIn(true);
-      loadDashboard();
-    } else {
-      setLoginError('Email ou mot de passe incorrect');
+    try {
+      const response = await salesAgentsApi.portalLogin(loginEmail, loginPassword);
+      if (response.token) {
+        localStorage.setItem('agentToken', response.token);
+        setIsLoggedIn(true);
+        loadDashboard();
+      } else {
+        setLoginError('Email ou mot de passe incorrect');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('Erreur de connexion. Veuillez réessayer.');
     }
   };
 
@@ -148,115 +154,95 @@ export default function AgentPortalPage() {
 
   const loadDashboard = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const token = localStorage.getItem('agentToken');
+      if (!token) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
 
-    // Mock data
-    setDashboard({
-      agent: {
-        id: '1',
-        firstName: 'Jean',
-        lastName: 'Dupont',
-        email: 'jean.dupont@example.com',
-        phone: '06 12 34 56 78',
-        company: 'JD Consulting',
-        region: 'Ile-de-France',
-        status: 'active',
-        contractType: 'unlimited',
-        stats: {
-          totalClients: 28,
-          activeClients: 25,
-          totalCommissions: 15400,
-          pendingCommissions: 1750,
-        },
-        createdAt: '2024-03-15',
-      },
-      currentMonth: {
-        activeClients: 25,
-        pendingClients: 3,
-        projectedCommission: 1750,
-      },
-      lastMonth: {
-        activeClients: 24,
-        commission: 1680,
-        status: 'paid',
-      },
-      yearToDate: {
-        totalCommissions: 15400,
-        totalClients: 28,
-        averageMonthly: 1711,
-      },
-      activeChallenge: {
-        name: '1000 clients en 4 mois',
-        endDate: '2025-01-31',
-        currentRank: 1,
-        clientsRecruited: 28,
-        targetClients: 1000,
-        potentialPrize: 4000,
-      },
-    });
+      // Charger les données depuis l'API
+      const [dashboardData, clientsData, commissionsData] = await Promise.all([
+        salesAgentsApi.portalGetDashboard(token),
+        salesAgentsApi.portalGetClients(token),
+        salesAgentsApi.portalGetCommissions(token),
+      ]);
 
-    setClients([
-      {
-        id: '1',
-        companyName: 'Industrie ABC',
-        companyType: 'industry',
-        contactName: 'Marie Durand',
-        contactEmail: 'marie@abc.fr',
-        contactPhone: '01 23 45 67 89',
-        status: 'active',
-        activatedAt: '2024-04-01',
-        monthlyCommission: 70,
-        totalCommissionsPaid: 560,
-        createdAt: '2024-03-25',
-      },
-      {
-        id: '2',
-        companyName: 'Transport Express',
-        companyType: 'transporter',
-        contactName: 'Pierre Martin',
-        contactEmail: 'pierre@express.fr',
-        contactPhone: '01 98 76 54 32',
-        status: 'active',
-        activatedAt: '2024-05-15',
-        monthlyCommission: 70,
-        totalCommissionsPaid: 420,
-        createdAt: '2024-05-10',
-      },
-      {
-        id: '3',
-        companyName: 'Logistique Pro',
-        companyType: 'logistician',
-        contactName: 'Sophie Bernard',
-        contactEmail: 'sophie@logpro.fr',
-        contactPhone: '01 11 22 33 44',
-        status: 'pending_activation',
-        monthlyCommission: 70,
-        totalCommissionsPaid: 0,
-        createdAt: '2024-11-20',
-      },
-      {
-        id: '4',
-        companyName: 'Transitaire International',
-        companyType: 'forwarder',
-        contactName: 'Luc Leroy',
-        contactEmail: 'luc@transit.fr',
-        contactPhone: '01 55 66 77 88',
-        status: 'prospect',
-        monthlyCommission: 70,
-        totalCommissionsPaid: 0,
-        createdAt: '2024-11-25',
-      },
-    ]);
+      // Transformer les données pour le format attendu par le composant
+      if (dashboardData.agent) {
+        setDashboard({
+          agent: {
+            id: dashboardData.agent.id,
+            firstName: dashboardData.agent.firstName,
+            lastName: dashboardData.agent.lastName,
+            email: dashboardData.agent.email,
+            phone: dashboardData.agent.phone,
+            company: dashboardData.agent.company,
+            region: dashboardData.agent.region,
+            status: dashboardData.agent.status as 'active' | 'suspended' | 'non_compliant',
+            contractType: dashboardData.agent.contractType,
+            stats: dashboardData.agent.stats,
+            createdAt: dashboardData.agent.createdAt,
+          },
+          currentMonth: dashboardData.currentMonth || {
+            activeClients: dashboardData.agent.stats?.activeClients || 0,
+            pendingClients: 0,
+            projectedCommission: (dashboardData.agent.stats?.activeClients || 0) * COMMISSION_RATE,
+          },
+          lastMonth: dashboardData.lastMonth || {
+            activeClients: 0,
+            commission: 0,
+            status: 'pending',
+          },
+          yearToDate: dashboardData.yearToDate || {
+            totalCommissions: dashboardData.agent.stats?.totalCommissions || 0,
+            totalClients: dashboardData.agent.stats?.totalClients || 0,
+            averageMonthly: 0,
+          },
+          activeChallenge: dashboardData.activeChallenge,
+        });
+      }
 
-    setCommissions([
-      { id: '1', period: '2024-11', activeClients: 25, totalAmount: 1750, status: 'pending', createdAt: '2024-12-01' },
-      { id: '2', period: '2024-10', activeClients: 24, totalAmount: 1680, status: 'paid', createdAt: '2024-11-01', paidAt: '2024-11-15' },
-      { id: '3', period: '2024-09', activeClients: 22, totalAmount: 1540, status: 'paid', createdAt: '2024-10-01', paidAt: '2024-10-15' },
-      { id: '4', period: '2024-08', activeClients: 20, totalAmount: 1400, status: 'paid', createdAt: '2024-09-01', paidAt: '2024-09-15' },
-      { id: '5', period: '2024-07', activeClients: 18, totalAmount: 1260, status: 'paid', createdAt: '2024-08-01', paidAt: '2024-08-15' },
-    ]);
+      // Mapper les clients
+      if (clientsData.clients) {
+        setClients(clientsData.clients.map((c: any) => ({
+          id: c.id,
+          companyName: c.companyName,
+          companyType: c.companyType || 'industry',
+          contactName: c.contactName,
+          contactEmail: c.email || c.contactEmail,
+          contactPhone: c.phone || c.contactPhone,
+          status: c.status,
+          activatedAt: c.activatedAt,
+          monthlyCommission: COMMISSION_RATE,
+          totalCommissionsPaid: c.totalCommissionsPaid || 0,
+          createdAt: c.createdAt,
+        })));
+      }
 
-    setLoading(false);
+      // Mapper les commissions
+      if (commissionsData.commissions) {
+        setCommissions(commissionsData.commissions.map((c: any) => ({
+          id: c.id,
+          period: c.period,
+          activeClients: c.activeClients || c.clientCount || 0,
+          totalAmount: c.totalAmount || c.amount || 0,
+          status: c.status,
+          createdAt: c.createdAt,
+          paidAt: c.paidAt,
+        })));
+      }
+    } catch (error) {
+      console.error('Erreur chargement dashboard:', error);
+      // En cas d'erreur d'authentification, déconnecter
+      if ((error as any)?.message?.includes('401') || (error as any)?.message?.includes('unauthorized')) {
+        localStorage.removeItem('agentToken');
+        setIsLoggedIn(false);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
