@@ -14,17 +14,28 @@ export default function HomePage() {
       router.push('/login');
       return;
     }
-    setUser(getUser());
+    const currentUser = getUser();
+    setUser(currentUser);
 
-    // Charger l'abonnement
-    const sub = localStorage.getItem('userSubscription');
-    if (sub) {
-      setSubscription(JSON.parse(sub));
+    // Charger l'abonnement depuis l'utilisateur (API) ou localStorage (fallback)
+    if (currentUser?.subscription) {
+      // Subscription from API (new format)
+      const sub = {
+        tier: currentUser.subscription.plan || 'free',
+        status: currentUser.subscription.status || 'active',
+        features: currentUser.subscription.features || []
+      };
+      setSubscription(sub);
     } else {
-      // Abonnement gratuit par défaut
-      const defaultSub = { tier: 'free', status: 'active' };
-      setSubscription(defaultSub);
-      localStorage.setItem('userSubscription', JSON.stringify(defaultSub));
+      // Fallback: localStorage
+      const sub = localStorage.getItem('userSubscription');
+      if (sub) {
+        setSubscription(JSON.parse(sub));
+      } else {
+        const defaultSub = { tier: 'free', status: 'active' };
+        setSubscription(defaultSub);
+        localStorage.setItem('userSubscription', JSON.stringify(defaultSub));
+      }
     }
     setLoading(false);
   }, [router]);
@@ -115,22 +126,36 @@ export default function HomePage() {
       icon: '📦',
       title: 'Bourse de Stockage',
       desc: 'Publiez vos besoins et recevez des offres avec IA',
-      locked: subscription?.tier === 'free',
+      locked: !(user?.modules?.bourseDeStockage?.active || subscription?.tier !== 'free'),
       route: '/storage-market'
     },
     {
       icon: '📚',
       title: 'Formation & Training',
       desc: 'Accédez aux modules de formation pour vos équipes',
-      locked: subscription?.tier === 'free',
+      locked: !(user?.modules?.formationTraining?.active || subscription?.tier !== 'free'),
       route: '/training'
     },
     {
       icon: '🧠',
       title: 'Affret.IA',
       desc: 'Optimisation IA des flux logistiques et fret',
-      locked: subscription?.tier !== 'enterprise',
+      locked: !(user?.modules?.affretIA?.active || subscription?.tier === 'enterprise'),
       route: '/affret-ia'
+    },
+    {
+      icon: '🚚',
+      title: 'Référencement Transporteurs',
+      desc: 'Gérez votre panel de transporteurs référencés',
+      locked: !(user?.modules?.referencementTransporteurs?.active || subscription?.tier !== 'free'),
+      route: '/transporteurs'
+    },
+    {
+      icon: '📋',
+      title: 'Grilles Tarifaires',
+      desc: 'Configurez et gérez vos grilles tarifaires transport',
+      locked: !(user?.modules?.grillesTarifaires?.active || subscription?.tier !== 'free'),
+      route: '/pricing-grids'
     },
     {
       icon: '💶',
