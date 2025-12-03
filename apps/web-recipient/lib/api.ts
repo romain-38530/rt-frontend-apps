@@ -6,7 +6,7 @@ const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jf
 const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
 const TRACKING_API_URL = process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net';
 const NOTIFICATIONS_API_URL = process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2t9age53em7o5.cloudfront.net';
-const ECMR_API_URL = process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
+const ECMR_API_URL = process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d28q05cx5hmg9q.cloudfront.net';
 const CHATBOT_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
 const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
 
