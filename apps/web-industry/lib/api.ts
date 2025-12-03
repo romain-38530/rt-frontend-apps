@@ -1,64 +1,64 @@
 // API Configuration for SYMPHONI.A Industry
 // Backend Services URLs (HTTPS via CloudFront)
-
-// Main CloudFront Gateway - All APIs route through this
-const MAIN_API = 'https://d2i50a1vlg138w.cloudfront.net';
-const SUBSCRIPTIONS_CLOUDFRONT = 'https://dgze8l03lwl5h.cloudfront.net';
+// CloudFront domains from cloudfront-results.json registry
 
 export const API_CONFIG = {
-  // Authentication
-  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || MAIN_API,
+  // Authentication (authz service)
+  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://ddaywxps9n701.cloudfront.net',
 
   // Planning Sites API - Sites, Docks, Slots, Driver Check-in
-  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || MAIN_API,
+  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net',
 
   // eCMR Signature API - Electronic CMR with eIDAS compliance
-  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || MAIN_API,
+  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d28q05cx5hmg9q.cloudfront.net',
 
   // Appointments API - RDV Transporteurs
-  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || MAIN_API,
+  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'https://d28uezz0327lfm.cloudfront.net',
 
   // Orders API
-  ORDERS_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || MAIN_API,
+  ORDERS_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net',
 
   // Tracking API
-  TRACKING_API: process.env.NEXT_PUBLIC_TRACKING_API_URL || MAIN_API,
+  TRACKING_API: process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net',
 
   // Notifications API
-  NOTIFICATIONS_API: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || MAIN_API,
+  NOTIFICATIONS_API: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2t9age53em7o5.cloudfront.net',
 
   // KPI API
-  KPI_API: process.env.NEXT_PUBLIC_KPI_API_URL || MAIN_API,
+  KPI_API: process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d57lw7v3zgfpy.cloudfront.net',
 
   // Storage Market API
-  STORAGE_MARKET_API: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || MAIN_API,
+  STORAGE_MARKET_API: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d1ea8wbaf6ws9i.cloudfront.net',
 
   // Training API
-  TRAINING_API: process.env.NEXT_PUBLIC_TRAINING_API_URL || MAIN_API,
+  TRAINING_API: process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d39f1h56c4jwz4.cloudfront.net',
 
-  // Subscriptions API (dedicated CloudFront)
-  SUBSCRIPTIONS_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || SUBSCRIPTIONS_CLOUDFRONT,
+  // Subscriptions API
+  SUBSCRIPTIONS_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
+
+  // Subscriptions Pricing API (pricing grids)
+  SUBSCRIPTIONS_PRICING_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_PRICING_API_URL || 'https://d35kjzzin322yz.cloudfront.net',
 
   // Billing API
-  BILLING_API: process.env.NEXT_PUBLIC_BILLING_API_URL || MAIN_API,
+  BILLING_API: process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net',
 
   // Scoring API
-  SCORING_API: process.env.NEXT_PUBLIC_SCORING_API_URL || MAIN_API,
+  SCORING_API: process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net',
 
   // Vigilance API
-  VIGILANCE_API: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || MAIN_API,
+  VIGILANCE_API: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d23m3oa6ef3tr1.cloudfront.net',
 
   // Palettes API
-  PALETTES_API: process.env.NEXT_PUBLIC_PALETTES_API_URL || MAIN_API,
+  PALETTES_API: process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net',
 
   // AFFRET.IA API
-  AFFRET_IA_API: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || MAIN_API,
+  AFFRET_IA_API: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || 'https://d393yiia4ig3bw.cloudfront.net',
 
   // Chatbot API
-  CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || MAIN_API,
+  CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net',
 
   // Dispatch API (Orders API handles dispatch)
-  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || MAIN_API
+  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net'
 };
 
 // Helper to get auth headers
