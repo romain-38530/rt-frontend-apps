@@ -42,6 +42,7 @@ frontend:
       NEXT_PUBLIC_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'
 
       # Core APIs (Deployed via CloudFront for HTTPS)
+      NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://dgze8l03lwl5h.cloudfront.net'
       NEXT_PUBLIC_AUTHZ_URL: 'https://d2i50a1vlg138w.cloudfront.net'
       NEXT_PUBLIC_ORDERS_API_URL: 'https://d2i50a1vlg138w.cloudfront.net/api/v1'
       NEXT_PUBLIC_TRACKING_API_URL: 'https://d2i50a1vlg138w.cloudfront.net'

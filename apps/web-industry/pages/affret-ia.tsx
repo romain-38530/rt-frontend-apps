@@ -9,7 +9,7 @@ interface Stats { totalSessions: number; successRate: number; avgResponseTime: n
 
 export default function AffretiaPage() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || '';
+  const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d2i50a1vlg138w.cloudfront.net';
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'bourse' | 'tracking' | 'vigilance' | 'stats'>('dashboard');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);

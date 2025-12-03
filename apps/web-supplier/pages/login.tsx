@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://d2i50a1vlg138w.cloudfront.net'}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
