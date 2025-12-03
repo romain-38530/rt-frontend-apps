@@ -385,7 +385,7 @@ applications:
             - npm install -g pnpm@8.15.4
             - cd ../..
             - pnpm install
-            - pnpm turbo build --filter=@rt/backoffice-admin^...
+            - pnpm turbo build --filter=@rt/ui-components --filter=@rt/backoffice-admin^...
             - cd apps/backoffice-admin
         build:
           commands:
