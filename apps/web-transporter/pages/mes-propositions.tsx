@@ -13,6 +13,8 @@ interface Proposal {
   id: string;
   sessionId: string;
   orderId: string;
+  industrialId?: string;
+  industrialName?: string;
   route: {
     pickup: string;
     delivery: string;
@@ -66,6 +68,8 @@ export default function MesPropositionsPage() {
           id: 'prop-1',
           sessionId: 'sess-1',
           orderId: 'ORD-2024-001',
+          industrialId: 'IND-001',
+          industrialName: 'TOTAL Énergies Logistique',
           route: { pickup: 'Lyon', delivery: 'Paris' },
           proposedPrice: 780,
           estimatedPrice: 850,
@@ -83,6 +87,8 @@ export default function MesPropositionsPage() {
           id: 'prop-2',
           sessionId: 'sess-2',
           orderId: 'ORD-2024-002',
+          industrialId: 'IND-002',
+          industrialName: 'Carrefour Supply Chain',
           route: { pickup: 'Marseille', delivery: 'Bordeaux' },
           proposedPrice: 920,
           estimatedPrice: 880,
@@ -414,6 +420,18 @@ export default function MesPropositionsPage() {
                         <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
                           {proposal.route.pickup} → {proposal.route.delivery}
                         </div>
+                        {proposal.industrialName && (
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#667eea',
+                            marginBottom: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span>🏭</span> {proposal.industrialName}
+                          </div>
+                        )}
                         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
                           Ref: {proposal.orderId} • Envoyée {formatRelativeTime(proposal.submittedAt)}
                         </div>

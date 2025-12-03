@@ -41,7 +41,7 @@ interface LoginResponse {
 // Configuration
 // ==========================================
 
-const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 // ==========================================
 // Utilitaires d'authentification
@@ -55,7 +55,7 @@ export function setAdminToken(token: string) {
 
 export function getAdminToken(): string | null {
   if (typeof window !== 'undefined') {
-    return localStorage.setItem('admin_token');
+    return localStorage.getItem('admin_token');
   }
   return null;
 }

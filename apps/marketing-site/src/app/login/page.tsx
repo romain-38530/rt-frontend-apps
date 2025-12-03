@@ -32,7 +32,7 @@ function LoginContent() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://ddaywxps9n701.cloudfront.net'}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -13,6 +13,8 @@ interface BourseOffer {
   id: string;
   sessionId: string;
   orderId: string;
+  industrialId?: string;
+  industrialName?: string;
   pickup: {
     city: string;
     postalCode: string;
@@ -93,10 +95,26 @@ export default function BoursePage() {
     } catch (err) {
       console.error('Error loading offers from API:', err);
       // Fallback mock data
+      const industrialNames = [
+        'TOTAL Énergies Logistique',
+        'Carrefour Supply Chain',
+        'Danone Transport',
+        'Saint-Gobain Distribution',
+        'Michelin Logistics',
+        'L\'Oréal Fret',
+        'Peugeot Stellantis',
+        'Airbus Freight',
+        'Sanofi Pharma Transport',
+        'Renault Distribution',
+        'EDF Énergie',
+        'Bouygues Materials'
+      ];
       const mockOffers: BourseOffer[] = Array.from({ length: 12 }, (_, i) => ({
         id: `offer-${i + 1}`,
         sessionId: `session-${i + 1}`,
         orderId: `ORD-${Date.now()}-${i}`,
+        industrialId: `IND-${String(i + 1).padStart(3, '0')}`,
+        industrialName: industrialNames[i % industrialNames.length],
         pickup: {
           city: ['Lyon', 'Marseille', 'Bordeaux', 'Lille', 'Toulouse', 'Nantes'][i % 6],
           postalCode: ['69000', '13000', '33000', '59000', '31000', '44000'][i % 6],
@@ -371,6 +389,28 @@ export default function BoursePage() {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
+                  {/* Industriel (expéditeur) */}
+                  {offer.industrialName && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '12px',
+                      paddingBottom: '12px',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    }}>
+                      <span style={{ fontSize: '18px' }}>🏭</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#667eea' }}>
+                          {offer.industrialName}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                          Expéditeur
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Route */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                     <div style={{ flex: 1 }}>
@@ -517,6 +557,29 @@ export default function BoursePage() {
               <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>
                 {selectedOffer.pickup.city} → {selectedOffer.delivery.city}
               </h2>
+
+              {/* Expéditeur */}
+              {selectedOffer.industrialName && (
+                <div style={{
+                  background: 'rgba(102,126,234,0.15)',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}>
+                  <span style={{ fontSize: '28px' }}>🏭</span>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>
+                      Expéditeur
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#667eea' }}>
+                      {selectedOffer.industrialName}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
