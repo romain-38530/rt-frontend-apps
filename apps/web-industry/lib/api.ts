@@ -1,60 +1,64 @@
 // API Configuration for SYMPHONI.A Industry
 // Backend Services URLs (HTTPS via CloudFront)
 
+// Main CloudFront Gateway - All APIs route through this
+const MAIN_API = 'https://d2i50a1vlg138w.cloudfront.net';
+const SUBSCRIPTIONS_CLOUDFRONT = 'https://dgze8l03lwl5h.cloudfront.net';
+
 export const API_CONFIG = {
   // Authentication
-  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jfg8ri.cloudfront.net',
+  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || MAIN_API,
 
   // Planning Sites API - Sites, Docks, Slots, Driver Check-in
-  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net',
+  PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || MAIN_API,
 
   // eCMR Signature API - Electronic CMR with eIDAS compliance
-  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || 'https://d28q05cx5hmg9q.cloudfront.net',
+  ECMR_API: process.env.NEXT_PUBLIC_ECMR_API_URL || MAIN_API,
 
   // Appointments API - RDV Transporteurs
-  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || 'https://d28uezz0327lfm.cloudfront.net',
+  APPOINTMENTS_API: process.env.NEXT_PUBLIC_APPOINTMENTS_API_URL || MAIN_API,
 
   // Orders API
-  ORDERS_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net',
+  ORDERS_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || MAIN_API,
 
   // Tracking API
-  TRACKING_API: process.env.NEXT_PUBLIC_TRACKING_API_URL || 'https://d2mn43ccfvt3ub.cloudfront.net',
+  TRACKING_API: process.env.NEXT_PUBLIC_TRACKING_API_URL || MAIN_API,
 
   // Notifications API
-  NOTIFICATIONS_API: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'https://d2t9age53em7o5.cloudfront.net',
+  NOTIFICATIONS_API: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || MAIN_API,
 
   // KPI API
-  KPI_API: process.env.NEXT_PUBLIC_KPI_API_URL || 'https://d57lw7v3zgfpy.cloudfront.net',
+  KPI_API: process.env.NEXT_PUBLIC_KPI_API_URL || MAIN_API,
 
   // Storage Market API
-  STORAGE_MARKET_API: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || 'https://d1ea8wbaf6ws9i.cloudfront.net',
+  STORAGE_MARKET_API: process.env.NEXT_PUBLIC_STORAGE_MARKET_API_URL || MAIN_API,
 
   // Training API
-  TRAINING_API: process.env.NEXT_PUBLIC_TRAINING_API_URL || 'https://d39f1h56c4jwz4.cloudfront.net',
+  TRAINING_API: process.env.NEXT_PUBLIC_TRAINING_API_URL || MAIN_API,
 
-  // Subscriptions API
-  SUBSCRIPTIONS_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
+  // Subscriptions API (dedicated CloudFront)
+  SUBSCRIPTIONS_API: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || SUBSCRIPTIONS_CLOUDFRONT,
 
   // Billing API
-  BILLING_API: process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net',
+  BILLING_API: process.env.NEXT_PUBLIC_BILLING_API_URL || MAIN_API,
 
   // Scoring API
-  SCORING_API: process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net',
+  SCORING_API: process.env.NEXT_PUBLIC_SCORING_API_URL || MAIN_API,
 
   // Vigilance API
-  VIGILANCE_API: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || 'https://d23m3oa6ef3tr1.cloudfront.net',
+  VIGILANCE_API: process.env.NEXT_PUBLIC_VIGILANCE_API_URL || MAIN_API,
 
   // Palettes API
-  PALETTES_API: process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net',
+  PALETTES_API: process.env.NEXT_PUBLIC_PALETTES_API_URL || MAIN_API,
 
   // AFFRET.IA API
-  AFFRET_IA_API: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || 'https://d393yiia4ig3bw.cloudfront.net',
+  AFFRET_IA_API: process.env.NEXT_PUBLIC_AFFRET_IA_API_URL || MAIN_API,
 
   // Chatbot API
-  CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net',
+  CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || MAIN_API,
 
   // Dispatch API (Orders API handles dispatch)
-  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net'
+  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || MAIN_API
 };
 
 // Helper to get auth headers
@@ -356,7 +360,7 @@ export const appointmentsApi = {
 // ============================================
 
 // Chatbot API URL
-const CHATBOT_API = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://rt-chatbot-api-prod.eba-xxx.eu-central-1.elasticbeanstalk.com';
+const CHATBOT_API = process.env.NEXT_PUBLIC_CHATBOT_API_URL || MAIN_API;
 
 export type ChatBotType = 'helpbot' | 'planif-ia' | 'routier' | 'quai-wms' | 'livraisons' | 'expedition' | 'freight-ia' | 'copilote';
 
