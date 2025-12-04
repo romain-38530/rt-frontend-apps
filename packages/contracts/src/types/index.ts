@@ -61,3 +61,6 @@ export * from './bourse-maritime';
 
 // Admin Gateway
 export * from './admin';
+
+// Logisticien (Logistics User Management)
+export * from './logistician';

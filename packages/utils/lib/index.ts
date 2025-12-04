@@ -66,3 +66,6 @@ export { AppointmentsService } from './services/appointments-service';
 
 // Scoring Service
 export { ScoringService, DEFAULT_WEIGHTS } from './services/scoring-service';
+
+// Logistician Service
+export { LogisticianService } from './services/logistician-service';
