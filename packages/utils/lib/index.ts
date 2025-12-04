@@ -51,3 +51,18 @@ export { AdminService, getAdminService, createAdminService } from './services/ad
 
 // Bourse Maritime Service
 export { BourseMaritimeService, getBourseMaritimeService, createBourseMaritimeService } from './services/bourse-maritime-service';
+
+// Orders Service
+export { OrdersService } from './services/orders-service';
+
+// Documents Service
+export { DocumentsService } from './services/documents-service';
+
+// Tracking Service
+export { TrackingService } from './services/tracking-service';
+
+// Appointments Service
+export { AppointmentsService } from './services/appointments-service';
+
+// Scoring Service
+export { ScoringService, DEFAULT_WEIGHTS } from './services/scoring-service';

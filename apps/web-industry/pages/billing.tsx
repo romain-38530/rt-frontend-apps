@@ -61,6 +61,8 @@ interface Prefacturation {
     invoiceNumber: string;
     generatedAt: string;
     sentToERP: boolean;
+    erpExportDate?: string;
+    erpSystem?: string;
   };
   createdAt: string;
 }

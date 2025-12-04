@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { OrdersService } from '@rt/utils/lib/services/orders-service';
+import { OrdersService } from '@rt/utils';
 import type { ImportResult } from '@rt/contracts';
 
 interface ImportOrdersFormProps {

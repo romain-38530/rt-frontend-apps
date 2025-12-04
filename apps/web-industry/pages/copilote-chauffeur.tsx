@@ -714,6 +714,7 @@ const mockMission: CopiloteMission = {
     type: 'Palettes',
     weight: 15000,
     pallets: 33,
+    quantity: 33,
     description: 'Produits industriels',
   },
   route: {

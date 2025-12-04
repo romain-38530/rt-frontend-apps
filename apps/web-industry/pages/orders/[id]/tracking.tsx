@@ -8,9 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../../lib/auth';
 import { MapView, TrackingPanel } from '@rt/ui-components';
-import TrackingService from '@rt/utils/lib/services/tracking-service';
-import OrdersService from '@rt/utils/lib/services/orders-service';
-import { useWebSocket } from '@rt/utils/lib/hooks/useWebSocket';
+import { TrackingService, OrdersService, useWebSocket } from '@rt/utils';
 import type {
   TrackingSession,
   TrackingPosition,

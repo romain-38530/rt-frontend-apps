@@ -22,10 +22,15 @@ import {
 import { isAuthenticated, getUser } from '../lib/auth';
 import kpiApi, { IndustryKPIs, CarrierScore } from '@shared/services/kpi-api';
 
-interface IndustryKPIsExtended extends Partial<IndustryKPIs> {
+interface IndustryKPIsExtended {
   qualityOfService: {
     onTimeDeliveries: string;
     onTimePickups: string;
+    delayAnalysis?: {
+      carrierCaused: number;
+      logisticsCaused: number;
+      externalCaused: number;
+    };
     deliveryConformity: string;
     missingDocuments: number;
   };

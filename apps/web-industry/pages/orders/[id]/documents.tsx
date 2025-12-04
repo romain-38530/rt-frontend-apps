@@ -8,8 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../../lib/auth';
 import { FileUpload, DocumentsList, DocumentViewer } from '@rt/ui-components';
-import DocumentsService from '@rt/utils/lib/services/documents-service';
-import OrdersService from '@rt/utils/lib/services/orders-service';
+import { DocumentsService, OrdersService } from '@rt/utils';
 import type { Document, DocumentStats } from '@rt/contracts';
 import type { Order } from '@rt/contracts';
 

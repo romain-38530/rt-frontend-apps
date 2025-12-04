@@ -26,10 +26,12 @@ export interface TransportInfo {
 
 export interface CargoInfo {
   description: string;
+  type?: string; // type de marchandise
   weight: number; // en kg
   volume?: number; // en m³
   quantity: number;
   palettes?: number;
+  pallets?: number; // alias pour palettes
   packaging?: string;
   references?: string[];
   specialInstructions?: string;

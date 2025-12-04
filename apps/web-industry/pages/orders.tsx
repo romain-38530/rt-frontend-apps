@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { CreateOrderForm, OrdersList } from '@rt/ui-components';
-import OrdersService from '@rt/utils/lib/services/orders-service';
+import { OrdersService } from '@rt/utils';
 import type {
   Order,
   CreateOrderInput,
