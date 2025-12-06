@@ -5,6 +5,7 @@ import Logistician from '../models/Logistician';
 import LogisticianInvitation from '../models/LogisticianInvitation';
 import OrderAccess from '../models/OrderAccess';
 import User from '../models/User';
+import emailService from '../services/email-service';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -95,14 +96,23 @@ router.post('/invite', authenticate, async (req, res) => {
 
     await invitation.save();
 
-    // TODO: Envoyer email d'invitation
+    // Envoyer email d'invitation
     const invitationUrl = `${process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphonia.com'}/invitation/${invitation.token}`;
+
+    const emailSent = await emailService.sendLogisticianInvitation({
+      email: email.toLowerCase(),
+      industrialName,
+      companyName,
+      invitationUrl,
+      accessLevel: accessLevel || 'view',
+      message,
+    });
 
     res.status(201).json({
       invitationId: invitation.invitationId,
       invitationUrl,
       expiresAt: invitation.expiresAt,
-      emailSent: true, // TODO: vrai envoi d'email
+      emailSent,
     });
   } catch (error: any) {
     console.error('Erreur invitation:', error);
@@ -130,9 +140,18 @@ router.post('/invitations/:id/resend', authenticate, async (req, res) => {
     invitation.status = 'pending';
     await invitation.save();
 
-    // TODO: Renvoyer email
+    // Renvoyer email d'invitation
+    const invitationUrl = `${process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphonia.com'}/invitation/${invitation.token}`;
 
-    res.json({ success: true, expiresAt: invitation.expiresAt });
+    const emailSent = await emailService.sendLogisticianInvitation({
+      email: invitation.email,
+      industrialName: invitation.industrialName,
+      companyName: invitation.companyName,
+      invitationUrl,
+      accessLevel: invitation.accessLevel,
+    });
+
+    res.json({ success: true, expiresAt: invitation.expiresAt, emailSent });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
