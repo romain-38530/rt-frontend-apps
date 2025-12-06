@@ -4,7 +4,7 @@
 
 export const API_CONFIG = {
   // Authentication (authz service)
-  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://ddaywxps9n701.cloudfront.net',
+  AUTH_API: process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jfg8ri.cloudfront.net',
 
   // Planning Sites API - Sites, Docks, Slots, Driver Check-in
   PLANNING_API: process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net',
