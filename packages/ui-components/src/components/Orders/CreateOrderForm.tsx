@@ -12,6 +12,7 @@ import type {
   OrderDates,
   ConstraintType,
 } from '@rt/contracts';
+import { AddressAutocomplete, type AddressSuggestion } from '../AddressAutocomplete';
 
 export interface CreateOrderFormProps {
   onSubmit: (input: CreateOrderInput) => Promise<void>;
@@ -231,13 +232,26 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Rue *</label>
-                <input
-                  type="text"
+                <label style={labelStyle}>Adresse *</label>
+                <AddressAutocomplete
                   value={formData.pickupAddress.street}
-                  onChange={(e) => updatePickupAddress('street', e.target.value)}
-                  style={inputStyle}
-                  required
+                  onChange={(value) => updatePickupAddress('street', value)}
+                  onSelect={(suggestion: AddressSuggestion) => {
+                    setFormData({
+                      ...formData,
+                      pickupAddress: {
+                        ...formData.pickupAddress,
+                        street: suggestion.street,
+                        city: suggestion.city,
+                        postalCode: suggestion.postalCode,
+                        country: suggestion.country,
+                        latitude: suggestion.latitude,
+                        longitude: suggestion.longitude,
+                      },
+                    });
+                  }}
+                  placeholder="Rechercher une adresse..."
+                  inputStyle={inputStyle}
                 />
               </div>
 
@@ -363,13 +377,26 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Rue *</label>
-                <input
-                  type="text"
+                <label style={labelStyle}>Adresse *</label>
+                <AddressAutocomplete
                   value={formData.deliveryAddress.street}
-                  onChange={(e) => updateDeliveryAddress('street', e.target.value)}
-                  style={inputStyle}
-                  required
+                  onChange={(value) => updateDeliveryAddress('street', value)}
+                  onSelect={(suggestion: AddressSuggestion) => {
+                    setFormData({
+                      ...formData,
+                      deliveryAddress: {
+                        ...formData.deliveryAddress,
+                        street: suggestion.street,
+                        city: suggestion.city,
+                        postalCode: suggestion.postalCode,
+                        country: suggestion.country,
+                        latitude: suggestion.latitude,
+                        longitude: suggestion.longitude,
+                      },
+                    });
+                  }}
+                  placeholder="Rechercher une adresse..."
+                  inputStyle={inputStyle}
                 />
               </div>
 
