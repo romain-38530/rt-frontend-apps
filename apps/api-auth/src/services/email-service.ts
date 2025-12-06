@@ -31,35 +31,45 @@ export class EmailService {
   private smtpTransporter: nodemailer.Transporter | null = null;
 
   constructor(config?: Partial<EmailConfig>) {
+    // Configuration par défaut pour OVH SMTP
+    const defaultSmtpHost = 'ssl0.ovh.net';
+    const defaultSmtpPort = 465;
+    const defaultSmtpSecure = true;
+
     this.config = {
-      provider: (process.env.EMAIL_PROVIDER as EmailProvider) || config?.provider || 'mock',
-      // SMTP
-      smtpHost: config?.smtpHost || process.env.SMTP_HOST,
-      smtpPort: config?.smtpPort || Number(process.env.SMTP_PORT) || 587,
-      smtpSecure: config?.smtpSecure || process.env.SMTP_SECURE === 'true',
-      smtpUser: config?.smtpUser || process.env.SMTP_USER,
-      smtpPassword: config?.smtpPassword || process.env.SMTP_PASSWORD,
-      // OVH
+      // Par défaut on utilise SMTP (OVH)
+      provider: (process.env.EMAIL_PROVIDER as EmailProvider) || config?.provider || 'smtp',
+      // SMTP OVH par défaut
+      smtpHost: config?.smtpHost || process.env.SMTP_HOST || defaultSmtpHost,
+      smtpPort: config?.smtpPort || Number(process.env.SMTP_PORT) || defaultSmtpPort,
+      smtpSecure: config?.smtpSecure ?? (process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === undefined),
+      smtpUser: config?.smtpUser || process.env.SMTP_USER || process.env.OVH_EMAIL_USER,
+      smtpPassword: config?.smtpPassword || process.env.SMTP_PASSWORD || process.env.OVH_EMAIL_PASSWORD,
+      // OVH API (pour référence)
       ovhApplicationKey: config?.ovhApplicationKey || process.env.OVH_APP_KEY,
       ovhApplicationSecret: config?.ovhApplicationSecret || process.env.OVH_APP_SECRET,
       ovhConsumerKey: config?.ovhConsumerKey || process.env.OVH_CONSUMER_KEY,
-      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'rt-technologie.com',
+      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'music-music.fr',
       // Commun
-      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
-      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'RT Technologie',
+      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || process.env.OVH_EMAIL_USER || 'noreply@music-music.fr',
+      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'RT Technologie - SYMPHONI.A',
     };
 
-    // Initialiser SMTP si configuré
-    if (this.config.provider === 'smtp' && this.config.smtpHost) {
+    // Initialiser SMTP automatiquement si les credentials sont présents
+    if (this.config.smtpUser && this.config.smtpPassword) {
       this.smtpTransporter = nodemailer.createTransport({
         host: this.config.smtpHost,
         port: this.config.smtpPort,
         secure: this.config.smtpSecure,
         auth: {
-          user: this.config.smtpUser || '',
-          pass: this.config.smtpPassword || '',
+          user: this.config.smtpUser,
+          pass: this.config.smtpPassword,
         },
       });
+      console.log(`[EmailService] SMTP configuré avec ${this.config.smtpHost}:${this.config.smtpPort}`);
+    } else {
+      console.log('[EmailService] Mode mock - pas de credentials SMTP');
+      this.config.provider = 'mock';
     }
   }
 
