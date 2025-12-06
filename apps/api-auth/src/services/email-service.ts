@@ -49,9 +49,9 @@ export class EmailService {
       ovhApplicationKey: config?.ovhApplicationKey || process.env.OVH_APP_KEY,
       ovhApplicationSecret: config?.ovhApplicationSecret || process.env.OVH_APP_SECRET,
       ovhConsumerKey: config?.ovhConsumerKey || process.env.OVH_CONSUMER_KEY,
-      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'music-music.fr',
+      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'symphonia-controltower.com',
       // Commun
-      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || process.env.OVH_EMAIL_USER || 'noreply@music-music.fr',
+      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || process.env.OVH_EMAIL_USER || 'noreply@symphonia-controltower.com',
       fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'RT Technologie - SYMPHONI.A',
     };
 
@@ -64,6 +64,9 @@ export class EmailService {
         auth: {
           user: this.config.smtpUser,
           pass: this.config.smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false, // Accepter les certificats OVH
         },
       });
       console.log(`[EmailService] SMTP configuré avec ${this.config.smtpHost}:${this.config.smtpPort}`);

@@ -35,22 +35,22 @@ frontend:
       NEXT_PUBLIC_SITE_URL: 'https://transporter.symphonia-controltower.com'
       NEXT_PUBLIC_PORTAL_TYPE: 'transporter'
 
-      # Core APIs (Deployed)
-      NEXT_PUBLIC_API_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com/api'
-      NEXT_PUBLIC_ORDERS_API_URL: 'http://rt-orders-api-prod.eba-dbgatxmk.eu-central-1.elasticbeanstalk.com/api/v1'
-      NEXT_PUBLIC_AUTHZ_URL: 'http://rt-authz-api-prod.eba-smipp22d.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_TRACKING_API_URL: 'http://rt-tracking-api-prod.eba-mttbqqhw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'http://rt-appointments-api-prod.eba-b5rcxvcw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_DOCUMENTS_API_URL: 'http://rt-documents-api-prod.eba-xscabiv8.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_SCORING_API_URL: 'http://rt-scoring-api-prod.eba-ygb5kqyw.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_AFFRET_API_URL: 'http://rt-affret-ia-api-prod-v2.eba-quc9udpr.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_WS_URL: 'ws://rt-websocket-api-prod.eba-nedjyqk3.eu-central-1.elasticbeanstalk.com'
+      # Core APIs (CloudFront HTTPS)
+      NEXT_PUBLIC_API_URL: 'https://d2jgmccc3o2t9k.cloudfront.net/api'
+      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
+      NEXT_PUBLIC_AUTHZ_URL: 'https://d2jgmccc3o2t9k.cloudfront.net'
+      NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
+      NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
+      NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://d8987l284s9q4.cloudfront.net'
+      NEXT_PUBLIC_SCORING_API_URL: 'https://d1uyscmpcwc65a.cloudfront.net'
+      NEXT_PUBLIC_AFFRET_API_URL: 'https://d393yiia4ig3bw.cloudfront.net'
+      NEXT_PUBLIC_WS_URL: 'wss://d2aodzk1jwptdr.cloudfront.net'
 
-      # Transporter-specific APIs
-      NEXT_PUBLIC_ECMR_API: 'http://rt-ecmr-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_PLANNING_API_URL: 'http://rt-planning-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_CHATBOT_API_URL: 'http://rt-chatbot-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
-      NEXT_PUBLIC_BILLING_API: 'http://rt-billing-api-prod.eba-placeholder.eu-central-1.elasticbeanstalk.com'
+      # Transporter-specific APIs (CloudFront HTTPS)
+      NEXT_PUBLIC_ECMR_API: 'https://d28q05cx5hmg9q.cloudfront.net'
+      NEXT_PUBLIC_PLANNING_API_URL: 'https://dpw23bg2dclr1.cloudfront.net'
+      NEXT_PUBLIC_CHATBOT_API_URL: 'https://de1913kh0ya48.cloudfront.net'
+      NEXT_PUBLIC_BILLING_API: 'https://d1ciol606nbfs0.cloudfront.net'
 
       # Build
       NODE_VERSION: '20'
