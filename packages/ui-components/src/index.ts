@@ -79,9 +79,9 @@ export type {
   GeofenceStatus
 } from './components/Planning';
 
-// Address Autocomplete - API Adresse Gouv.fr
+// Address Autocomplete - API Adresse Gouv.fr + OpenStreetMap Nominatim
 export { AddressAutocomplete } from './components/AddressAutocomplete';
-export type { AddressAutocompleteProps, AddressSuggestion } from './components/AddressAutocomplete';
+export type { AddressAutocompleteProps, AddressSuggestion, AddressProvider } from './components/AddressAutocomplete';
 
 // Billing Components - Module Préfacturation & Facturation Transport
 export { PrefacturationList, DiscrepancyAlert, InvoiceUpload, DisputeManager, BlockingStatus, ERPExportButton } from './components/Billing';
