@@ -284,6 +284,64 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 />
               </div>
 
+              <div>
+                <label style={labelStyle}>Email du contact</label>
+                <input
+                  type="email"
+                  value={formData.pickupAddress.contactEmail}
+                  onChange={(e) => updatePickupAddress('contactEmail', e.target.value)}
+                  style={inputStyle}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+
+              {/* Accès portail expéditeur */}
+              {formData.pickupAddress.contactEmail && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        pickupAddress: {
+                          ...formData.pickupAddress,
+                          enablePortalAccess: !formData.pickupAddress.enablePortalAccess,
+                          portalRole: 'supplier',
+                        },
+                      });
+                    }}
+                    style={{
+                      padding: '16px',
+                      border: formData.pickupAddress.enablePortalAccess
+                        ? '2px solid #10b981'
+                        : '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: formData.pickupAddress.enablePortalAccess
+                        ? '#ecfdf5'
+                        : 'white',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.pickupAddress.enablePortalAccess || false}
+                        onChange={() => {}}
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                          Donner accès au Portail Expéditeur
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                          L'expéditeur recevra un email pour accéder au suivi de la commande
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Instructions de collecte</label>
                 <textarea
@@ -357,6 +415,64 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                   style={inputStyle}
                 />
               </div>
+
+              <div>
+                <label style={labelStyle}>Email du contact</label>
+                <input
+                  type="email"
+                  value={formData.deliveryAddress.contactEmail}
+                  onChange={(e) => updateDeliveryAddress('contactEmail', e.target.value)}
+                  style={inputStyle}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+
+              {/* Accès portail destinataire */}
+              {formData.deliveryAddress.contactEmail && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        deliveryAddress: {
+                          ...formData.deliveryAddress,
+                          enablePortalAccess: !formData.deliveryAddress.enablePortalAccess,
+                          portalRole: 'recipient',
+                        },
+                      });
+                    }}
+                    style={{
+                      padding: '16px',
+                      border: formData.deliveryAddress.enablePortalAccess
+                        ? '2px solid #10b981'
+                        : '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: formData.deliveryAddress.enablePortalAccess
+                        ? '#ecfdf5'
+                        : 'white',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.deliveryAddress.enablePortalAccess || false}
+                        onChange={() => {}}
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                          Donner accès au Portail Destinataire
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                          Le destinataire recevra un email pour accéder au suivi de la commande
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Instructions de livraison</label>

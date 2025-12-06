@@ -39,6 +39,26 @@ export interface Address {
   contactPhone?: string;
   contactEmail?: string;
   instructions?: string;
+  // Portal access configuration
+  enablePortalAccess?: boolean;
+  portalRole?: 'supplier' | 'recipient';
+}
+
+/**
+ * Portal invitation for sender/recipient access
+ */
+export interface PortalInvitation {
+  id: string;
+  orderId: string;
+  email: string;
+  phone?: string;
+  role: 'supplier' | 'recipient';
+  status: 'pending' | 'sent' | 'accepted' | 'expired';
+  token: string;
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt?: string;
+  userId?: string; // Linked user after acceptance
 }
 
 export interface Constraint {
@@ -106,6 +126,9 @@ export interface Order {
 
   // Documents
   documentIds: string[];
+
+  // Portal access for sender/recipient
+  portalInvitations?: PortalInvitation[];
 
   // Metadata
   createdAt: string;
