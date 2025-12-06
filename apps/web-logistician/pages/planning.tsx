@@ -232,26 +232,61 @@ export default function PlanningPage() {
     setSuccess('Demande rejetée');
   }, []);
 
-  const handleToggleDock = useCallback((dockId: string) => {
-    setDocks(prev => prev.map(dock =>
-      dock.id === dockId ? { ...dock, isActive: !dock.isActive } : dock
-    ));
+  const handleToggleDock = useCallback(async (dockId: string) => {
+    try {
+      const dock = docks.find(d => d.id === dockId);
+      if (!dock) return;
+
+      const newStatus = dock.isActive ? 'closed' : 'available';
+      await planningApi.updateDockStatus(dock.siteId, dockId, newStatus);
+
+      setDocks(prev => prev.map(d =>
+        d.id === dockId ? { ...d, isActive: !d.isActive } : d
+      ));
+      setSuccess(dock.isActive ? 'Quai fermé' : 'Quai ouvert');
+    } catch (err) {
+      console.error('Error toggling dock:', err);
+      // Fallback to local update
+      setDocks(prev => prev.map(dock =>
+        dock.id === dockId ? { ...dock, isActive: !dock.isActive } : dock
+      ));
+    }
+  }, [docks]);
+
+  const handleBlockSlot = useCallback(async (slotId: string) => {
+    try {
+      await planningApi.blockSlot(slotId, 'Bloqué par le logisticien');
+      setSlots(prev => prev.map(slot =>
+        slot.id === slotId ? { ...slot, status: 'blocked' as const } : slot
+      ));
+      setSuccess('Créneau bloqué');
+    } catch (err) {
+      console.error('Error blocking slot:', err);
+      // Fallback to local update
+      setSlots(prev => prev.map(slot =>
+        slot.id === slotId ? { ...slot, status: 'blocked' as const } : slot
+      ));
+      setSuccess('Créneau bloqué (local)');
+    }
+    setShowSlotModal(false);
   }, []);
 
-  const handleBlockSlot = useCallback((slotId: string) => {
-    setSlots(prev => prev.map(slot =>
-      slot.id === slotId ? { ...slot, status: 'blocked' as const } : slot
-    ));
+  const handleUnblockSlot = useCallback(async (slotId: string) => {
+    try {
+      await planningApi.unblockSlot(slotId);
+      setSlots(prev => prev.map(slot =>
+        slot.id === slotId ? { ...slot, status: 'available' as const } : slot
+      ));
+      setSuccess('Créneau débloqué');
+    } catch (err) {
+      console.error('Error unblocking slot:', err);
+      // Fallback to local update
+      setSlots(prev => prev.map(slot =>
+        slot.id === slotId ? { ...slot, status: 'available' as const } : slot
+      ));
+      setSuccess('Créneau débloqué (local)');
+    }
     setShowSlotModal(false);
-    setSuccess('Créneau bloqué');
-  }, []);
-
-  const handleUnblockSlot = useCallback((slotId: string) => {
-    setSlots(prev => prev.map(slot =>
-      slot.id === slotId ? { ...slot, status: 'available' as const } : slot
-    ));
-    setShowSlotModal(false);
-    setSuccess('Créneau débloqué');
   }, []);
 
   // Stats calculations

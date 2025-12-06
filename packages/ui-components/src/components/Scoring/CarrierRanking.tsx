@@ -5,7 +5,7 @@
 
 import React from 'react';
 import type { CarrierRanking as RankingType, RankingList } from '@rt/contracts';
-import ScoringService from '@rt/utils/lib/services/scoring-service';
+import { ScoringService } from '@rt/utils';
 
 interface CarrierRankingProps {
   ranking: RankingList;

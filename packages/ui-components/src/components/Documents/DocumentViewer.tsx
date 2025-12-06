@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import type { Document } from '@rt/contracts';
-import DocumentsService from '@rt/utils/lib/services/documents-service';
+import { DocumentsService } from '@rt/utils';
 
 interface DocumentViewerProps {
   document: Document;

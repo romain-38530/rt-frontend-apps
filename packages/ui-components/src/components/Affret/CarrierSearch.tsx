@@ -9,7 +9,7 @@ import type {
   CarrierSearchResult,
   AffretCarrier,
 } from '@rt/contracts';
-import AffretIAService from '@rt/utils/lib/services/affret-ia-service';
+import { AffretIAService } from '@rt/utils';
 
 interface CarrierSearchProps {
   initialRequest?: Partial<CarrierSearchRequest>;

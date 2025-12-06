@@ -441,9 +441,15 @@ importers:
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
+      '@types/jsonwebtoken':
+        specifier: ^9.0.5
+        version: 9.0.10
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.25
+      '@types/uuid':
+        specifier: ^9.0.7
+        version: 9.0.8
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -453,12 +459,18 @@ importers:
       express:
         specifier: ^4.18.2
         version: 4.21.2
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
       mongoose:
         specifier: ^8.0.0
         version: 8.20.1
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
+      uuid:
+        specifier: ^9.0.0
+        version: 9.0.1
     devDependencies:
       tsx:
         specifier: ^4.7.0

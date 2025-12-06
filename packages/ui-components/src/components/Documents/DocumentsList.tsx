@@ -9,7 +9,7 @@ import type {
   DocumentType,
   DocumentStatus,
 } from '@rt/contracts';
-import DocumentsService from '@rt/utils/lib/services/documents-service';
+import { DocumentsService } from '@rt/utils';
 
 interface DocumentsListProps {
   documents: Document[];

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import type { TimelineDataPoint } from '@rt/contracts';
-import ScoringService from '@rt/utils/lib/services/scoring-service';
+import { ScoringService } from '@rt/utils';
 
 interface PerformanceChartProps {
   data: TimelineDataPoint[];
