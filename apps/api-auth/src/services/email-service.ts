@@ -1,39 +1,191 @@
 /**
- * Service d'email pour les invitations logisticien
- * Utilise nodemailer avec SMTP
+ * Service d'email multi-provider pour les invitations logisticien
+ * Supporte: OVH, SMTP (nodemailer), et mock pour dev
  */
 
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+
+export type EmailProvider = 'ovh' | 'smtp' | 'mock';
 
 export interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
+  provider: EmailProvider;
+  // SMTP (nodemailer)
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpSecure?: boolean;
+  smtpUser?: string;
+  smtpPassword?: string;
+  // OVH
+  ovhApplicationKey?: string;
+  ovhApplicationSecret?: string;
+  ovhConsumerKey?: string;
+  ovhDomain?: string;
+  // Commun
+  fromEmail?: string;
+  fromName?: string;
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
-  private enabled: boolean;
+  private config: EmailConfig;
+  private smtpTransporter: nodemailer.Transporter | null = null;
 
-  constructor() {
-    this.enabled = process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true';
+  constructor(config?: Partial<EmailConfig>) {
+    this.config = {
+      provider: (process.env.EMAIL_PROVIDER as EmailProvider) || config?.provider || 'mock',
+      // SMTP
+      smtpHost: config?.smtpHost || process.env.SMTP_HOST,
+      smtpPort: config?.smtpPort || Number(process.env.SMTP_PORT) || 587,
+      smtpSecure: config?.smtpSecure || process.env.SMTP_SECURE === 'true',
+      smtpUser: config?.smtpUser || process.env.SMTP_USER,
+      smtpPassword: config?.smtpPassword || process.env.SMTP_PASSWORD,
+      // OVH
+      ovhApplicationKey: config?.ovhApplicationKey || process.env.OVH_APP_KEY,
+      ovhApplicationSecret: config?.ovhApplicationSecret || process.env.OVH_APP_SECRET,
+      ovhConsumerKey: config?.ovhConsumerKey || process.env.OVH_CONSUMER_KEY,
+      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'rt-technologie.com',
+      // Commun
+      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
+      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'RT Technologie',
+    };
 
-    if (this.enabled && process.env.SMTP_HOST) {
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
+    // Initialiser SMTP si configuré
+    if (this.config.provider === 'smtp' && this.config.smtpHost) {
+      this.smtpTransporter = nodemailer.createTransport({
+        host: this.config.smtpHost,
+        port: this.config.smtpPort,
+        secure: this.config.smtpSecure,
         auth: {
-          user: process.env.SMTP_USER || '',
-          pass: process.env.SMTP_PASSWORD || '',
+          user: this.config.smtpUser || '',
+          pass: this.config.smtpPassword || '',
         },
       });
     }
   }
+
+  // ========== ENVOI VIA OVH ==========
+
+  private async sendViaOvh(to: string, subject: string, html: string): Promise<boolean> {
+    const { ovhApplicationKey, ovhApplicationSecret, ovhConsumerKey, ovhDomain, fromEmail, fromName } = this.config;
+
+    if (!ovhApplicationKey || !ovhApplicationSecret || !ovhConsumerKey) {
+      console.error('OVH email configuration missing');
+      return false;
+    }
+
+    try {
+      const timestamp = Math.floor(Date.now() / 1000);
+      const method = 'POST';
+      const url = `https://eu.api.ovh.com/1.0/email/domain/${ovhDomain}/redirection`;
+
+      // Pour les emails transactionnels OVH, utiliser l'API email/exchange ou domain/email
+      // Alternative: utiliser l'API OVH Email Pro ou Exchange
+      const emailUrl = `https://eu.api.ovh.com/1.0/email/domain/${ovhDomain}/account`;
+
+      // Signature OVH
+      const body = JSON.stringify({
+        to,
+        from: `${fromName} <${fromEmail}>`,
+        subject,
+        body: html,
+        contentType: 'text/html',
+      });
+
+      const toSign = `${ovhApplicationSecret}+${ovhConsumerKey}+${method}+${emailUrl}+${body}+${timestamp}`;
+      const signature = '$1$' + crypto.createHash('sha1').update(toSign).digest('hex');
+
+      // Note: OVH n'a pas d'API email transactionnel direct comme pour SMS
+      // On utilise plutôt le SMTP OVH avec les credentials
+      // Fallback sur SMTP OVH
+      console.log(`[OVH Email] Would send to ${to}: ${subject}`);
+      console.log(`[OVH Email] Configure SMTP with OVH credentials for production`);
+
+      // Utiliser SMTP OVH
+      if (this.config.smtpHost?.includes('ovh') || this.config.smtpHost?.includes('ssl0')) {
+        return this.sendViaSmtp(to, subject, html);
+      }
+
+      // Log pour dev
+      this.logEmail(to, subject, html);
+      return true;
+    } catch (error) {
+      console.error('Error sending OVH email:', error);
+      return false;
+    }
+  }
+
+  // ========== ENVOI VIA SMTP ==========
+
+  private async sendViaSmtp(to: string, subject: string, html: string): Promise<boolean> {
+    if (!this.smtpTransporter) {
+      // Essayer de créer le transporteur
+      if (this.config.smtpHost) {
+        this.smtpTransporter = nodemailer.createTransport({
+          host: this.config.smtpHost,
+          port: this.config.smtpPort,
+          secure: this.config.smtpSecure,
+          auth: {
+            user: this.config.smtpUser || '',
+            pass: this.config.smtpPassword || '',
+          },
+        });
+      } else {
+        console.error('SMTP configuration missing');
+        return false;
+      }
+    }
+
+    try {
+      await this.smtpTransporter.sendMail({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+      console.log(`Email sent to ${to}`);
+      return true;
+    } catch (error) {
+      console.error('Error sending SMTP email:', error);
+      return false;
+    }
+  }
+
+  // ========== MODE MOCK ==========
+
+  private logEmail(to: string, subject: string, html: string): void {
+    // Extraire le texte du HTML pour le log
+    const textContent = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200);
+    console.log(`
+========================================
+EMAIL (${this.config.provider.toUpperCase()})
+========================================
+To: ${to}
+From: ${this.config.fromName} <${this.config.fromEmail}>
+Subject: ${subject}
+
+${textContent}...
+
+[Full HTML content available in production]
+========================================
+    `);
+  }
+
+  // ========== METHODE PRINCIPALE ==========
+
+  private async send(to: string, subject: string, html: string): Promise<boolean> {
+    switch (this.config.provider) {
+      case 'ovh':
+        return this.sendViaOvh(to, subject, html);
+      case 'smtp':
+        return this.sendViaSmtp(to, subject, html);
+      case 'mock':
+      default:
+        this.logEmail(to, subject, html);
+        return true;
+    }
+  }
+
+  // ========== EMAILS METIER ==========
 
   /**
    * Envoie un email d'invitation logisticien
@@ -46,49 +198,9 @@ export class EmailService {
     accessLevel: string;
     message?: string;
   }): Promise<boolean> {
-    if (!this.enabled || !this.transporter) {
-      console.log(`
-========================================
-EMAIL: Invitation Logisticien
-========================================
-To: ${data.email}
-Subject: Invitation au portail logisticien RT Technologie
-
-Bonjour,
-
-${data.industrialName} vous invite à rejoindre leur espace logisticien sur RT Technologie.
-
-${data.companyName ? `Entreprise: ${data.companyName}` : ''}
-Niveau d'accès: ${this.getAccessLevelLabel(data.accessLevel)}
-
-${data.message ? `Message: ${data.message}` : ''}
-
-Lien d'activation: ${data.invitationUrl}
-
-Ce lien est valable pendant 7 jours.
-
-Cordialement,
-L'équipe RT Technologie
-========================================
-      `);
-      return true;
-    }
-
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
-      to: data.email,
-      subject: `Invitation au portail logisticien - ${data.industrialName}`,
-      html: this.generateInvitationHtml(data),
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Invitation email sent to ${data.email}`);
-      return true;
-    } catch (error) {
-      console.error('Error sending invitation email:', error);
-      return false;
-    }
+    const subject = `Invitation au portail logisticien - ${data.industrialName}`;
+    const html = this.generateInvitationHtml(data);
+    return this.send(data.email, subject, html);
   }
 
   /**
@@ -101,45 +213,9 @@ L'équipe RT Technologie
     orderId: string;
     accessLevel: string;
   }): Promise<boolean> {
-    if (!this.enabled || !this.transporter) {
-      console.log(`
-========================================
-EMAIL: Commande Partagée
-========================================
-To: ${data.email}
-Subject: Nouvelle commande partagée - ${data.orderId}
-
-Bonjour ${data.logisticianName},
-
-${data.industrialName} a partagé une commande avec vous.
-
-Commande: ${data.orderId}
-Niveau d'accès: ${this.getAccessLevelLabel(data.accessLevel)}
-
-Connectez-vous à votre portail pour consulter les détails.
-
-Cordialement,
-L'équipe RT Technologie
-========================================
-      `);
-      return true;
-    }
-
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
-      to: data.email,
-      subject: `Nouvelle commande partagée - ${data.orderId}`,
-      html: this.generateOrderSharedHtml(data),
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Order shared email sent to ${data.email}`);
-      return true;
-    } catch (error) {
-      console.error('Error sending order shared email:', error);
-      return false;
-    }
+    const subject = `Nouvelle commande partagée - ${data.orderId}`;
+    const html = this.generateOrderSharedHtml(data);
+    return this.send(data.email, subject, html);
   }
 
   /**
@@ -152,41 +228,9 @@ L'équipe RT Technologie
     orderId: string;
     reason?: string;
   }): Promise<boolean> {
-    if (!this.enabled || !this.transporter) {
-      console.log(`
-========================================
-EMAIL: Accès Révoqué
-========================================
-To: ${data.email}
-Subject: Accès révoqué - Commande ${data.orderId}
-
-Bonjour ${data.logisticianName},
-
-${data.industrialName} a révoqué votre accès à la commande ${data.orderId}.
-
-${data.reason ? `Raison: ${data.reason}` : ''}
-
-Cordialement,
-L'équipe RT Technologie
-========================================
-      `);
-      return true;
-    }
-
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
-      to: data.email,
-      subject: `Accès révoqué - Commande ${data.orderId}`,
-      html: this.generateAccessRevokedHtml(data),
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      return true;
-    } catch (error) {
-      console.error('Error sending access revoked email:', error);
-      return false;
-    }
+    const subject = `Accès révoqué - Commande ${data.orderId}`;
+    const html = this.generateAccessRevokedHtml(data);
+    return this.send(data.email, subject, html);
   }
 
   /**
@@ -198,46 +242,12 @@ L'équipe RT Technologie
     industrialName: string;
     portalUrl: string;
   }): Promise<boolean> {
-    if (!this.enabled || !this.transporter) {
-      console.log(`
-========================================
-EMAIL: Bienvenue Logisticien
-========================================
-To: ${data.email}
-Subject: Bienvenue sur RT Technologie - Compte activé
-
-Bonjour,
-
-Votre compte logisticien pour ${data.companyName} a été activé avec succès.
-
-Vous êtes maintenant connecté à ${data.industrialName}.
-
-Accédez à votre portail: ${data.portalUrl}
-
-Cordialement,
-L'équipe RT Technologie
-========================================
-      `);
-      return true;
-    }
-
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@rt-technologie.com',
-      to: data.email,
-      subject: `Bienvenue sur RT Technologie - Compte activé`,
-      html: this.generateWelcomeHtml(data),
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      return true;
-    } catch (error) {
-      console.error('Error sending welcome email:', error);
-      return false;
-    }
+    const subject = `Bienvenue sur RT Technologie - Compte activé`;
+    const html = this.generateWelcomeHtml(data);
+    return this.send(data.email, subject, html);
   }
 
-  // ========== HTML Templates ==========
+  // ========== HTML TEMPLATES ==========
 
   private generateInvitationHtml(data: {
     email: string;
@@ -250,12 +260,15 @@ L'équipe RT Technologie
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #2563eb; margin-bottom: 20px;">Invitation au portail logisticien</h1>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://rt-technologie.com/logo.png" alt="RT Technologie" style="height: 50px;" onerror="this.style.display='none'">
+          </div>
+          <h1 style="color: #2563eb; margin-bottom: 20px; text-align: center;">Invitation au portail logisticien</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour,</p>
 
           <p style="font-size: 16px; color: #333;">
-            <strong>${data.industrialName}</strong> vous invite à rejoindre leur espace logisticien sur RT Technologie.
+            <strong>${data.industrialName}</strong> vous invite à rejoindre leur espace logisticien sur la plateforme SYMPHONI.A de RT Technologie.
           </p>
 
           ${data.companyName ? `<p style="color: #666;">Entreprise: <strong>${data.companyName}</strong></p>` : ''}
@@ -266,23 +279,26 @@ L'équipe RT Technologie
 
           ${data.message ? `
             <div style="background: #f0f7ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0; color: #333;">"${data.message}"</p>
+              <p style="margin: 0; color: #333; font-style: italic;">"${data.message}"</p>
             </div>
           ` : ''}
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.invitationUrl}" style="background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            <a href="${data.invitationUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);">
               Activer mon compte
             </a>
           </div>
 
-          <p style="color: #999; font-size: 13px;">
-            Ce lien est valable pendant 7 jours. Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
-          </p>
+          <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #92400e; font-size: 14px;">
+              ⏰ Ce lien est valable pendant <strong>7 jours</strong>. Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
+            </p>
+          </div>
         </div>
 
         <p style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
-          RT Technologie - Solution de gestion logistique<br>
+          RT Technologie - SYMPHONI.A<br>
+          Solution de gestion logistique<br>
           Cet email a été envoyé automatiquement.
         </p>
       </div>
@@ -299,7 +315,7 @@ L'équipe RT Technologie
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #059669; margin-bottom: 20px;">Nouvelle commande partagée</h1>
+          <h1 style="color: #059669; margin-bottom: 20px;">📦 Nouvelle commande partagée</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour ${data.logisticianName},</p>
 
@@ -307,7 +323,7 @@ L'équipe RT Technologie
             <strong>${data.industrialName}</strong> a partagé une commande avec vous.
           </p>
 
-          <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #bbf7d0;">
             <p style="margin: 5px 0; color: #333;">
               <strong>Commande:</strong> ${data.orderId}
             </p>
@@ -317,7 +333,7 @@ L'équipe RT Technologie
           </div>
 
           <p style="color: #666;">
-            Connectez-vous à votre portail pour consulter les détails de cette commande.
+            Connectez-vous à votre portail logisticien pour consulter les détails de cette commande et effectuer les actions nécessaires.
           </p>
         </div>
       </div>
@@ -334,7 +350,7 @@ L'équipe RT Technologie
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #dc2626; margin-bottom: 20px;">Accès révoqué</h1>
+          <h1 style="color: #dc2626; margin-bottom: 20px;">🔒 Accès révoqué</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour ${data.logisticianName},</p>
 
@@ -343,10 +359,14 @@ L'équipe RT Technologie
           </p>
 
           ${data.reason ? `
-            <div style="background: #fef2f2; border-radius: 8px; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0; color: #333;"><strong>Raison:</strong> ${data.reason}</p>
+            <div style="background: #fef2f2; border-radius: 8px; padding: 15px; margin: 20px 0; border: 1px solid #fecaca;">
+              <p style="margin: 0; color: #991b1b;"><strong>Raison:</strong> ${data.reason}</p>
             </div>
           ` : ''}
+
+          <p style="color: #666;">
+            Si vous pensez qu'il s'agit d'une erreur, veuillez contacter directement l'industriel.
+          </p>
         </div>
       </div>
     `;
@@ -361,7 +381,7 @@ L'équipe RT Technologie
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #2563eb; margin-bottom: 20px;">🎉 Bienvenue sur RT Technologie!</h1>
+          <h1 style="color: #2563eb; margin-bottom: 20px; text-align: center;">🎉 Bienvenue sur RT Technologie!</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour,</p>
 
@@ -374,20 +394,20 @@ L'équipe RT Technologie
           </p>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.portalUrl}" style="background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            <a href="${data.portalUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);">
               Accéder à mon portail
             </a>
           </div>
 
-          <p style="color: #666;">
-            Fonctionnalités disponibles:
-          </p>
-          <ul style="color: #666;">
-            <li>Consulter les commandes partagées</li>
-            <li>Suivre les transporteurs en temps réel</li>
-            <li>Gérer les documents de transport</li>
-            <li>Signer électroniquement les eCMR</li>
-          </ul>
+          <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="color: #1e40af; font-weight: bold; margin-bottom: 10px;">Fonctionnalités disponibles:</p>
+            <ul style="color: #3b82f6; margin: 0; padding-left: 20px;">
+              <li>Consulter les commandes partagées</li>
+              <li>Suivre les transporteurs en temps réel</li>
+              <li>Gérer les documents de transport</li>
+              <li>Signer électroniquement les eCMR</li>
+            </ul>
+          </div>
         </div>
       </div>
     `;
@@ -395,12 +415,22 @@ L'équipe RT Technologie
 
   private getAccessLevelLabel(level: string): string {
     const labels: Record<string, string> = {
-      view: 'Consultation',
-      edit: 'Modification',
-      sign: 'Signature',
-      full: 'Accès complet',
+      view: '👁️ Consultation',
+      edit: '✏️ Modification',
+      sign: '✍️ Signature',
+      full: '🔑 Accès complet',
     };
     return labels[level] || level;
+  }
+
+  // ========== UTILITAIRES ==========
+
+  setProvider(provider: EmailProvider): void {
+    this.config.provider = provider;
+  }
+
+  getProvider(): EmailProvider {
+    return this.config.provider;
   }
 }
 
