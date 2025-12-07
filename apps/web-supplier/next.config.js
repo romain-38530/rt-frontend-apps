@@ -21,7 +21,7 @@ const nextConfig = {
 
   // Désactiver TypeScript checking pendant le build
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // Désactiver optimisation des polices Google

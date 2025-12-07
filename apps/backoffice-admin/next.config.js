@@ -5,6 +5,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
 
+  // Transpile workspace packages (méthode recommandée par Next.js)
+  transpilePackages: ['@rt/ui-components', '@rt/contracts', '@rt/utils', '@rt/shared'],
+
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
   output: 'export',
 
@@ -18,9 +21,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Désactiver TypeScript checking pendant le build
+  // TypeScript checking activé pendant le build
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // Désactiver optimisation des polices Google
@@ -34,31 +37,9 @@ const nextConfig = {
     NEXT_PUBLIC_AUTHZ_URL: process.env.NEXT_PUBLIC_AUTHZ_URL || 'https://ddaywxps9n701.cloudfront.net',
   },
 
-  // Configuration webpack pour transpiler TypeScript externe
-  webpack: (config, { isServer }) => {
-    // Alias pour @shared et @rt/ui-components
+  // Configuration webpack pour alias @shared
+  webpack: (config) => {
     config.resolve.alias['@shared'] = path.resolve(__dirname, '../../packages/shared');
-    config.resolve.alias['@rt/ui-components'] = path.resolve(__dirname, '../../packages/ui-components/dist');
-
-    // Transpiler les fichiers TypeScript du dossier src/ root et packages/shared
-    config.module.rules.push({
-      test: /\.(ts|tsx)$/,
-      include: [
-        path.resolve(__dirname, '../../src'),
-        path.resolve(__dirname, '../../packages/shared'),
-      ],
-      use: {
-        loader: 'babel-loader',
-        options: {
-          presets: [
-            '@babel/preset-env',
-            '@babel/preset-typescript',
-            ['@babel/preset-react', { runtime: 'automatic' }],
-          ],
-        },
-      },
-    });
-
     return config;
   },
 };

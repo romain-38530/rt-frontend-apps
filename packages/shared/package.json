@@ -1,0 +1,26 @@
+{
+  "name": "@rt/shared",
+  "version": "1.0.0",
+  "description": "RT Technologie - Shared components and services",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./components/billing": "./components/billing/index.ts",
+    "./components/kpi": "./components/kpi/index.ts",
+    "./services/*": "./services/*.ts"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "typescript": "^5.4.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
