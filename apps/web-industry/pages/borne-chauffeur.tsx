@@ -353,7 +353,7 @@ export default function BorneChauffeurPage() {
           margin: '0 auto'
         }}>
           {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             {[
               { label: 'En attente', value: stats.waiting, icon: '⏳', color: '#FFB800' },
               { label: 'Aux quais', value: stats.atDock, icon: '🚚', color: '#00D084' },

@@ -241,7 +241,7 @@ export const DisputeManager: React.FC<DisputeManagerProps> = ({
 
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                 gap: '16px',
                 marginTop: '16px',
               }}>

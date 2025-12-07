@@ -111,7 +111,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           borderRadius: '8px',
           cursor: 'pointer',
           color: 'white',
-          transition: 'all 0.2s',
+          transition: 'all 0.2s ease',
           transform: isRinging ? 'rotate(10deg)' : 'rotate(0deg)',
         }}
         aria-label={`Notifications (${unreadCount} non lues)`}
@@ -277,18 +277,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       borderBottom: '1px solid #e5e7eb',
                       cursor: notification.actionUrl ? 'pointer' : 'default',
                       background: notification.read ? 'white' : '#f0f9ff',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                       position: 'relative',
                     }}
                     onMouseEnter={(e) => {
                       if (notification.actionUrl) {
                         e.currentTarget.style.background = notification.read ? '#f9fafb' : '#e0f2fe';
                       }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = notification.read ? 'white' : '#f0f9ff';
-                    }}
-                  >
+                    }}>
                     {!notification.read && (
                       <div
                         style={{

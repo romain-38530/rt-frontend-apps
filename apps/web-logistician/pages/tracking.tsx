@@ -544,7 +544,7 @@ export default function TrackingPage() {
               {/* Enregistrer position manuelle */}
               <div style={cardStyle}>
                 <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Enregistrer Position Manuelle</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
                   <input
                     style={inputStyle}
                     placeholder="ID Commande *"
@@ -742,7 +742,7 @@ export default function TrackingPage() {
 
               <div style={{ marginTop: '32px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>Statuts declenches automatiquement</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
                   <div style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px' }}>
                     <div style={{ fontWeight: '600' }}>Entree zone enlevement</div>
                     <div style={{ fontSize: '12px', opacity: 0.7 }}>Declenche: order.arrived.pickup</div>

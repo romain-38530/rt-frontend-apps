@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { affretIaApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface BourseOffer {
   id: string;
@@ -49,6 +50,7 @@ interface BourseOffer {
 
 export default function BoursePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [offers, setOffers] = useState<BourseOffer[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<BourseOffer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,13 +182,13 @@ export default function BoursePage() {
         message: proposalData.message,
       });
 
-      alert('Proposition envoyée avec succès !');
+      toast.success('Proposition envoyée avec succès !');
       setShowProposalModal(false);
       setSelectedOffer(null);
       setProposalData({ proposedPrice: '', message: '', pickupDate: '', deliveryDate: '' });
     } catch (err) {
       console.error('Error submitting proposal:', err);
-      alert('Erreur lors de l\'envoi de la proposition');
+      toast.error('Erreur lors de l\'envoi de la proposition');
     }
   };
 
@@ -376,19 +378,10 @@ export default function BoursePage() {
                     borderRadius: '16px',
                     padding: '24px',
                     border: '1px solid rgba(255,255,255,0.1)',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.2s ease',
                     cursor: 'pointer',
                   }}
-                  onClick={() => setSelectedOffer(offer)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
+                  onClick={() => setSelectedOffer(offer)}>
                   {/* Industriel (expéditeur) */}
                   {offer.industrialName && (
                     <div style={{

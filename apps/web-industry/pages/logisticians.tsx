@@ -200,7 +200,7 @@ export default function LogisticiansPage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
           <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <div style={{ color: '#64748b', fontSize: '14px' }}>Total logisticiens</div>
             <div style={{ fontSize: '32px', fontWeight: '700', color: '#1e293b' }}>{logisticians.length}</div>

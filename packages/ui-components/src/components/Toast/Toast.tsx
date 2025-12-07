@@ -70,7 +70,7 @@ export const Toast: React.FC<ToastProps> = ({ id, message, type, duration = 4000
   return (
     <div
       role="alert"
-      aria-live="polite"
+      aria-live="assertive"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -131,10 +131,7 @@ export const Toast: React.FC<ToastProps> = ({ id, message, type, duration = 4000
           fontSize: '12px',
           flexShrink: 0,
           transition: 'background 0.2s',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)')}
-      >
+        }}>
         ✕
       </button>
 

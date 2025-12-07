@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useToast } from '@rt/ui-components';
 import {
   FileText,
   Upload,
@@ -129,6 +130,7 @@ const BLOCK_LABELS: Record<string, string> = {
 };
 
 export default function BillingPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'prefacturations' | 'upload' | 'vigilance'>('dashboard');
   const [prefacturations, setPrefacturations] = useState<Prefacturation[]>([]);
   const [vigilanceDocuments, setVigilanceDocuments] = useState<VigilanceDocument[]>([]);
@@ -206,14 +208,14 @@ export default function BillingPage() {
 
       if (response.ok) {
         await fetchData();
-        alert('Facture uploadée avec succès. Analyse OCR en cours...');
+        toast.success('Facture uploadée avec succès. Analyse OCR en cours...');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.message}`);
+        toast.error(`Erreur: ${error.message}`);
       }
     } catch (error) {
       console.error('Erreur upload:', error);
-      alert('Erreur lors de l\'upload');
+      toast.error('Erreur lors de l\'upload');
     } finally {
       setUploadingInvoice(null);
     }
@@ -236,7 +238,7 @@ export default function BillingPage() {
         await fetchData();
         setContestationModal(null);
         setContestationReason('');
-        alert('Contestation soumise avec succès');
+        toast.success('Contestation soumise avec succès');
       }
     } catch (error) {
       console.error('Erreur contestation:', error);
@@ -273,7 +275,7 @@ export default function BillingPage() {
 
       if (response.ok) {
         await fetchData();
-        alert('Document vigilance uploadé avec succès');
+        toast.success('Document vigilance uploadé avec succès');
       }
     } catch (error) {
       console.error('Erreur upload vigilance:', error);

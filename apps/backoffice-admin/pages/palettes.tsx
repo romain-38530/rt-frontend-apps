@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useToast } from '@rt/ui-components';
 import {
   palettesAdminApi,
   PalletCheque,
@@ -30,6 +31,7 @@ const ChequeExportButton = dynamic<any>(
 type Tab = 'dashboard' | 'cheques' | 'ledgers' | 'sites' | 'disputes' | 'analytics' | 'scan' | 'map';
 
 export default function PalettesAdmin() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +99,7 @@ export default function PalettesAdmin() {
       const sitesData = await palettesAdminApi.getSites();
       setSites(sitesData);
 
-      alert('Quota mis à jour avec succès');
+      toast.success('Quota mis à jour avec succès');
     } catch (e: any) {
       setError(e.message);
     }
@@ -135,14 +137,14 @@ export default function PalettesAdmin() {
       // Not JSON, use as-is
     }
     setScannedChequeId(chequeId);
-    alert(`Chèque scanné: ${chequeId}\nCe chèque peut maintenant être vérifié dans le système.`);
+    toast.success(`Chèque scanné: ${chequeId}. Ce chèque peut maintenant être vérifié dans le système.`);
   }, []);
 
   // Handle signature capture (admin validation)
   const handleSignatureCapture = useCallback((signatureData: any) => {
     if (!signatureForCheque) return;
     console.log('Admin signature captured for cheque:', signatureForCheque, signatureData);
-    alert(`Signature admin enregistrée pour le chèque ${signatureForCheque}`);
+    toast.success(`Signature admin enregistrée pour le chèque ${signatureForCheque}`);
     setShowSignature(false);
     setSignatureForCheque(null);
   }, [signatureForCheque]);
@@ -519,7 +521,7 @@ export default function PalettesAdmin() {
                   </div>
                   {d.status === 'OPEN' && (
                     <button
-                      onClick={() => alert('Fonctionnalité de résolution à implémenter')}
+                      onClick={() => toast.info('Fonctionnalité de résolution à implémenter')}
                       style={{
                         marginTop: 12,
                         padding: '8px 12px',

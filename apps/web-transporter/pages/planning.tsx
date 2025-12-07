@@ -517,7 +517,7 @@ export default function PlanningPage() {
                 alignItems: 'center',
                 gap: '8px',
                 whiteSpace: 'nowrap',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s ease',
               }}
             >
               <span>{tab.icon}</span>

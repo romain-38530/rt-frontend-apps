@@ -761,7 +761,7 @@ function OpportunityCard({ need, onView }: { need: StorageNeed; onView: () => vo
         gap: '20px',
         alignItems: 'center',
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'all 0.2s ease',
       }}
     >
       <div>

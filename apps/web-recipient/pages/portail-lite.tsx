@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useToast } from '@rt/ui-components';
 
 // Types
 interface Delivery {
@@ -55,6 +56,7 @@ const faqs = [
 ];
 
 export default function PortailLiteDestinataire() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'deliveries' | 'slots' | 'support'>('dashboard');
   const [deliveries, setDeliveries] = useState<Delivery[]>(mockDeliveries);
   const [slots] = useState<Slot[]>(mockSlots);
@@ -77,7 +79,7 @@ export default function PortailLiteDestinataire() {
   };
 
   const confirmSlot = (slotId: string) => {
-    alert(`Disponibilite confirmee pour le creneau ${slotId}`);
+    toast.success(`Disponibilité confirmée pour le créneau ${slotId}`);
   };
 
   const showUpgrade = () => setShowUpgradeModal(true);

@@ -363,7 +363,7 @@ export const InvoiceUpload: React.FC<InvoiceUploadProps> = ({
           <div style={{ padding: '20px' }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
               gap: '16px',
               marginBottom: '24px',
             }}>

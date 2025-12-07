@@ -355,7 +355,7 @@ export default function DispatchConfigPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div style={{ padding: '24px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          <div style={{ padding: '24px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
             <div style={cardStyle}>
               <div style={{ fontSize: '32px', fontWeight: '800', color: '#667eea' }}>{stats.totalOrders}</div>
               <div style={{ fontSize: '12px', color: '#6b7280' }}>Commandes totales</div>
@@ -708,7 +708,7 @@ export default function DispatchConfigPage() {
                 Tarification Tracking
               </h2>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 {Object.values(dispatchApi.TRACKING_PRICING).map((pricing) => (
                   <div
                     key={pricing.level}
@@ -802,7 +802,7 @@ export default function DispatchConfigPage() {
 
               <div style={{ padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>Documents archives</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                   <div style={{ textAlign: 'center', padding: '16px', backgroundColor: 'white', borderRadius: '8px' }}>
                     <div style={{ fontSize: '28px', fontWeight: '800', color: '#667eea' }}>1,245</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Total archives</div>

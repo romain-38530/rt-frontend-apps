@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@rt/ui-components';
 
 // Types
 interface Document {
@@ -54,6 +55,7 @@ function CarrierDetailsContent() {
   const searchParams = useSearchParams();
   const carrierId = searchParams.get('id') || '';
 
+  const { toast } = useToast();
   const [carrier, setCarrier] = useState<Carrier | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -98,13 +100,13 @@ function CarrierDetailsContent() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`Onboarding réussi ! Score: ${data.score}`);
+        toast.success(`Onboarding réussi ! Score: ${data.score}`);
         fetchCarrier();
       } else {
-        alert(`Erreur: ${data.error?.message}`);
+        toast.error(`Erreur: ${data.error?.message}`);
       }
     } catch (err) {
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -117,11 +119,11 @@ function CarrierDetailsContent() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`Score recalculé: ${data.score} points`);
+        toast.success(`Score recalculé: ${data.score} points`);
         fetchCarrier();
       }
     } catch (err) {
-      alert('Erreur lors du calcul du score');
+      toast.error('Erreur lors du calcul du score');
     }
   };
 

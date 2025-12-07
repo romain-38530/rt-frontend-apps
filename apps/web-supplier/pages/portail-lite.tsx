@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useToast } from '@rt/ui-components';
 
 // Types
 interface Order {
@@ -53,6 +54,7 @@ const faqs = [
 ];
 
 export default function PortailLiteFournisseur() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'slots' | 'support'>('dashboard');
   const [orders, setOrders] = useState<Order[]>(mockOrders);
   const [slots] = useState<Slot[]>(mockSlots);
@@ -77,7 +79,7 @@ export default function PortailLiteFournisseur() {
       setShowUpgradeModal(true);
       return;
     }
-    alert(`Creneau ${slotId} reserve avec succes!`);
+    toast.success(`Créneau ${slotId} réservé avec succès !`);
   };
 
   const showUpgrade = () => setShowUpgradeModal(true);

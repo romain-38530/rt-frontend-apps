@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback } from 'react';
+import { useToast } from '../../Toast';
 
 export interface PalletChequeExport {
   chequeId: string;
@@ -460,9 +461,10 @@ export const ChequeExportButton: React.FC<ChequeExportProps> = ({
   buttonStyle,
   children,
 }) => {
+  const { toast } = useToast();
   const handleExport = useCallback(() => {
     if (cheques.length === 0) {
-      alert('Aucun chèque à exporter');
+      toast.error('Aucun chèque à exporter');
       return;
     }
 
@@ -494,7 +496,7 @@ export const ChequeExportButton: React.FC<ChequeExportProps> = ({
     }
 
     onExportComplete?.(format, cheques.length);
-  }, [cheques, format, filename, includeQRCodes, includeSignatures, companyLogo, companyName, onExportComplete]);
+  }, [cheques, format, filename, includeQRCodes, includeSignatures, companyLogo, companyName, onExportComplete, toast]);
 
   const defaultStyle: React.CSSProperties = {
     padding: '10px 16px',
@@ -509,7 +511,7 @@ export const ChequeExportButton: React.FC<ChequeExportProps> = ({
     background: cheques.length === 0 ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: cheques.length === 0 ? '#999' : 'white',
     opacity: cheques.length === 0 ? 0.7 : 1,
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
     ...buttonStyle,
   };
 

@@ -295,7 +295,7 @@ export default function BillingPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   };
 
   const buttonSecondaryStyle: React.CSSProperties = {
@@ -334,7 +334,7 @@ export default function BillingPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   });
 
   const getStatusColor = (status: string) => {
@@ -445,7 +445,7 @@ export default function BillingPage() {
           {activeTab === 'dashboard' && (
             <div>
               {/* KPI Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Total Prefacturations</div>
                   <div style={{ fontSize: '32px', fontWeight: '800' }}>{stats?.prefacturations?.total || 0}</div>

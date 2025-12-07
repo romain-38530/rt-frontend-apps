@@ -131,7 +131,7 @@ export const DiscrepancyAlert: React.FC<DiscrepancyAlertProps> = ({
       {/* Summary */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '16px',
         padding: '20px',
         background: 'white',

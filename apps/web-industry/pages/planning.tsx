@@ -329,7 +329,7 @@ export default function PlanningPage() {
           margin: '0 auto'
         }}>
           {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             {[
               { label: 'Sites', value: stats.totalSites, icon: '🏭', color: '#667eea' },
               { label: 'Quais', value: stats.totalDocks, icon: '🚚', color: '#00D084' },
@@ -600,10 +600,8 @@ export default function PlanningPage() {
                               fontSize: '11px',
                               cursor: 'pointer',
                               border: isBooked ? '1px solid #FF6B6B' : '1px solid #00D084',
-                              transition: 'transform 0.2s'
+                              transition: 'transform 0.2s ease'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           >
                             {isBooked ? 'Reserve' : 'Libre'}
                           </div>

@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { documentsApi, ordersApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface TransportDocument {
   id: string;
@@ -34,6 +35,7 @@ interface OrderForUpload {
 
 export default function DocumentsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [documents, setDocuments] = useState<TransportDocument[]>([]);
   const [pendingOrders, setPendingOrders] = useState<OrderForUpload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,11 +169,11 @@ export default function DocumentsPage() {
     try {
       await documentsApi.upload(file, { type: docType, orderId });
 
-      alert(`Document ${docType.toUpperCase()} téléversé avec succès !\nOCR en cours de traitement...`);
+      toast.success(`Document ${docType.toUpperCase()} téléversé avec succès ! OCR en cours de traitement...`);
       loadData();
     } catch (err) {
       console.error('Error uploading document:', err);
-      alert('Erreur lors du téléversement');
+      toast.error('Erreur lors du téléversement');
     } finally {
       setUploadingOrder(null);
       setUploadingType(null);

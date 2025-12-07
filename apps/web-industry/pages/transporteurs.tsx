@@ -713,7 +713,7 @@ export default function TransporteursPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div style={{ padding: '24px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
+          <div style={{ padding: '24px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             <div style={cardStyle}>
               <div style={{ fontSize: '32px', fontWeight: '800', color: '#667eea' }}>{stats.total}</div>
               <div style={{ fontSize: '12px', color: '#6b7280' }}>Total Transporteurs</div>
@@ -1244,7 +1244,7 @@ export default function TransporteursPage() {
               </div>
 
               {/* Score */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
                   <div style={{ fontSize: '32px', fontWeight: '800', color: '#667eea' }}>{selectedCarrier.overallScore}</div>
                   <div style={{ fontSize: '12px', color: '#6b7280' }}>Score Global</div>
@@ -1265,7 +1265,7 @@ export default function TransporteursPage() {
 
               {/* Scores detailles */}
               <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>Scores Detailles</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '8px', marginBottom: '24px' }}>
                 {Object.entries(selectedCarrier.scoreDetails).map(([key, value]) => {
                   const labels: Record<string, string> = {
                     onTimeDelivery: 'Ponctualite',

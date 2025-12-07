@@ -244,11 +244,8 @@ export default function HomePage() {
                 cursor: 'pointer',
                 fontWeight: '700',
                 fontSize: '14px',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'white'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.9)'}
-            >
+                transition: 'all 0.2s ease'
+              }}>
               Abonnement
             </button>
             <button
@@ -319,7 +316,7 @@ export default function HomePage() {
                   ? '2px solid rgba(102,126,234,0.5)'
                   : '1px solid rgba(255,255,255,0.2)',
                 cursor: 'pointer',
-                transition: 'all 0.3s',
+                transition: 'all 0.3s ease',
                 position: 'relative',
                 opacity: item.locked ? 0.6 : 1
               }}
@@ -383,11 +380,8 @@ export default function HomePage() {
                       fontWeight: '700',
                       fontSize: '14px',
                       width: '100%',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'white'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.9)'}
-                  >
+                      transition: 'all 0.2s ease'
+                    }}>
                     🔓 Débloquer
                   </button>
                 ) : (
@@ -404,18 +398,9 @@ export default function HomePage() {
                       fontWeight: '700',
                       fontSize: '14px',
                       width: '100%',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                       boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-                    }}
-                  >
+                    }}>
                     ▶ Accéder
                   </button>
                 )}

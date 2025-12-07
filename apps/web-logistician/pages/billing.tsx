@@ -24,6 +24,7 @@ import {
   Calendar,
   Users,
 } from 'lucide-react';
+import { useToast } from '@rt/ui-components';
 
 interface Prefacturation {
   _id: string;
@@ -142,6 +143,7 @@ const BLOCK_LABELS: Record<string, string> = {
 };
 
 export default function LogisticianBillingPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'prefacturations' | 'disputes' | 'blocks'>('overview');
   const [prefacturations, setPrefacturations] = useState<Prefacturation[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -224,7 +226,7 @@ export default function LogisticianBillingPage() {
       });
       if (response.ok) {
         await fetchData();
-        alert('Écart résolu avec succès');
+        toast.success('Écart résolu avec succès');
       }
     } catch (error) {
       console.error('Erreur résolution:', error);
@@ -240,7 +242,7 @@ export default function LogisticianBillingPage() {
       });
       if (response.ok) {
         await fetchData();
-        alert('Blocage levé');
+        toast.success('Blocage levé');
       }
     } catch (error) {
       console.error('Erreur déblocage:', error);

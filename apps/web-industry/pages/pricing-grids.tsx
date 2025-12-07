@@ -471,7 +471,7 @@ export default function PricingGridsPage() {
           {showCreateForm && (
             <div style={cardStyle}>
               <h3 style={{ marginTop: 0 }}>Nouvelle Grille Tarifaire</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
                 <div>
                   <label style={{ fontSize: '12px', opacity: 0.7 }}>Nom de la grille *</label>
                   <input style={inputStyle} placeholder="Ex: Tarif LTL 2024" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
@@ -637,7 +637,7 @@ export default function PricingGridsPage() {
           <div style={cardStyle}>
             <h3 style={{ marginTop: 0 }}>Calculateur de Prix</h3>
             <p style={{ opacity: 0.7, marginBottom: '20px' }}>Estimez le cout d'un transport selon vos grilles tarifaires</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
               <div>
                 <label style={{ fontSize: '12px', opacity: 0.7 }}>Type</label>
                 <select style={selectStyle}>

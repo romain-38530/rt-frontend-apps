@@ -365,7 +365,7 @@ export default function RdvTransporteursPage() {
           margin: '0 auto'
         }}>
           {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             {[
               { label: 'En attente', value: stats.pending, icon: '⏳', color: '#FFB800' },
               { label: 'Confirmes', value: stats.confirmed, icon: '✅', color: '#00D084' },
@@ -471,7 +471,7 @@ export default function RdvTransporteursPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                     <div>
                       <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Site</div>
                       <div style={{ fontWeight: '600', fontSize: '14px' }}>{apt.siteName}</div>

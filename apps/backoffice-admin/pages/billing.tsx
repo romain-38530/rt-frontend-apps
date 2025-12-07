@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { billingApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 import {
   Euro,
   FileText,
@@ -156,6 +157,7 @@ const BLOCK_TYPES: Record<string, { label: string; icon: any; color: string }> =
 };
 
 export default function BillingAdminPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'prefacturations' | 'blocks' | 'tariffs' | 'exports' | 'settings'>('overview');
   const [prefacturations, setPrefacturations] = useState<Prefacturation[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -230,7 +232,7 @@ export default function BillingAdminPage() {
       });
       if (response.ok) {
         await fetchData();
-        alert('Facture finalisée avec succès');
+        toast.success('Facture finalisée avec succès');
       }
     } catch (error) {
       console.error('Erreur finalisation:', error);
@@ -247,7 +249,7 @@ export default function BillingAdminPage() {
       if (response.ok) {
         const result = await response.json();
         await fetchData();
-        alert(`Export ${result.data.status} vers ${result.data.erpSystem}`);
+        toast.success(`Export ${result.data.status} vers ${result.data.erpSystem}`);
       }
     } catch (error) {
       console.error('Erreur export:', error);
@@ -263,7 +265,7 @@ export default function BillingAdminPage() {
       });
       if (response.ok) {
         await fetchData();
-        alert('Blocage levé avec succès');
+        toast.success('Blocage levé avec succès');
       }
     } catch (error) {
       console.error('Erreur déblocage:', error);
@@ -281,7 +283,7 @@ export default function BillingAdminPage() {
         await fetchData();
         setShowBlockModal(false);
         setBlockFormData({ prefacturationId: '', type: 'manual', reason: '' });
-        alert('Blocage créé avec succès');
+        toast.success('Blocage créé avec succès');
       }
     } catch (error) {
       console.error('Erreur création blocage:', error);

@@ -70,18 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
                 fontWeight: '600',
                 fontSize: '14px',
                 transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = gradient
-                  ? 'rgba(255,255,255,0.3)'
-                  : '#E5E7EB';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = gradient
-                  ? 'rgba(255,255,255,0.2)'
-                  : '#F3F4F6';
-              }}
-            >
+              }}>
               Se déconnecter
             </button>
           )}

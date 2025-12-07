@@ -144,7 +144,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   };
 
   const dayHeaderStyle: React.CSSProperties = {
@@ -163,7 +163,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     border: '1px solid #e5e7eb',
     backgroundColor: 'white',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   };
 
   return (
@@ -183,18 +183,12 @@ export const Calendar: React.FC<CalendarProps> = ({
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={goToPreviousMonth}
-            style={buttonStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
-          >
+            style={buttonStyle}>
             ← Précédent
           </button>
           <button
             onClick={goToNextMonth}
-            style={buttonStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
-          >
+            style={buttonStyle}>
             Suivant →
           </button>
         </div>
@@ -205,10 +199,7 @@ export const Calendar: React.FC<CalendarProps> = ({
 
         <button
           onClick={goToToday}
-          style={{ ...buttonStyle, backgroundColor: '#667eea', color: 'white', border: 'none' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5568d3')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#667eea')}
-        >
+          style={{ ...buttonStyle, backgroundColor: '#667eea', color: 'white', border: 'none' }}>
           Aujourd'hui
         </button>
       </div>
@@ -303,17 +294,8 @@ export const Calendar: React.FC<CalendarProps> = ({
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                           cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.opacity = '0.8';
-                          e.currentTarget.style.transform = 'scale(1.02)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                        title={event.title}
+                          transition: 'all 0.2s ease',
+                        }}title={event.title}
                       >
                         {event.title}
                       </div>

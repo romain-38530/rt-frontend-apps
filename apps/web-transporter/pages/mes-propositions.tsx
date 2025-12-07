@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { affretIaApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface Proposal {
   id: string;
@@ -40,6 +41,7 @@ interface Proposal {
 
 export default function MesPropositionsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -174,7 +176,7 @@ export default function MesPropositionsPage() {
         await affretIaApi.withdrawProposal(selectedProposal.id);
       }
 
-      alert(accept ? 'Contre-offre acceptée !' : 'Contre-offre refusée');
+      toast.success(accept ? 'Contre-offre acceptée !' : 'Contre-offre refusée');
       setSelectedProposal(null);
       setCounterResponse(null);
       loadProposals();
@@ -189,11 +191,11 @@ export default function MesPropositionsPage() {
 
     try {
       await affretIaApi.withdrawProposal(proposalId);
-      alert('Proposition retirée');
+      toast.success('Proposition retirée');
       loadProposals();
     } catch (err) {
       console.error('Error withdrawing proposal:', err);
-      alert('Erreur lors du retrait de la proposition');
+      toast.error('Erreur lors du retrait de la proposition');
     }
   };
 

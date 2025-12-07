@@ -198,7 +198,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                       backgroundColor: isSelected ? '#e3f2fd' : '#fff',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{
@@ -265,7 +265,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                           borderRadius: '10px',
                           backgroundColor: isSelected ? '#e3f2fd' : '#fff',
                           cursor: 'pointer',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.2s ease',
                           boxShadow: isSelected ? '0 4px 12px rgba(25, 118, 210, 0.2)' : 'none',
                         }}
                       >

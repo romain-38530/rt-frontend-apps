@@ -221,17 +221,8 @@ export default function OrderDetailPage() {
                   fontWeight: '600',
                   fontSize: '14px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#667eea';
-                  e.currentTarget.style.backgroundColor = '#f3f4f6';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
+                  transition: 'all 0.2s ease',
+                }}>
                 📁 Documents
               </button>
 
@@ -249,20 +240,11 @@ export default function OrderDetailPage() {
                     fontSize: '14px',
                     cursor: 'pointer',
                     boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-                  }}
-                >
+                  }}>
                   🗺️ Voir le tracking
                 </button>
               )}
@@ -328,7 +310,7 @@ export default function OrderDetailPage() {
               {/* Marchandise */}
               <div style={cardStyle}>
                 <h2 style={sectionTitleStyle}>📦 Marchandise</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                   <div>
                     <div style={labelStyle}>Poids</div>
                     <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.weight} kg</div>

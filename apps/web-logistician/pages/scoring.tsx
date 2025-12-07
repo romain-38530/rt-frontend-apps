@@ -645,7 +645,7 @@ export default function ScoringPage() {
                 {orderScore && (
                   <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
                     <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>Score de la Commande</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                       <div>
                         <div style={{ fontSize: '12px', color: '#6b7280' }}>Commande</div>
                         <div style={{ fontWeight: '600' }}>{orderScore.orderId}</div>
@@ -674,7 +674,7 @@ export default function ScoringPage() {
                   <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>
                     Details: {selectedCarrier.carrierName || selectedCarrier.carrierId}
                   </h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                     <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
                       <div style={{ fontSize: '32px', fontWeight: '800', color: getScoreColor(selectedCarrier.averageScores?.overall || 0) }}>
                         {selectedCarrier.averageScores?.overall || 0}

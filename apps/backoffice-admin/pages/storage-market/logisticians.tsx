@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { storageAdminApi, type LogisticianSubscription } from '@/lib/api/storage'
+import { useToast } from '@rt/ui-components'
 
 export default function LogisticiansManagementPage() {
+  const { toast } = useToast()
   const [logisticians, setLogisticians] = useState<LogisticianSubscription[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +31,7 @@ export default function LogisticiansManagementPage() {
       setLogisticians(prev => prev.map(l => l.id === id ? { ...l, status: 'APPROVED' as const, approvedAt: new Date().toISOString() } : l))
     } catch (err) {
       console.error('Error approving logistician:', err)
-      alert('Erreur lors de l\'approbation')
+      toast.error('Erreur lors de l\'approbation')
     }
   }
 
@@ -42,7 +44,7 @@ export default function LogisticiansManagementPage() {
       setLogisticians(prev => prev.map(l => l.id === id ? { ...l, status: 'REJECTED' as const } : l))
     } catch (err) {
       console.error('Error rejecting logistician:', err)
-      alert('Erreur lors du rejet')
+      toast.error('Erreur lors du rejet')
     }
   }
 

@@ -105,7 +105,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
           gap: '16px',
           marginBottom: '24px',
         }}
@@ -305,7 +305,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#111827' }}>
             📊 Comparaison avec le marché
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             <ComparisonCard
               label="Votre score"
               value={Math.round(scores.overallScore)}

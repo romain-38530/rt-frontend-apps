@@ -135,9 +135,7 @@ export default function Login() {
                       fontSize: '14px',
                       fontWeight: language === lang ? '600' : '400',
                       color: '#333'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = language === lang ? '#f0f0f0' : 'white'}
+                    >}
                   >
                     {languageNames[lang]}
                   </button>
@@ -301,10 +299,7 @@ export default function Login() {
                 fontWeight: '600',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#1ba5a6')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#22c1c3')}
-            >
+              }}>
               {loading ? t.logging : t.login}
             </button>
           </form>

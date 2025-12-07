@@ -20,6 +20,7 @@ import React, { useState, useEffect } from 'react';
 import { usePricing, BackendAccountType, formatPrice } from '../../../../../src/hooks/usePricing';
 import { getAllCreatableTypesInfo, AccountTypeInfo } from '../../../../../src/utils/accountTypeMapping';
 import { PricingCard } from '../../../../../packages/ui-components/src/components/PricingCard';
+import { useToast } from '@rt/ui-components';
 
 // ==========================================
 // Page Principale
@@ -27,6 +28,7 @@ import { PricingCard } from '../../../../../packages/ui-components/src/component
 
 export default function SelectAccountTypePage() {
   const { allPricing, calculateMultiplePrices, loading, error } = usePricing();
+  const { toast } = useToast();
 
   const [selectedType, setSelectedType] = useState<BackendAccountType | null>(null);
   const [promoCode, setPromoCode] = useState('');
@@ -114,7 +116,7 @@ export default function SelectAccountTypePage() {
       setCalculatedPrices(pricesMap);
     } catch (err) {
       console.error('Error applying promo code:', err);
-      alert('Erreur lors de l\'application du code promo');
+      toast.error('Erreur lors de l\'application du code promo');
     } finally {
       setIsApplyingPromo(false);
     }
@@ -123,7 +125,7 @@ export default function SelectAccountTypePage() {
   // Gérer la confirmation
   const handleConfirm = () => {
     if (!selectedType) {
-      alert('Veuillez sélectionner un type de compte');
+      toast.warning('Veuillez sélectionner un type de compte');
       return;
     }
 

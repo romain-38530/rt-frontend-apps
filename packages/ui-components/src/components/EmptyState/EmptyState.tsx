@@ -107,16 +107,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             cursor: 'pointer',
             transition: 'transform 0.2s, box-shadow 0.2s',
             boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-          }}
-        >
+          }}>
           {action.label}
         </button>
       )}

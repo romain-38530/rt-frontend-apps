@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { useToast } from '@rt/ui-components';
 
 const plans = [
   {
@@ -49,6 +50,7 @@ const plans = [
 
 export default function SubscriptionPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
   const [currentTier, setCurrentTier] = useState('free');
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ export default function SubscriptionPage() {
     };
     localStorage.setItem('userSubscription', JSON.stringify(subscription));
     setCurrentTier(planId);
-    alert(`Abonnement ${planId} activé avec succès !`);
+    toast.success(`Abonnement ${planId} activé avec succès !`);
   };
 
   if (loading) {

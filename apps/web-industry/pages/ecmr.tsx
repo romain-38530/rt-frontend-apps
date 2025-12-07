@@ -499,7 +499,7 @@ export default function ECMRPage() {
           margin: '0 auto'
         }}>
           {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             {[
               { label: 'Total eCMR', value: stats.total, icon: '📄', color: '#667eea' },
               { label: 'En attente', value: stats.pending, icon: '⏳', color: '#FFB800' },
@@ -684,7 +684,7 @@ export default function ECMRPage() {
                   </div>
 
                   {/* Details */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                     <div>
                       <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Expediteur</div>
                       <div style={{ fontWeight: '600', fontSize: '14px' }}>{ecmr.shipper.name}</div>

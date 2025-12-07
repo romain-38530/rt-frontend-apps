@@ -274,7 +274,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

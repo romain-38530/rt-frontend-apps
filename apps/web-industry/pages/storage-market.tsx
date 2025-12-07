@@ -641,7 +641,7 @@ function NeedCard({ need, onView, getStatusBadge }: { need: any; onView: () => v
         gap: '20px',
         alignItems: 'center',
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'all 0.2s ease',
       }}
     >
       <div>

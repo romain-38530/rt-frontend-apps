@@ -122,7 +122,7 @@ export const OrdersList: React.FC<OrdersListProps> = ({
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   };
 
   return (
@@ -137,6 +137,7 @@ export const OrdersList: React.FC<OrdersListProps> = ({
           <input
             type="text"
             placeholder="Rechercher par référence, client..."
+            aria-label="Rechercher une commande"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={inputStyle}
@@ -145,6 +146,7 @@ export const OrdersList: React.FC<OrdersListProps> = ({
           <input
             type="date"
             placeholder="Date début"
+            aria-label="Date de début"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             style={inputStyle}
@@ -153,6 +155,7 @@ export const OrdersList: React.FC<OrdersListProps> = ({
           <input
             type="date"
             placeholder="Date fin"
+            aria-label="Date de fin"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             style={inputStyle}
@@ -226,18 +229,9 @@ export const OrdersList: React.FC<OrdersListProps> = ({
               style={{
                 ...cardStyle,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s ease',
               }}
-              onClick={() => onOrderClick(order.id)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
+              onClick={() => onOrderClick(order.id)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>

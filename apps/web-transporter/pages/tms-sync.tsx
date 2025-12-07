@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { tmsSyncApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface SyncStatus {
   lastSync: string;
@@ -14,6 +15,7 @@ interface SyncStatus {
 
 export default function TmssyncPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     lastSync: '',
     status: 'Chargement...',
@@ -53,10 +55,10 @@ export default function TmssyncPage() {
     try {
       await tmsSyncApi.syncNow();
       await loadSyncStatus();
-      alert('Synchronisation lancée avec succès !');
+      toast.success('Synchronisation lancée avec succès !');
     } catch (err) {
       console.error('Error triggering sync:', err);
-      alert('Erreur lors de la synchronisation');
+      toast.error('Erreur lors de la synchronisation');
     } finally {
       setLoading(false);
     }
@@ -117,10 +119,8 @@ export default function TmssyncPage() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '600',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
               ← Retour
             </button>
@@ -175,7 +175,7 @@ export default function TmssyncPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px' }}>{syncStatus.orders}</div>
                   <div style={{ fontSize: '14px', opacity: 0.7 }}>Commandes synchronisées</div>

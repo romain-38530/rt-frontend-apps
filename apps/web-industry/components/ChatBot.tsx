@@ -332,8 +332,6 @@ export default function ChatBot({
           zIndex: 1000,
           transition: 'transform 0.3s ease'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       >
         {isOpen ? '✕' : config.icon}
       </button>
@@ -483,17 +481,8 @@ export default function ChatBot({
                           cursor: 'pointer',
                           fontSize: '12px',
                           fontWeight: '500',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = primaryColor;
-                          e.currentTarget.style.borderColor = primaryColor;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-                        }}
-                      >
+                          transition: 'all 0.2s ease'
+                        }}>
                         {action.label}
                       </button>
                     ))}

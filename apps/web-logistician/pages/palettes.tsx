@@ -565,7 +565,7 @@ export default function PalettesCircularPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   };
 
   const buttonSecondaryStyle: React.CSSProperties = {
@@ -599,7 +599,7 @@ export default function PalettesCircularPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   });
 
   const getStatusColor = (status: string) => {
@@ -1034,7 +1034,7 @@ export default function PalettesCircularPage() {
             <div>
               <h2 style={{ marginBottom: '24px' }}>Grand Livre - Solde Palettes</h2>
               {ledger ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                   {Object.entries(ledger.balances).map(([type, value]) => (
                     <div key={type} style={cardStyle}>
                       <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>{type.replace(/_/g, ' ')}</div>

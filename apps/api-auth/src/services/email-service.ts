@@ -52,7 +52,7 @@ export class EmailService {
       ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'symphonia-controltower.com',
       // Commun
       fromEmail: config?.fromEmail || process.env.EMAIL_FROM || process.env.OVH_EMAIL_USER || 'noreply@symphonia-controltower.com',
-      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'RT Technologie - SYMPHONI.A',
+      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'SYMPHONI.A',
     };
 
     // Initialiser SMTP automatiquement si les credentials sont présents

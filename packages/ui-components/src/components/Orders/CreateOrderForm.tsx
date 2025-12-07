@@ -333,7 +333,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                       backgroundColor: formData.pickupAddress.enablePortalAccess
                         ? '#ecfdf5'
                         : 'white',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -478,7 +478,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                       backgroundColor: formData.deliveryAddress.enablePortalAccess
                         ? '#ecfdf5'
                         : 'white',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -720,7 +720,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                       backgroundColor: selectedConstraints.includes(constraint.value)
                         ? '#f0f4ff'
                         : 'white',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

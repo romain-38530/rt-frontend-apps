@@ -158,7 +158,7 @@ export const SitesMap: React.FC<SitesMapProps> = ({
     background: isActive ? '#667eea' : 'white',
     color: isActive ? 'white' : '#333',
     boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   });
 
   const legendStyle: React.CSSProperties = {
@@ -324,7 +324,7 @@ export const SitesMap: React.FC<SitesMapProps> = ({
                 fill={color}
                 stroke={isSelected ? '#fff' : 'rgba(255,255,255,0.8)'}
                 strokeWidth={isSelected ? 4 : 2}
-                style={{ transition: 'all 0.2s' }}
+                style={{ transition: 'all 0.2s ease' }}
               />
 
               {/* Score ou rang */}

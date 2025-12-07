@@ -303,7 +303,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     fontSize: '12px',
     fontWeight: isActive ? '600' : '500',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   });
 
   const getProviderIcon = (prov: 'gouv-fr' | 'nominatim') => {

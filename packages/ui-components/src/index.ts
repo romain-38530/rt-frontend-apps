@@ -29,6 +29,7 @@ export { colors, subscriptionColors } from './styles/colors';
 
 // Hooks
 export { useSubscription } from './hooks/useSubscription';
+export { useHover, useHoverMap } from './hooks/useHover';
 
 // Orders Components
 export { CreateOrderForm, OrdersList } from './components/Orders';

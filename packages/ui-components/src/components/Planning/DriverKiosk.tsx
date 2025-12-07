@@ -429,7 +429,7 @@ export const DriverKiosk: React.FC<DriverKioskProps> = ({
       <div style={{ padding: '24px' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '16px',
           marginBottom: '24px',
         }}>
@@ -536,6 +536,8 @@ export const DriverKiosk: React.FC<DriverKioskProps> = ({
           <button
             onClick={nextAction.action}
             disabled={nextAction.disabled || loading}
+            aria-busy={loading}
+            aria-disabled={nextAction.disabled || loading}
             style={{
               width: '100%',
               padding: '18px',

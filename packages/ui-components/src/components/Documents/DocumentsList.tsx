@@ -88,7 +88,7 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
     borderRadius: '12px',
     marginBottom: '20px',
     display: 'grid',
-    gridTemplateColumns: compact ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gridTemplateColumns: compact ? 'repeat(auto-fit, minmax(300px, 1fr))' : 'repeat(auto-fit, minmax(250px, 1fr))',
     gap: '12px',
   };
 
@@ -143,6 +143,7 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
           <input
             type="text"
             placeholder="🔍 Rechercher un document..."
+            aria-label="Rechercher un document"
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             style={inputStyle}

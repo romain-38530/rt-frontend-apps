@@ -319,7 +319,7 @@ export const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                 color: view === v ? '#1976d2' : '#666',
                 fontWeight: view === v ? 600 : 400,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s ease',
               }}
             >
               {v === 'day' ? 'Jour' : v === 'week' ? 'Semaine' : v === 'dock' ? 'Quais' : 'Transporteurs'}

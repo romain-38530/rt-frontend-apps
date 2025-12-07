@@ -10,6 +10,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useToast } from '@rt/ui-components';
 
 // Configuration
 const API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
@@ -48,6 +49,7 @@ interface SubscriptionStatus {
 
 function InvoicesContent() {
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +128,7 @@ function InvoicesContent() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Download error:', err);
-      alert('Erreur lors du téléchargement de la facture');
+      toast.error('Erreur lors du téléchargement de la facture');
     } finally {
       setDownloadingId(null);
     }
@@ -141,13 +143,13 @@ function InvoicesContent() {
       const data = await response.json();
 
       if (data.success) {
-        alert('Facture renvoyée par email avec succès !');
+        toast.success('Facture renvoyée par email avec succès !');
       } else {
-        alert(data.error || 'Erreur lors de l\'envoi');
+        toast.error(data.error || 'Erreur lors de l\'envoi');
       }
     } catch (err) {
       console.error('Resend error:', err);
-      alert('Erreur lors de l\'envoi de la facture');
+      toast.error('Erreur lors de l\'envoi de la facture');
     } finally {
       setResendingId(null);
     }

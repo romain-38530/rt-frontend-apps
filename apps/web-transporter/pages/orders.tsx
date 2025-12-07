@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
-import { CreateOrderForm, OrdersList } from '@rt/ui-components';
+import { CreateOrderForm, OrdersList, useToast } from '@rt/ui-components';
 import { OrdersService } from '@rt/utils';
 import type {
   Order,
@@ -18,6 +18,7 @@ import type {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   // État de la page
   const [view, setView] = useState<'list' | 'create'>('list');
@@ -73,9 +74,7 @@ export default function OrdersPage() {
       await loadOrders();
 
       // Afficher une notification de succès
-      if (typeof window !== 'undefined') {
-        alert(`Commande ${newOrder.reference} créée avec succès !`);
-      }
+      toast.success(`Commande ${newOrder.reference} créée avec succès !`);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création de la commande');
       console.error('Error creating order:', err);
@@ -91,9 +90,9 @@ export default function OrdersPage() {
       const duplicatedOrder = await OrdersService.duplicateOrder(orderId);
       console.log('Order duplicated:', duplicatedOrder);
       await loadOrders();
-      alert(`Commande ${duplicatedOrder.reference} dupliquée avec succès !`);
+      toast.success(`Commande ${duplicatedOrder.reference} dupliquée avec succès !`);
     } catch (err: any) {
-      alert(`Erreur lors de la duplication : ${err.message}`);
+      toast.error(`Erreur lors de la duplication : ${err.message}`);
       console.error('Error duplicating order:', err);
     }
   };
@@ -104,9 +103,9 @@ export default function OrdersPage() {
       const cancelledOrder = await OrdersService.cancelOrder(orderId, 'Annulation manuelle');
       console.log('Order cancelled:', cancelledOrder);
       await loadOrders();
-      alert(`Commande ${cancelledOrder.reference} annulée avec succès !`);
+      toast.success(`Commande ${cancelledOrder.reference} annulée avec succès !`);
     } catch (err: any) {
-      alert(`Erreur lors de l'annulation : ${err.message}`);
+      toast.error(`Erreur lors de l'annulation : ${err.message}`);
       console.error('Error cancelling order:', err);
     }
   };
@@ -199,11 +198,8 @@ export default function OrdersPage() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '600',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-            >
+                transition: 'all 0.2s ease',
+              }}>
               ← Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -227,17 +223,8 @@ export default function OrdersPage() {
                 fontSize: '14px',
                 fontWeight: '700',
                 boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-              }}
-            >
+                transition: 'all 0.2s ease',
+              }}>
               + Nouvelle commande
             </button>
           )}

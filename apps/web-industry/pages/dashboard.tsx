@@ -67,11 +67,8 @@ export default function DashboardPage() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '600',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
+                transition: 'all 0.2s ease'
+              }}>
               ← Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -100,7 +97,7 @@ export default function DashboardPage() {
           margin: '0 auto'
         }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
               {Object.entries(kpis).map(([key, kpi]) => (
                 <div key={key} style={{
                   background: 'rgba(255,255,255,0.1)',

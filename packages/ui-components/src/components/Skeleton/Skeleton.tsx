@@ -84,6 +84,8 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
 }) => {
   return (
     <div
+      aria-busy="true"
+      aria-label="Chargement en cours"
       style={{
         padding: '20px',
         background: 'white',
@@ -124,7 +126,7 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
   columns = 4,
 }) => {
   return (
-    <div style={{ overflow: 'hidden', borderRadius: '12px', background: 'white' }}>
+    <div aria-busy="true" aria-label="Chargement du tableau" style={{ overflow: 'hidden', borderRadius: '12px', background: 'white' }}>
       {/* Header */}
       <div
         style={{
@@ -176,6 +178,8 @@ export const SkeletonGrid: React.FC<SkeletonGridProps> = ({
 }) => {
   return (
     <div
+      aria-busy="true"
+      aria-label="Chargement de la grille"
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(auto-fit, minmax(250px, 1fr))`,

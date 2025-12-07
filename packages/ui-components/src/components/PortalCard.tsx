@@ -25,13 +25,7 @@ export const PortalCard: React.FC<PortalCardProps> = ({ portal, onClick }) => {
         e.currentTarget.style.transform = 'translateY(-8px)';
         e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.15)';
         e.currentTarget.style.borderColor = portal.gradient.match(/#[0-9a-f]{6}/i)?.[0] || '#6366F1';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
-        e.currentTarget.style.borderColor = 'transparent';
-      }}
-    >
+      }}>
       {/* Gradient accent bar */}
       <div
         style={{

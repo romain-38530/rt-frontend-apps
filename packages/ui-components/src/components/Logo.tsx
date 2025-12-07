@@ -65,14 +65,7 @@ export const Logo: React.FC<LogoProps> = ({
         viewBox="0 0 100 100"
         style={{
           transition: 'transform 0.3s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05) rotate(5deg)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-        }}
-      >
+        }}>
         <defs>
           {/* Gradient for the icon */}
           <linearGradient id={`logoGradient-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">

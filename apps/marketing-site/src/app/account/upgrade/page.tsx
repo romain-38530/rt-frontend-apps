@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountUpgrade } from '@/hooks/useAccountUpgrade';
 import { getAccountTypeInfo } from '@/types/account';
 import type { AccountType } from '@/types/account';
+import { useToast } from '@rt/ui-components';
 
 function UpgradeContent() {
   const router = useRouter();
@@ -13,6 +14,7 @@ function UpgradeContent() {
   const fromTypeParam = searchParams.get('fromType') as AccountType | null;
 
   const { checkEligibility, upgradeAccount, canUpgrade, loading, error } = useAccountUpgrade();
+  const { toast } = useToast();
 
   const [fromType, setFromType] = useState<AccountType | null>(fromTypeParam);
   const [reason, setReason] = useState('');
@@ -62,14 +64,14 @@ function UpgradeContent() {
 
       if (response.success) {
         // Show success message and redirect to new portal
-        alert(`Félicitations ! Votre compte a été mis à niveau vers ${response.newAccountType}.`);
+        toast.success(`Félicitations ! Votre compte a été mis à niveau vers ${response.newAccountType}.`);
         window.location.href = response.newPortalUrl;
       } else {
-        alert(response.message || 'Erreur lors de la mise à niveau du compte');
+        toast.error(response.message || 'Erreur lors de la mise à niveau du compte');
       }
     } catch (err) {
       console.error('Error upgrading account:', err);
-      alert('Une erreur est survenue. Veuillez réessayer.');
+      toast.error('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }

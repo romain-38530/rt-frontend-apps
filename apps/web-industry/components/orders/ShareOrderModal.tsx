@@ -141,18 +141,23 @@ export const ShareOrderModal: React.FC<ShareOrderModalProps> = ({
       justifyContent: 'center',
       zIndex: 1000,
     }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '32px',
-        width: '100%',
-        maxWidth: '600px',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-order-title"
+        style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '32px',
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '90vh',
+          overflow: 'auto',
+        }}
+      >
         {/* Header */}
         <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
+          <h2 id="share-order-title" style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
             Partager la commande
           </h2>
           {orderReference && (
@@ -163,7 +168,7 @@ export const ShareOrderModal: React.FC<ShareOrderModalProps> = ({
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '40px' }} aria-busy="true" aria-live="polite">
             <div style={{ color: '#64748b' }}>Chargement...</div>
           </div>
         ) : success ? (
@@ -334,6 +339,8 @@ export const ShareOrderModal: React.FC<ShareOrderModalProps> = ({
                 <button
                   onClick={handleShare}
                   disabled={sharing || selectedLogisticians.length === 0}
+                  aria-busy={sharing}
+                  aria-disabled={sharing || selectedLogisticians.length === 0}
                   style={{
                     padding: '12px 24px',
                     background: sharing || selectedLogisticians.length === 0

@@ -408,7 +408,7 @@ export default function PalettesCircularPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   };
 
   const buttonSecondaryStyle: React.CSSProperties = {
@@ -442,7 +442,7 @@ export default function PalettesCircularPage() {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s ease'
   });
 
   const getBalanceColor = (value: number) => value >= 0 ? '#00D084' : '#e74c3c';
@@ -551,7 +551,7 @@ export default function PalettesCircularPage() {
           {activeTab === 'dashboard' && (
             <div>
               {/* KPI Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Balance Totale</div>
                   <div style={{ fontSize: '36px', fontWeight: '800', color: getBalanceColor(getTotalBalance()) }}>
@@ -593,7 +593,7 @@ export default function PalettesCircularPage() {
               {/* Balance Details */}
               <h3 style={{ marginBottom: '16px' }}>Soldes par Type de Palette</h3>
               {ledger ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                   {Object.entries(ledger.balances).map(([type, value]) => (
                     <div key={type} style={{ ...cardStyle, textAlign: 'center' }}>
                       <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '8px' }}>{type.replace(/_/g, ' ')}</div>
@@ -821,7 +821,7 @@ export default function PalettesCircularPage() {
 
               {/* Balance Summary */}
               {ledger ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                   {Object.entries(ledger.balances).map(([type, value]) => (
                     <div key={type} style={cardStyle}>
                       <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>{type.replace(/_/g, ' ')}</div>
@@ -1021,7 +1021,7 @@ export default function PalettesCircularPage() {
               {/* Filters */}
               <div style={{ ...cardStyle, marginBottom: '24px' }}>
                 <h3 style={{ marginBottom: '16px' }}>Filtres</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Date debut</label>
                     <input
@@ -1063,7 +1063,7 @@ export default function PalettesCircularPage() {
               </div>
 
               {/* Report Options */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '48px', marginBottom: '16px', textAlign: 'center' }}>📊</div>
                   <h4 style={{ marginBottom: '8px', textAlign: 'center' }}>Rapport de Solde</h4>
@@ -1101,7 +1101,7 @@ export default function PalettesCircularPage() {
               {/* Summary Statistics */}
               <div style={{ ...cardStyle, marginTop: '24px' }}>
                 <h3 style={{ marginBottom: '16px' }}>Resume Statistique</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '28px', fontWeight: '800', color: '#00D084' }}>
                       {cheques.filter(c => c.status === 'RECU').length}

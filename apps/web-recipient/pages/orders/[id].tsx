@@ -269,7 +269,7 @@ export default function OrderDetailPage() {
               {/* Marchandise */}
               <div style={cardStyle}>
                 <h2 style={sectionTitleStyle}>📦 Marchandise</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                   <div>
                     <div style={labelStyle}>Poids</div>
                     <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.weight} kg</div>

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountTypes } from '@/hooks/useAccountTypes';
 import { getCreatableAccountTypes } from '@/types/account';
 import type { AccountType } from '@/types/account';
+import { useToast } from '@rt/ui-components';
 
 function SelectTypeContent() {
   const router = useRouter();
@@ -12,6 +13,7 @@ function SelectTypeContent() {
   const userId = searchParams.get('userId');
 
   const { selectAccountType, loading, error } = useAccountTypes(userId || undefined);
+  const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<AccountType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,11 +37,11 @@ function SelectTypeContent() {
         // Redirect to the user's dedicated portal
         window.location.href = response.redirectUrl || response.portalUrl;
       } else {
-        alert(response.message || 'Erreur lors de la sélection du type de compte');
+        toast.error(response.message || 'Erreur lors de la sélection du type de compte');
       }
     } catch (err) {
       console.error('Error selecting account type:', err);
-      alert('Une erreur est survenue. Veuillez réessayer.');
+      toast.error('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }

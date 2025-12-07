@@ -200,11 +200,8 @@ export default function OrdersPage() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '600',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-            >
+                transition: 'all 0.2s ease',
+              }}>
               ← Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -228,17 +225,8 @@ export default function OrdersPage() {
                 fontSize: '14px',
                 fontWeight: '700',
                 boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-              }}
-            >
+                transition: 'all 0.2s ease',
+              }}>
               + Nouvelle commande
             </button>
           )}

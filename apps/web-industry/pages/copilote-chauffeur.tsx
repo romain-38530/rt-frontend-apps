@@ -1049,7 +1049,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   photoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '10px',
   },
   photoThumb: {

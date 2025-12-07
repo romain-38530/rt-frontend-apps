@@ -165,7 +165,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                 fill="white"
                 stroke={ScoringService.getScoreColor(point.value)}
                 strokeWidth={hoveredPoint === i ? 3 : 2}
-                style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
                 onMouseEnter={() => setHoveredPoint(i)}
                 onMouseLeave={() => setHoveredPoint(null)}
               />

@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { vigilanceApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface VigilanceDocument {
   type: string;
@@ -37,6 +38,7 @@ interface VigilanceData {
 
 export default function VigilancePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [vigilance, setVigilance] = useState<VigilanceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
@@ -147,11 +149,11 @@ export default function VigilancePage() {
     setUploadingDoc(docType);
     try {
       await vigilanceApi.uploadDocument(docType, file);
-      alert(`Document ${docType} téléversé avec succès !`);
+      toast.success(`Document ${docType} téléversé avec succès !`);
       loadVigilance();
     } catch (err) {
       console.error('Error uploading document:', err);
-      alert('Erreur lors du téléversement');
+      toast.error('Erreur lors du téléversement');
     } finally {
       setUploadingDoc(null);
     }

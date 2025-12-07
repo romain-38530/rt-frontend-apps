@@ -141,11 +141,8 @@ export default function NotificationsPage() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '600',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
+                transition: 'all 0.2s ease'
+              }}>
               &#8592; Retour
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -256,7 +253,7 @@ export default function NotificationsPage() {
                       gap: '16px',
                       alignItems: 'center',
                       cursor: notif.read ? 'default' : 'pointer',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     <div style={{
