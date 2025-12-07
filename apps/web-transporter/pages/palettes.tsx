@@ -942,7 +942,7 @@ export default function PalettesCircularPage() {
                   </p>
                   <QRScanner
                     onScan={handleQRScan}
-                    onError={(err) => setError(err)}
+                    onError={(err: string) => setError(err)}
                     height={400}
                     showGuide={true}
                     enableFlash={true}
@@ -1024,7 +1024,7 @@ export default function PalettesCircularPage() {
                   sites={mapSites}
                   userLocation={{ latitude: matchingForm.latitude, longitude: matchingForm.longitude }}
                   selectedSiteId={newCheque.destinationSiteId}
-                  onSelectSite={(site) => {
+                  onSelectSite={(site: { siteId: string; siteName: string }) => {
                     setNewCheque({ ...newCheque, destinationSiteId: site.siteId });
                     setSuccess(`Site ${site.siteName} selectionne`);
                   }}
@@ -1064,7 +1064,7 @@ export default function PalettesCircularPage() {
                 }))}
                 format="csv"
                 filename="cheques-palette"
-                onExportComplete={(format, count) => setSuccess(`${count} cheques exportes en ${format}`)}
+                onExportComplete={(format: string, count: number) => setSuccess(`${count} cheques exportes en ${format}`)}
                 buttonStyle={{ background: 'rgba(0,208,132,0.9)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
               />
               <ChequeExportButton
@@ -1087,7 +1087,7 @@ export default function PalettesCircularPage() {
                 filename="cheques-palette"
                 includeQRCodes={true}
                 companyName="Transport Express"
-                onExportComplete={(format, count) => setSuccess(`${count} cheques exportes en ${format}`)}
+                onExportComplete={(format: string, count: number) => setSuccess(`${count} cheques exportes en ${format}`)}
                 buttonStyle={{ boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
               />
             </div>

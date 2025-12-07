@@ -705,8 +705,8 @@ export default function PlanningPage() {
                   { id: 'site-1', name: 'Entrepôt Principal', lat: 48.8566, lng: 2.3522, radius: 500, type: 'site' },
                   { id: 'parking-1', name: 'Parking Poids Lourds', lat: 48.8570, lng: 2.3530, radius: 100, type: 'parking' },
                 ]}
-                onEnter={(event) => console.log('Entrée:', event)}
-                onExit={(event) => console.log('Sortie:', event)}
+                onEnter={(event: { zone: { id: string; name: string }; timestamp: Date }) => console.log('Entrée:', event)}
+                onExit={(event: { zone: { id: string; name: string }; timestamp: Date }) => console.log('Sortie:', event)}
                 enabled={true}
                 showUI={true}
               />

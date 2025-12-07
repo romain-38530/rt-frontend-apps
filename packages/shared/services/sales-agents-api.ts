@@ -663,3 +663,8 @@ export const REGIONS = [
 ];
 
 export const COMMISSION_RATE = 70; // EUR per client per month
+
+// Alias exports for backwards compatibility
+export { getPortalDashboard as portalGetDashboard };
+export { getPortalClients as portalGetClients };
+export { getPortalCommissions as portalGetCommissions };

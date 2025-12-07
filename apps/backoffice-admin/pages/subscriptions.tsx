@@ -643,7 +643,7 @@ export default function SubscriptionsPage() {
                         {mod.priceMonthly === 0 ? 'Gratuit' : formatPrice(mod.priceMonthly)}
                         {mod.priceMonthly > 0 && <span className="text-sm font-normal text-gray-500">/mois</span>}
                       </p>
-                      {mod.commission && (
+                      {'commission' in mod && mod.commission && (
                         <p className="text-xs text-gray-500 mt-1">+ {mod.commission} commission</p>
                       )}
                     </div>
@@ -659,9 +659,9 @@ export default function SubscriptionsPage() {
                     <div key={key} className="bg-white rounded-lg shadow p-4">
                       <h3 className="font-semibold text-gray-900">{track.name}</h3>
                       <p className="text-2xl font-bold text-purple-600 mt-2">
-                        {track.priceMonthly ? formatPrice(track.priceMonthly) : `${track.pricePerTransport}EUR`}
+                        {'priceMonthly' in track ? formatPrice(track.priceMonthly) : `${'pricePerTransport' in track ? track.pricePerTransport : 0}EUR`}
                         <span className="text-sm font-normal text-gray-500">
-                          /{track.priceMonthly ? 'mois' : 'transport'}
+                          /{'priceMonthly' in track ? 'mois' : 'transport'}
                         </span>
                       </p>
                     </div>

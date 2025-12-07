@@ -49,7 +49,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
           <div className="flex items-center justify-between">
             {!collapsed ? (
               <a href="/" className="flex items-center">
-                <LogoCompact width={180} height={54} showTagline={false} />
+                <LogoCompact width={180} height={54} />
               </a>
             ) : (
               <a href="/" className="flex items-center justify-center w-full">
