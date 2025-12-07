@@ -83,6 +83,18 @@ export type {
 export { AddressAutocomplete } from './components/AddressAutocomplete';
 export type { AddressAutocompleteProps, AddressSuggestion, AddressProvider } from './components/AddressAutocomplete';
 
+// Toast Notifications - Replacement for alert()
+export { Toast, ToastProvider, useToast } from './components/Toast';
+export type { ToastProps, ToastType } from './components/Toast';
+
+// Skeleton Loading States
+export { Skeleton, SkeletonCard, SkeletonTable, SkeletonGrid } from './components/Skeleton';
+export type { SkeletonProps, SkeletonCardProps, SkeletonTableProps, SkeletonGridProps } from './components/Skeleton';
+
+// Empty States
+export { EmptyState, EmptyStateNoData, EmptyStateNoResults, EmptyStateError } from './components/EmptyState';
+export type { EmptyStateProps } from './components/EmptyState';
+
 // Billing Components - Module Préfacturation & Facturation Transport
 export { PrefacturationList, DiscrepancyAlert, InvoiceUpload, DisputeManager, BlockingStatus, ERPExportButton } from './components/Billing';
 export type {
