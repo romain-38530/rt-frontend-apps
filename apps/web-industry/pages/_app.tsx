@@ -17,19 +17,10 @@ export default function App({ Component, pageProps }: AppProps) {
     setMounted(true);
   }, []);
 
-  // Ne rendre que le HTML minimal pendant le SSR
-  if (!mounted) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#1a1a2e' }}>
-        <Component {...pageProps} />
-      </div>
-    );
-  }
-
   return (
     <ToastProvider position="top-right">
       <Component {...pageProps} />
-      <ChatBotWrapper />
+      {mounted && <ChatBotWrapper />}
     </ToastProvider>
   );
 }
