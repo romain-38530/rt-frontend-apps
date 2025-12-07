@@ -6,7 +6,7 @@ const nextConfig = {
   swcMinify: true,
 
   // Transpile workspace packages
-  transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
+  transpilePackages: ['@rt/ui-components', '@rt/contracts', '@rt/utils'],
 
   // Webpack config for @shared alias
   webpack: (config) => {
