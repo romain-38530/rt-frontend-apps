@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { notificationsApi } from '../lib/api';
@@ -13,7 +13,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

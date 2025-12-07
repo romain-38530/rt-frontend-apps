@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import {
@@ -25,7 +25,7 @@ import {
 } from '../lib/api';
 
 export default function DispatchConfigPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
 
   // ID industriel (a recuperer du contexte auth)
   const industrielId = 'IND-001';

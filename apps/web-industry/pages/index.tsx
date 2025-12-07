@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
 
 export default function HomePage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);

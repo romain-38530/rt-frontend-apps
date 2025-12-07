@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
 
@@ -77,7 +77,7 @@ interface KnowledgeArticle {
 }
 
 export default function ChatbotPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   // L'API Chatbot IA est dans le bundle subscriptions-contracts
   const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net';
 

@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
 
@@ -72,7 +72,7 @@ interface ScoreCriteria {
 }
 
 export default function ScoringPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const scoringApiUrl = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net/api/v1';
 
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'calculate' | 'history' | 'search'>('leaderboard');

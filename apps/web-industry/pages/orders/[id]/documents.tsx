@@ -4,17 +4,18 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../../../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../../../lib/auth';
-import { FileUpload, DocumentsList, DocumentViewer } from '@rt/ui-components';
+import { FileUpload, DocumentsList, DocumentViewer, useToast } from '@rt/ui-components';
 import { DocumentsService, OrdersService } from '@rt/utils';
 import type { Document, DocumentStats } from '@rt/contracts';
 import type { Order } from '@rt/contracts';
 
 export default function DocumentsPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const { id } = router.query;
+  const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -69,7 +70,7 @@ export default function DocumentsPage() {
     try {
       await DocumentsService.downloadDocument(documentId);
     } catch (err: any) {
-      alert(`Erreur lors du téléchargement : ${err.message}`);
+      toast.error(`Erreur lors du téléchargement : ${err.message}`);
     }
   };
 
@@ -78,7 +79,7 @@ export default function DocumentsPage() {
       await DocumentsService.deleteDocument(documentId);
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors de la suppression : ${err.message}`);
+      toast.error(`Erreur lors de la suppression : ${err.message}`);
     }
   };
 
@@ -90,7 +91,7 @@ export default function DocumentsPage() {
       });
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors de la vérification : ${err.message}`);
+      toast.error(`Erreur lors de la vérification : ${err.message}`);
     }
   };
 
@@ -106,7 +107,7 @@ export default function DocumentsPage() {
         loadData();
       }, 2000);
     } catch (err: any) {
-      alert(`Erreur lors du lancement de l'OCR : ${err.message}`);
+      toast.error(`Erreur lors du lancement de l'OCR : ${err.message}`);
     }
   };
 
@@ -117,7 +118,7 @@ export default function DocumentsPage() {
       const result = await DocumentsService.exportOrderDocuments(id, 'zip');
       window.open(result.downloadUrl, '_blank');
     } catch (err: any) {
-      alert(`Erreur lors de l'export : ${err.message}`);
+      toast.error(`Erreur lors de l'export : ${err.message}`);
     }
   };
 
@@ -316,7 +317,7 @@ export default function DocumentsPage() {
                 multiple={true}
                 autoOCR={true}
                 onUploadComplete={handleUploadComplete}
-                onUploadError={(error) => alert(`Erreur : ${error}`)}
+                onUploadError={(error) => toast.error(`Erreur : ${error}`)}
               />
             </div>
           )}

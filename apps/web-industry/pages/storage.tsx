@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { storageMarketApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface StorageSpace {
   id: string;
@@ -15,7 +16,8 @@ interface StorageSpace {
 }
 
 export default function StoragePage() {
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { toast } = useToast();
   const [spaces, setSpaces] = useState<StorageSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,10 +53,10 @@ export default function StoragePage() {
       await storageMarketApi.createReservation({ spaceId, startDate: new Date().toISOString() });
       // Update local state
       setSpaces(prev => prev.map(s => s.id === spaceId ? { ...s, available: false } : s));
-      alert('Reservation effectuee avec succes!');
+      toast.success('Reservation effectuee avec succes!');
     } catch (err) {
       console.error('Error creating reservation:', err);
-      alert('Erreur lors de la reservation');
+      toast.error('Erreur lors de la reservation');
     } finally {
       setReserving(null);
     }

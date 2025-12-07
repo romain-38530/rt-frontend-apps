@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
 
@@ -72,7 +72,7 @@ const CERTIFICATIONS = [
 ];
 
 export default function StorageMarketPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'detail' | 'responses'>('list');
   const [needs, setNeeds] = useState<StorageNeed[]>([]);
   const [responses, setResponses] = useState<LogisticianResponse[]>([]);

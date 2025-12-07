@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
@@ -134,7 +134,7 @@ interface RecoveryRequest {
 }
 
 export default function PalettesCircularPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State

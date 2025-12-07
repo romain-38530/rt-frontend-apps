@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getUser } from '../lib/auth';
 import { ChatbotService } from '@rt/utils';
+import { useToast } from '@rt/ui-components';
 import type {
   CopiloteMission,
   Checkpoint,
@@ -12,7 +13,8 @@ import type {
 } from '@rt/contracts';
 
 export default function CopiloteChauffeurPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -114,7 +116,7 @@ export default function CopiloteChauffeurPage() {
 
   const activateMission = async (missionId: string) => {
     if (!currentLocation) {
-      alert('Activation de la geolocalisation requise');
+      toast.warning('Activation de la geolocalisation requise');
       return;
     }
 
@@ -127,10 +129,10 @@ export default function CopiloteChauffeurPage() {
         },
       });
       setCurrentMission(updated);
-      alert('Mission activee avec succes');
+      toast.success('Mission activee avec succes');
     } catch (error) {
       console.error('Error activating mission:', error);
-      alert('Erreur lors de l\'activation de la mission');
+      toast.error('Erreur lors de l\'activation de la mission');
     }
   };
 
@@ -147,10 +149,10 @@ export default function CopiloteChauffeurPage() {
         timestamp: new Date().toISOString(),
       });
       setCurrentMission(updated);
-      alert('Arrivee signalee');
+      toast.success('Arrivee signalee');
     } catch (error) {
       console.error('Error reporting arrival:', error);
-      alert('Erreur lors du signalement');
+      toast.error('Erreur lors du signalement');
     }
   };
 
@@ -174,10 +176,10 @@ export default function CopiloteChauffeurPage() {
       setProofPhotos([]);
       setProofNotes('');
       setSignatureData(null);
-      alert('Checkpoint complete');
+      toast.success('Checkpoint complete');
     } catch (error) {
       console.error('Error completing checkpoint:', error);
-      alert('Erreur lors de la completion');
+      toast.error('Erreur lors de la completion');
     }
   };
 
@@ -196,11 +198,11 @@ export default function CopiloteChauffeurPage() {
           mimeType: file.type,
           data: base64.split(',')[1],
         });
-        alert('Document uploade');
+        toast.success('Document uploade');
         setShowDocumentUpload(false);
       } catch (error) {
         console.error('Error uploading document:', error);
-        alert('Erreur lors de l\'upload');
+        toast.error('Erreur lors de l\'upload');
       }
     };
     reader.readAsDataURL(file);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { planningApi } from '../lib/api';
@@ -36,7 +36,7 @@ interface TimeSlot {
 }
 
 export default function PlanningPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'sites' | 'docks' | 'slots'>('overview');
   const [sites, setSites] = useState<Site[]>([]);

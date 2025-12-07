@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { trainingApi } from '../lib/api';
@@ -14,7 +14,7 @@ interface TrainingModule {
 }
 
 export default function TrainingPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [modules, setModules] = useState<TrainingModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

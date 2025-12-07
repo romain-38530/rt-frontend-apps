@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { useLanguage } from '../hooks/useLanguage';
 import { languages, languageNames } from '../lib/translations';
 
 export default function Login() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const { language, changeLanguage, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
 import { API_CONFIG } from '../lib/api';
@@ -71,7 +71,7 @@ const ZONES = {
 };
 
 export default function PricingGridsPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const apiUrl = API_CONFIG.SUBSCRIPTIONS_PRICING_API;
   const fileInputRef = useRef<HTMLInputElement>(null);
 

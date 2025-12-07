@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getToken } from '../lib/auth';
 
@@ -8,7 +8,7 @@ interface Proposal { _id: string; carrierId: string; carrierName: string; propos
 interface Stats { totalSessions: number; successRate: number; avgResponseTime: number; avgPrice: number; topCarriers: Array<{ carrierId: string; name: string; assignations: number; avgScore: number }>; }
 
 export default function AffretiaPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d393yiia4ig3bw.cloudfront.net';
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'bourse' | 'tracking' | 'vigilance' | 'stats'>('dashboard');
   const [sessions, setSessions] = useState<Session[]>([]);

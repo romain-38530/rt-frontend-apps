@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import {
   CreditCard,
   Package,
@@ -47,7 +47,7 @@ const MODULES = [
 ];
 
 export default function SubscriptionPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);

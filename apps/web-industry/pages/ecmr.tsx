@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { ecmrApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface ECMR {
   id: string;
@@ -50,7 +51,8 @@ interface ECMR {
 }
 
 export default function ECMRPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { toast } = useToast();
 
   const [ecmrs, setEcmrs] = useState<ECMR[]>([]);
   const [loading, setLoading] = useState(true);
@@ -400,7 +402,7 @@ export default function ECMRPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert(`Erreur lors du telechargement du PDF pour eCMR ${ecmr.id}`);
+      toast.error(`Erreur lors du telechargement du PDF pour eCMR ${ecmr.id}`);
     }
   };
 

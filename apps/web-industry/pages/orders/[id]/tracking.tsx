@@ -4,10 +4,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../../../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../../../lib/auth';
-import { MapView, TrackingPanel } from '@rt/ui-components';
+import { MapView, TrackingPanel, useToast } from '@rt/ui-components';
 import { TrackingService, OrdersService, useWebSocket } from '@rt/utils';
 import type {
   TrackingSession,
@@ -17,8 +17,9 @@ import type {
 import type { Order } from '@rt/contracts';
 
 export default function TrackingPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const { id } = router.query;
+  const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [session, setSession] = useState<TrackingSession | null>(null);
@@ -148,7 +149,7 @@ export default function TrackingPage() {
       });
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors du démarrage du tracking : ${err.message}`);
+      toast.error(`Erreur lors du démarrage du tracking : ${err.message}`);
     }
   };
 
@@ -159,7 +160,7 @@ export default function TrackingPage() {
       await TrackingService.stopTracking(session.id);
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors de l'arrêt du tracking : ${err.message}`);
+      toast.error(`Erreur lors de l'arrêt du tracking : ${err.message}`);
     }
   };
 
@@ -170,7 +171,7 @@ export default function TrackingPage() {
       await TrackingService.pauseTracking(session.id);
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors de la pause du tracking : ${err.message}`);
+      toast.error(`Erreur lors de la pause du tracking : ${err.message}`);
     }
   };
 
@@ -181,7 +182,7 @@ export default function TrackingPage() {
       await TrackingService.resumeTracking(session.id);
       await loadData();
     } catch (err: any) {
-      alert(`Erreur lors de la reprise du tracking : ${err.message}`);
+      toast.error(`Erreur lors de la reprise du tracking : ${err.message}`);
     }
   };
 

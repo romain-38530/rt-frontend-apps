@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { driverApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface DriverCheckin {
   id: string;
@@ -24,7 +25,8 @@ interface DriverCheckin {
 }
 
 export default function BorneChauffeurPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'queue' | 'checkin'>('dashboard');
   const [drivers, setDrivers] = useState<DriverCheckin[]>([]);
@@ -241,15 +243,15 @@ export default function BorneChauffeurPage() {
       const result = await driverApi.checkin({ code: checkinCode, siteId: selectedSite, method: 'manual' });
 
       if (result.success) {
-        alert('Check-in reussi!');
+        toast.success('Check-in reussi!');
         setCheckinCode('');
         loadDrivers();
       } else {
-        alert('Check-in reussi! (demo)');
+        toast.success('Check-in reussi! (demo)');
         setCheckinCode('');
       }
     } catch (error) {
-      alert('Check-in reussi! (demo)');
+      toast.success('Check-in reussi! (demo)');
       setCheckinCode('');
     }
   };

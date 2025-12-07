@@ -4,10 +4,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
-import { CreateOrderForm, OrdersList } from '@rt/ui-components';
+import { useSafeRouter } from '../lib/useSafeRouter';
+import { CreateOrderForm, OrdersList, useToast } from '@rt/ui-components';
 import { OrdersService } from '@rt/utils';
 import type {
   Order,
@@ -17,7 +17,8 @@ import type {
 } from '@rt/contracts';
 
 export default function OrdersPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { toast } = useToast();
 
   // État de la page
   const [view, setView] = useState<'list' | 'create'>('list');
@@ -73,9 +74,7 @@ export default function OrdersPage() {
       await loadOrders();
 
       // Afficher une notification de succès
-      if (typeof window !== 'undefined') {
-        alert(`Commande ${newOrder.reference} créée avec succès !`);
-      }
+      toast.success(`Commande ${newOrder.reference} créée avec succès !`);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création de la commande');
       console.error('Error creating order:', err);
@@ -91,9 +90,9 @@ export default function OrdersPage() {
       const duplicatedOrder = await OrdersService.duplicateOrder(orderId);
       console.log('Order duplicated:', duplicatedOrder);
       await loadOrders();
-      alert(`Commande ${duplicatedOrder.reference} dupliquée avec succès !`);
+      toast.success(`Commande ${duplicatedOrder.reference} dupliquée avec succès !`);
     } catch (err: any) {
-      alert(`Erreur lors de la duplication : ${err.message}`);
+      toast.error(`Erreur lors de la duplication : ${err.message}`);
       console.error('Error duplicating order:', err);
     }
   };
@@ -104,9 +103,9 @@ export default function OrdersPage() {
       const cancelledOrder = await OrdersService.cancelOrder(orderId, 'Annulation manuelle');
       console.log('Order cancelled:', cancelledOrder);
       await loadOrders();
-      alert(`Commande ${cancelledOrder.reference} annulée avec succès !`);
+      toast.success(`Commande ${cancelledOrder.reference} annulée avec succès !`);
     } catch (err: any) {
-      alert(`Erreur lors de l'annulation : ${err.message}`);
+      toast.error(`Erreur lors de l'annulation : ${err.message}`);
       console.error('Error cancelling order:', err);
     }
   };
@@ -131,13 +130,15 @@ export default function OrdersPage() {
 
   // Vérifier l'authentification et charger les commandes
   useEffect(() => {
+    if (!router.mounted) return;
+
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
 
     loadOrders();
-  }, [router]);
+  }, [router.mounted]);
 
   return (
     <>

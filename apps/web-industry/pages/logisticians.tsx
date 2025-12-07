@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getUser } from '../lib/auth';
 import { LogisticianService } from '@rt/utils';
@@ -31,7 +31,7 @@ const ACCESS_LABELS: Record<OrderAccessLevel, { label: string; description: stri
 };
 
 export default function LogisticiansPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

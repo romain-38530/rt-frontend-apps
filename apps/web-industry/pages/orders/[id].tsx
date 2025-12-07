@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: s
 };
 
 export default function OrderDetailPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const { id } = router.query;
 
   const [order, setOrder] = useState<Order | null>(null);

@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
 
@@ -81,7 +81,7 @@ interface BillingStats {
 }
 
 export default function BillingPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const apiUrl = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
 
   // State

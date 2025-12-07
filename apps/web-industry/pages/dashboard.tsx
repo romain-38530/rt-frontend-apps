@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const [kpis, setKpis] = useState({
