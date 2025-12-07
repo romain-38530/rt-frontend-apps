@@ -493,8 +493,8 @@ export default function StorageMarketLogisticianPage() {
                         <div style={{ fontWeight: '700', marginBottom: '8px' }}>{cap.site?.name}</div>
                         <div style={{ fontSize: '14px', opacity: 0.7 }}>{cap.site?.region}, {cap.site?.country}</div>
                         <div style={{ marginTop: '8px', display: 'flex', gap: '16px' }}>
-                          <span style={{ color: '#10b981' }}>{cap.capacity?.available?.value || cap.capacity?.available} m2 dispo</span>
-                          <span style={{ opacity: 0.6 }}>/ {cap.capacity?.total?.value || cap.capacity?.total} m2 total</span>
+                          <span style={{ color: '#10b981' }}>{typeof cap.capacity?.available === 'object' ? (cap.capacity.available as {value?: number})?.value : cap.capacity?.available} m2 dispo</span>
+                          <span style={{ opacity: 0.6 }}>/ {typeof cap.capacity?.total === 'object' ? (cap.capacity.total as {value?: number})?.value : cap.capacity?.total} m2 total</span>
                         </div>
                       </div>
                     ))}
