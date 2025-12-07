@@ -1,4 +1,4 @@
 // RT Technologie - Shared utilities
-// TODO: Add your utility functions here
+// Re-export all utilities from lib
 
-export {};
+export * from './lib/index';
