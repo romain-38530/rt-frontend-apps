@@ -10,7 +10,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/marketing-site^...
             - cd apps/marketing-site
         build:
@@ -63,7 +63,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-industry^...
             - cd apps/web-industry
         build:
@@ -121,7 +121,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-transporter^...
             - cd apps/web-transporter
         build:
@@ -186,7 +186,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-logistician^...
             - cd apps/web-logistician
         build:
@@ -245,7 +245,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-recipient^...
             - cd apps/web-recipient
         build:
@@ -296,7 +296,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-supplier^...
             - cd apps/web-supplier
         build:
@@ -347,7 +347,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/web-forwarder^...
             - cd apps/web-forwarder
         build:
@@ -400,7 +400,7 @@ applications:
           commands:
             - npm install -g pnpm@8.15.4
             - cd ../..
-            - pnpm install
+            - pnpm install --no-frozen-lockfile
             - pnpm turbo build --filter=@rt/ui-components --filter=@rt/backoffice-admin^...
             - cd apps/backoffice-admin
         build:

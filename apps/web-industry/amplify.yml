@@ -5,7 +5,7 @@ frontend:
       commands:
         - npm install -g pnpm@8.15.4
         - cd ../..
-        - pnpm install
+        - pnpm install --no-frozen-lockfile
         - pnpm turbo build --filter=@rt/web-industry^...
         - cd apps/web-industry
     build:
