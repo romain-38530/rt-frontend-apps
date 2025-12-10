@@ -11,7 +11,7 @@ interface CreateEventParams {
     metadata?: IOrderEvent['metadata'];
     previousStatus?: string;
     newStatus?: string;
-    description: string;
+    description?: string;
 }
 declare class EventService {
     /**

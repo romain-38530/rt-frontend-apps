@@ -25,12 +25,14 @@ export type OrderEventType =
   | 'tracking.eta.updated'
   | 'tracking.delay.detected'
   | 'tracking.position.updated'
+  | 'tracking.ping.requested'
   // Étapes Transport
   | 'order.in.transit'
   | 'order.arrived.pickup'
   | 'order.loaded'
   | 'order.arrived.delivery'
   | 'order.delivered'
+  | 'delivered'
   // RDV
   | 'rdv.requested'
   | 'rdv.proposed'
@@ -40,8 +42,17 @@ export type OrderEventType =
   | 'documents.uploaded'
   | 'documents.ocr.completed'
   | 'documents.verified'
+  | 'document_uploaded'
+  | 'document_validated'
+  | 'document_rejected'
+  | 'document_signed'
+  // Incidents
+  | 'incident_reported'
+  | 'incident_resolved'
   // Finalisation
   | 'carrier.scored'
+  | 'score_calculated'
+  | 'order.completed'
   | 'order.archived'
   | 'order.closed';
 
@@ -51,7 +62,7 @@ export interface IOrderEvent extends Document {
   orderReference: string;
   eventType: OrderEventType;
   timestamp: Date;
-  source: 'system' | 'user' | 'carrier' | 'api' | 'erp' | 'affretia' | 'tracking';
+  source: 'system' | 'user' | 'carrier' | 'api' | 'erp' | 'affretia' | 'tracking' | 'recipient' | 'supplier' | 'industrial';
   actorId?: string;
   actorType?: 'industrial' | 'carrier' | 'supplier' | 'recipient' | 'system';
   actorName?: string;
@@ -78,11 +89,12 @@ const OrderEventSchema = new Schema<IOrderEvent>({
       'order.lane.detected', 'dispatch.chain.generated',
       'order.sent.to.carrier', 'carrier.accepted', 'carrier.refused', 'carrier.timeout',
       'order.escalated.to.affretia', 'affretia.carrier.assigned',
-      'tracking.started', 'tracking.eta.updated', 'tracking.delay.detected', 'tracking.position.updated',
-      'order.in.transit', 'order.arrived.pickup', 'order.loaded', 'order.arrived.delivery', 'order.delivered',
+      'tracking.started', 'tracking.eta.updated', 'tracking.delay.detected', 'tracking.position.updated', 'tracking.ping.requested',
+      'order.in.transit', 'order.arrived.pickup', 'order.loaded', 'order.arrived.delivery', 'order.delivered', 'delivered',
       'rdv.requested', 'rdv.proposed', 'rdv.confirmed', 'rdv.cancelled',
-      'documents.uploaded', 'documents.ocr.completed', 'documents.verified',
-      'carrier.scored', 'order.archived', 'order.closed'
+      'documents.uploaded', 'documents.ocr.completed', 'documents.verified', 'document_uploaded', 'document_validated', 'document_rejected', 'document_signed',
+      'incident_reported', 'incident_resolved',
+      'carrier.scored', 'score_calculated', 'order.completed', 'order.archived', 'order.closed'
     ],
     index: true
   },
@@ -90,7 +102,7 @@ const OrderEventSchema = new Schema<IOrderEvent>({
   source: {
     type: String,
     required: true,
-    enum: ['system', 'user', 'carrier', 'api', 'erp', 'affretia', 'tracking']
+    enum: ['system', 'user', 'carrier', 'api', 'erp', 'affretia', 'tracking', 'recipient', 'supplier', 'industrial']
   },
   actorId: String,
   actorType: {

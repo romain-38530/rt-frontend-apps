@@ -18,17 +18,33 @@ interface CreateEventParams {
   metadata?: IOrderEvent['metadata'];
   previousStatus?: string;
   newStatus?: string;
-  description: string;
+  description?: string;
 }
+
+// Auto-generate descriptions for event types
+const eventDescriptions: Record<string, string> = {
+  'document_uploaded': 'Document uploadé',
+  'document_validated': 'Document validé',
+  'document_rejected': 'Document rejeté',
+  'document_signed': 'Document signé électroniquement',
+  'delivered': 'Livraison confirmée',
+  'incident_reported': 'Incident signalé',
+  'incident_resolved': 'Incident résolu',
+  'score_calculated': 'Score transporteur calculé',
+  'tracking.ping.requested': 'Demande de pointage envoyée',
+  'order.completed': 'Commande complétée'
+};
 
 class EventService {
   /**
    * Crée un nouvel événement
    */
   static async createEvent(params: CreateEventParams): Promise<IOrderEvent> {
+    const description = params.description || eventDescriptions[params.eventType] || `Événement: ${params.eventType}`;
     const event = new OrderEvent({
       eventId: `evt_${uuidv4()}`,
       ...params,
+      description,
       timestamp: new Date()
     });
 

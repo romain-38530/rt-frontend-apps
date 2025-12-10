@@ -10,14 +10,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const uuid_1 = require("uuid");
 const OrderEvent_1 = __importDefault(require("../models/OrderEvent"));
 const Order_1 = __importDefault(require("../models/Order"));
+// Auto-generate descriptions for event types
+const eventDescriptions = {
+    'document_uploaded': 'Document uploadé',
+    'document_validated': 'Document validé',
+    'document_rejected': 'Document rejeté',
+    'document_signed': 'Document signé électroniquement',
+    'delivered': 'Livraison confirmée',
+    'incident_reported': 'Incident signalé',
+    'incident_resolved': 'Incident résolu',
+    'score_calculated': 'Score transporteur calculé',
+    'tracking.ping.requested': 'Demande de pointage envoyée',
+    'order.completed': 'Commande complétée'
+};
 class EventService {
     /**
      * Crée un nouvel événement
      */
     static async createEvent(params) {
+        const description = params.description || eventDescriptions[params.eventType] || `Événement: ${params.eventType}`;
         const event = new OrderEvent_1.default({
             eventId: `evt_${(0, uuid_1.v4)()}`,
             ...params,
+            description,
             timestamp: new Date()
         });
         await event.save();

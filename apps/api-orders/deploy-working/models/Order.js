@@ -69,9 +69,11 @@ const OrderDatesSchema = new mongoose_1.Schema({
     pickupDate: { type: Date, required: true },
     pickupTimeSlotStart: String,
     pickupTimeSlotEnd: String,
+    actualPickupDate: Date,
     deliveryDate: { type: Date, required: true },
     deliveryTimeSlotStart: String,
-    deliveryTimeSlotEnd: String
+    deliveryTimeSlotEnd: String,
+    actualDeliveryDate: Date
 }, { _id: false });
 const VehicleInfoSchema = new mongoose_1.Schema({
     truckPlate: String,
@@ -94,7 +96,7 @@ const OrderSchema = new mongoose_1.Schema({
         type: String,
         enum: ['draft', 'created', 'sent_to_carrier', 'carrier_accepted', 'carrier_refused',
             'in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered',
-            'closed', 'cancelled', 'escalated'],
+            'completed', 'closed', 'cancelled', 'escalated', 'incident', 'archived'],
         default: 'created'
     },
     trackingLevel: { type: String, enum: ['basic', 'gps', 'premium'], default: 'basic' },
@@ -103,6 +105,7 @@ const OrderSchema = new mongoose_1.Schema({
     logisticianManaged: { type: Boolean, default: false },
     carrierId: { type: String, index: true },
     carrierName: String,
+    carrierEmail: String,
     supplierId: { type: String, index: true },
     recipientId: { type: String, index: true },
     flowType: { type: String, enum: ['inbound', 'outbound'] },

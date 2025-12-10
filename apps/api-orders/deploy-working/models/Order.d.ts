@@ -2,7 +2,7 @@
  * Modèle Order - Représente une commande de transport SYMPHONI.A
  */
 import mongoose, { Document } from 'mongoose';
-export type OrderStatus = 'draft' | 'created' | 'sent_to_carrier' | 'carrier_accepted' | 'carrier_refused' | 'in_transit' | 'arrived_pickup' | 'loaded' | 'arrived_delivery' | 'delivered' | 'closed' | 'cancelled' | 'escalated';
+export type OrderStatus = 'draft' | 'created' | 'sent_to_carrier' | 'carrier_accepted' | 'carrier_refused' | 'in_transit' | 'arrived_pickup' | 'loaded' | 'arrived_delivery' | 'delivered' | 'completed' | 'closed' | 'cancelled' | 'escalated' | 'incident' | 'archived';
 export type TrackingLevel = 'basic' | 'gps' | 'premium';
 export interface IAddress {
     street: string;
@@ -36,9 +36,11 @@ export interface IOrderDates {
     pickupDate: Date;
     pickupTimeSlotStart?: string;
     pickupTimeSlotEnd?: string;
+    actualPickupDate?: Date;
     deliveryDate: Date;
     deliveryTimeSlotStart?: string;
     deliveryTimeSlotEnd?: string;
+    actualDeliveryDate?: Date;
 }
 export interface IVehicleInfo {
     truckPlate?: string;
@@ -64,6 +66,7 @@ export interface IOrder extends Document {
     logisticianManaged?: boolean;
     carrierId?: string;
     carrierName?: string;
+    carrierEmail?: string;
     supplierId?: string;
     recipientId?: string;
     flowType?: 'inbound' | 'outbound';

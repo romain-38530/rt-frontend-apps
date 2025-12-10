@@ -60,6 +60,14 @@ declare class ScoringService {
      */
     private static calculateTrendValue;
     /**
+     * Récupère le score d'une commande
+     */
+    static getOrderScore(orderId: string): Promise<ICarrierOrderScore | null>;
+    /**
+     * Calcule le score automatiquement à partir des données de la commande
+     */
+    static calculateScore(orderId: string, carrierId: string): Promise<ICarrierOrderScore | null>;
+    /**
      * Récupère le score global d'un transporteur
      */
     static getCarrierGlobalScore(carrierId: string): Promise<ICarrierGlobalScore | null>;

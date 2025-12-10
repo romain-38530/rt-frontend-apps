@@ -294,6 +294,34 @@ class ScoringService {
   }
 
   /**
+   * Récupère le score d'une commande
+   */
+  static async getOrderScore(orderId: string): Promise<ICarrierOrderScore | null> {
+    return CarrierOrderScore.findOne({ orderId });
+  }
+
+  /**
+   * Calcule le score automatiquement à partir des données de la commande
+   */
+  static async calculateScore(orderId: string, carrierId: string): Promise<ICarrierOrderScore | null> {
+    const order = await Order.findOne({ orderId });
+    if (!order) return null;
+
+    return this.calculateOrderScore({
+      orderId,
+      carrierId,
+      carrierName: order.carrierName || carrierId,
+      industrialId: order.industrialId || 'default',
+      pickupScheduledAt: order.dates?.pickupDate ? new Date(order.dates.pickupDate) : undefined,
+      pickupActualAt: order.dates?.actualPickupDate ? new Date(order.dates.actualPickupDate) : undefined,
+      deliveryScheduledAt: order.dates?.deliveryDate ? new Date(order.dates.deliveryDate) : undefined,
+      deliveryActualAt: order.dates?.actualDeliveryDate ? new Date(order.dates.actualDeliveryDate) : undefined,
+      appointmentRespected: (order as any).appointments?.pickupConfirmedAt && (order as any).appointments?.deliveryConfirmedAt ? true : undefined,
+      hadIncident: (order as any).deliveryIssues?.length > 0
+    });
+  }
+
+  /**
    * Récupère le score global d'un transporteur
    */
   static async getCarrierGlobalScore(carrierId: string): Promise<ICarrierGlobalScore | null> {

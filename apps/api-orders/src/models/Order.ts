@@ -6,7 +6,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export type OrderStatus =
   | 'draft' | 'created' | 'sent_to_carrier' | 'carrier_accepted' | 'carrier_refused'
   | 'in_transit' | 'arrived_pickup' | 'loaded' | 'arrived_delivery' | 'delivered'
-  | 'closed' | 'cancelled' | 'escalated';
+  | 'completed' | 'closed' | 'cancelled' | 'escalated' | 'incident' | 'archived';
 
 export type TrackingLevel = 'basic' | 'gps' | 'premium';
 
@@ -45,9 +45,11 @@ export interface IOrderDates {
   pickupDate: Date;
   pickupTimeSlotStart?: string;
   pickupTimeSlotEnd?: string;
+  actualPickupDate?: Date;
   deliveryDate: Date;
   deliveryTimeSlotStart?: string;
   deliveryTimeSlotEnd?: string;
+  actualDeliveryDate?: Date;
 }
 
 // Informations véhicule du transporteur
@@ -78,6 +80,7 @@ export interface IOrder extends Document {
   logisticianManaged?: boolean;
   carrierId?: string;
   carrierName?: string;
+  carrierEmail?: string;
   supplierId?: string;
   recipientId?: string;
   flowType?: 'inbound' | 'outbound';
@@ -142,9 +145,11 @@ const OrderDatesSchema = new Schema<IOrderDates>({
   pickupDate: { type: Date, required: true },
   pickupTimeSlotStart: String,
   pickupTimeSlotEnd: String,
+  actualPickupDate: Date,
   deliveryDate: { type: Date, required: true },
   deliveryTimeSlotStart: String,
-  deliveryTimeSlotEnd: String
+  deliveryTimeSlotEnd: String,
+  actualDeliveryDate: Date
 }, { _id: false });
 
 const VehicleInfoSchema = new Schema<IVehicleInfo>({
@@ -170,7 +175,7 @@ const OrderSchema = new Schema<IOrder>({
     type: String,
     enum: ['draft', 'created', 'sent_to_carrier', 'carrier_accepted', 'carrier_refused',
            'in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered',
-           'closed', 'cancelled', 'escalated'],
+           'completed', 'closed', 'cancelled', 'escalated', 'incident', 'archived'],
     default: 'created'
   },
   trackingLevel: { type: String, enum: ['basic', 'gps', 'premium'], default: 'basic' },
@@ -179,6 +184,7 @@ const OrderSchema = new Schema<IOrder>({
   logisticianManaged: { type: Boolean, default: false },
   carrierId: { type: String, index: true },
   carrierName: String,
+  carrierEmail: String,
   supplierId: { type: String, index: true },
   recipientId: { type: String, index: true },
   flowType: { type: String, enum: ['inbound', 'outbound'] },

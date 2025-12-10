@@ -15,6 +15,9 @@ const scoring_1 = __importDefault(require("./routes/scoring"));
 const archive_1 = __importDefault(require("./routes/archive"));
 const carrier_portal_1 = __importDefault(require("./routes/carrier-portal"));
 const tracking_1 = __importDefault(require("./routes/tracking"));
+const documents_1 = __importDefault(require("./routes/documents"));
+const delivery_1 = __importDefault(require("./routes/delivery"));
+const closure_1 = __importDefault(require("./routes/closure"));
 const timeout_scheduler_1 = __importDefault(require("./services/timeout-scheduler"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -75,7 +78,7 @@ app.use(express_1.default.json());
 app.get('/', (req, res) => {
     res.json({
         name: 'RT Technologie Orders API',
-        version: '2.0.0',
+        version: '2.9.0',
         description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
         endpoints: {
             health: '/health',
@@ -146,6 +149,38 @@ app.get('/', (req, res) => {
                 myOrders: 'GET /api/v1/carrier-portal/my-orders',
                 pending: 'GET /api/v1/carrier-portal/pending',
                 quickRespond: 'GET /api/v1/carrier-portal/quick-respond/:chainId'
+            },
+            tracking: {
+                getStatus: 'GET /api/v1/tracking/:orderId',
+                getHistory: 'GET /api/v1/tracking/:orderId/history',
+                updatePosition: 'POST /api/v1/tracking/:orderId/position',
+                updateMilestone: 'POST /api/v1/tracking/:orderId/milestone',
+                updateETA: 'POST /api/v1/tracking/:orderId/eta',
+                ping: 'POST /api/v1/tracking/:orderId/ping',
+                batch: 'POST /api/v1/tracking/:orderId/batch',
+                carrierActive: 'GET /api/v1/tracking/carrier/:carrierId/active'
+            },
+            documents: {
+                upload: 'POST /api/v1/documents/:orderId/upload',
+                list: 'GET /api/v1/documents/:orderId',
+                detail: 'GET /api/v1/documents/detail/:documentId',
+                validate: 'POST /api/v1/documents/:documentId/validate',
+                reject: 'POST /api/v1/documents/:documentId/reject',
+                sign: 'POST /api/v1/documents/:documentId/sign',
+                check: 'GET /api/v1/documents/:orderId/check',
+                stats: 'GET /api/v1/documents/stats'
+            },
+            delivery: {
+                confirm: 'POST /api/v1/delivery/:orderId/confirm',
+                reportIssue: 'POST /api/v1/delivery/:orderId/issue',
+                stats: 'GET /api/v1/delivery/stats'
+            },
+            closure: {
+                check: 'GET /api/v1/closure/:orderId/check',
+                close: 'POST /api/v1/closure/:orderId/close',
+                autoClose: 'POST /api/v1/closure/auto-close',
+                autoArchive: 'POST /api/v1/closure/auto-archive',
+                stats: 'GET /api/v1/closure/stats'
             }
         }
     });
@@ -158,6 +193,9 @@ app.use('/api/v1/scoring', scoring_1.default);
 app.use('/api/v1/archive', archive_1.default);
 app.use('/api/v1/carrier-portal', carrier_portal_1.default);
 app.use('/api/v1/tracking', tracking_1.default);
+app.use('/api/v1/documents', documents_1.default);
+app.use('/api/v1/delivery', delivery_1.default);
+app.use('/api/v1/closure', closure_1.default);
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'RT Orders API is running' });
@@ -183,7 +221,7 @@ mongoose_1.default.connect(MONGODB_URI)
     timeout_scheduler_1.default.start();
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
-        console.log('SYMPHONI.A Orders API v2.1 - Dispatch automatique activé');
+        console.log('SYMPHONI.A Orders API v2.9.0 - Cycle de vie complet activé');
     });
 })
     .catch((error) => {

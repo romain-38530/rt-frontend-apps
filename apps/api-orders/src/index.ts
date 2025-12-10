@@ -10,6 +10,9 @@ import scoringRoutes from './routes/scoring';
 import archiveRoutes from './routes/archive';
 import carrierPortalRoutes from './routes/carrier-portal';
 import trackingRoutes from './routes/tracking';
+import documentsRoutes from './routes/documents';
+import deliveryRoutes from './routes/delivery';
+import closureRoutes from './routes/closure';
 import timeoutScheduler from './services/timeout-scheduler';
 
 dotenv.config();
@@ -75,7 +78,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.0.0',
+    version: '2.9.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
     endpoints: {
       health: '/health',
@@ -146,6 +149,38 @@ app.get('/', (req, res) => {
         myOrders: 'GET /api/v1/carrier-portal/my-orders',
         pending: 'GET /api/v1/carrier-portal/pending',
         quickRespond: 'GET /api/v1/carrier-portal/quick-respond/:chainId'
+      },
+      tracking: {
+        getStatus: 'GET /api/v1/tracking/:orderId',
+        getHistory: 'GET /api/v1/tracking/:orderId/history',
+        updatePosition: 'POST /api/v1/tracking/:orderId/position',
+        updateMilestone: 'POST /api/v1/tracking/:orderId/milestone',
+        updateETA: 'POST /api/v1/tracking/:orderId/eta',
+        ping: 'POST /api/v1/tracking/:orderId/ping',
+        batch: 'POST /api/v1/tracking/:orderId/batch',
+        carrierActive: 'GET /api/v1/tracking/carrier/:carrierId/active'
+      },
+      documents: {
+        upload: 'POST /api/v1/documents/:orderId/upload',
+        list: 'GET /api/v1/documents/:orderId',
+        detail: 'GET /api/v1/documents/detail/:documentId',
+        validate: 'POST /api/v1/documents/:documentId/validate',
+        reject: 'POST /api/v1/documents/:documentId/reject',
+        sign: 'POST /api/v1/documents/:documentId/sign',
+        check: 'GET /api/v1/documents/:orderId/check',
+        stats: 'GET /api/v1/documents/stats'
+      },
+      delivery: {
+        confirm: 'POST /api/v1/delivery/:orderId/confirm',
+        reportIssue: 'POST /api/v1/delivery/:orderId/issue',
+        stats: 'GET /api/v1/delivery/stats'
+      },
+      closure: {
+        check: 'GET /api/v1/closure/:orderId/check',
+        close: 'POST /api/v1/closure/:orderId/close',
+        autoClose: 'POST /api/v1/closure/auto-close',
+        autoArchive: 'POST /api/v1/closure/auto-archive',
+        stats: 'GET /api/v1/closure/stats'
       }
     }
   });
@@ -159,6 +194,9 @@ app.use('/api/v1/scoring', scoringRoutes);
 app.use('/api/v1/archive', archiveRoutes);
 app.use('/api/v1/carrier-portal', carrierPortalRoutes);
 app.use('/api/v1/tracking', trackingRoutes);
+app.use('/api/v1/documents', documentsRoutes);
+app.use('/api/v1/delivery', deliveryRoutes);
+app.use('/api/v1/closure', closureRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -187,7 +225,7 @@ mongoose.connect(MONGODB_URI)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.1 - Dispatch automatique activé');
+      console.log('SYMPHONI.A Orders API v2.9.0 - Cycle de vie complet activé');
     });
   })
   .catch((error) => {

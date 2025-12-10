@@ -66,10 +66,13 @@ const TRACKING_TRANSITIONS = {
     'arrived_pickup': ['loaded'],
     'loaded': ['arrived_delivery'],
     'arrived_delivery': ['delivered'],
-    'delivered': ['closed'],
+    'delivered': ['completed', 'closed'],
+    'completed': ['archived'],
     'closed': [],
     'cancelled': [],
-    'escalated': []
+    'escalated': [],
+    'incident': ['delivered'],
+    'archived': []
 };
 // Labels des statuts pour les notifications
 const STATUS_LABELS = {
