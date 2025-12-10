@@ -56,9 +56,13 @@ export interface IOrder extends Document {
   status: OrderStatus;
   trackingLevel: TrackingLevel;
   industrialId: string;
+  logisticianId?: string;  // Si logistique externalisée
+  logisticianManaged?: boolean;  // Si true, logisticien gère le transport
   carrierId?: string;
   supplierId?: string;
   recipientId?: string;
+  // Flux de la marchandise
+  flowType?: 'inbound' | 'outbound';  // inbound = fournisseur->industriel, outbound = industriel->destinataire
   pickupAddress: IAddress;
   deliveryAddress: IAddress;
   dates: IOrderDates;
@@ -133,9 +137,12 @@ const OrderSchema = new Schema<IOrder>({
   },
   trackingLevel: { type: String, enum: ['basic', 'gps', 'premium'], default: 'basic' },
   industrialId: { type: String, required: true, index: true },
+  logisticianId: { type: String, index: true },
+  logisticianManaged: { type: Boolean, default: false },
   carrierId: { type: String, index: true },
   supplierId: { type: String, index: true },
   recipientId: { type: String, index: true },
+  flowType: { type: String, enum: ['inbound', 'outbound'] },
   pickupAddress: { type: AddressSchema, required: true },
   deliveryAddress: { type: AddressSchema, required: true },
   dates: { type: OrderDatesSchema, required: true },

@@ -4,7 +4,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type InvitationStatus = 'pending' | 'sent' | 'accepted' | 'expired';
-export type PortalRole = 'supplier' | 'recipient';
+export type PortalRole = 'supplier' | 'recipient' | 'logistician' | 'carrier';
 
 export interface IPortalInvitation extends Document {
   invitationId: string;
@@ -29,7 +29,7 @@ const PortalInvitationSchema = new Schema<IPortalInvitation>({
   email: { type: String, required: true },
   phone: String,
   contactName: { type: String, required: true },
-  role: { type: String, enum: ['supplier', 'recipient'], required: true },
+  role: { type: String, enum: ['supplier', 'recipient', 'logistician', 'carrier'], required: true },
   status: {
     type: String,
     enum: ['pending', 'sent', 'accepted', 'expired'],

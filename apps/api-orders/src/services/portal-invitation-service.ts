@@ -21,6 +21,17 @@ const transporter = nodemailer.createTransport({
 interface CreateInvitationParams {
   orderId: string;
   orderReference: string;
+  address?: IAddress;
+  email: string;
+  contactName: string;
+  phone?: string;
+  role: 'supplier' | 'recipient' | 'logistician' | 'carrier';
+  invitedBy: string;
+}
+
+interface CreateInvitationFromAddressParams {
+  orderId: string;
+  orderReference: string;
   address: IAddress;
   role: 'supplier' | 'recipient';
   invitedBy: string;
@@ -28,9 +39,81 @@ interface CreateInvitationParams {
 
 export class PortalInvitationService {
   /**
-   * Crée et envoie une invitation portail si l'accès est activé
+   * Détermine l'URL du portail selon le rôle
    */
-  static async createAndSendInvitation(params: CreateInvitationParams): Promise<string | null> {
+  private static getPortalUrl(role: string): string {
+    switch (role) {
+      case 'supplier':
+        return process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphoni-a.com';
+      case 'recipient':
+        return process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphoni-a.com';
+      case 'logistician':
+        return process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphoni-a.com';
+      case 'carrier':
+        return process.env.CARRIER_PORTAL_URL || 'https://carrier.symphoni-a.com';
+      default:
+        return 'https://symphoni-a.com';
+    }
+  }
+
+  /**
+   * Crée et envoie une invitation portail (méthode générique)
+   */
+  static async createInvitation(params: CreateInvitationParams): Promise<string | null> {
+    const { orderId, orderReference, email, contactName, phone, role, invitedBy } = params;
+
+    if (!email) {
+      return null;
+    }
+
+    // Générer un token unique
+    const token = uuidv4();
+    const invitationId = `inv_${uuidv4()}`;
+
+    // Déterminer l'URL du portail selon le rôle
+    const baseUrl = this.getPortalUrl(role);
+    const portalUrl = `${baseUrl}/accept-invitation?token=${token}`;
+
+    // Créer l'invitation (expire dans 7 jours)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const invitation = new PortalInvitation({
+      invitationId,
+      orderId,
+      email,
+      phone,
+      contactName,
+      role,
+      status: 'pending',
+      token,
+      expiresAt,
+      invitedBy,
+      portalUrl,
+    });
+
+    await invitation.save();
+
+    // Envoyer l'email d'invitation
+    await this.sendInvitationEmail({
+      email,
+      contactName,
+      orderReference,
+      role,
+      portalUrl,
+    });
+
+    // Mettre à jour le statut
+    invitation.status = 'sent';
+    await invitation.save();
+
+    return invitationId;
+  }
+
+  /**
+   * Crée et envoie une invitation portail depuis une adresse (si accès activé)
+   */
+  static async createAndSendInvitation(params: CreateInvitationFromAddressParams): Promise<string | null> {
     const { orderId, orderReference, address, role, invitedBy } = params;
 
     // Vérifier si l'accès portail est activé et que l'email est fourni
@@ -43,10 +126,7 @@ export class PortalInvitationService {
     const invitationId = `inv_${uuidv4()}`;
 
     // Déterminer l'URL du portail selon le rôle
-    const baseUrl = role === 'supplier'
-      ? process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphoni-a.com'
-      : process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphoni-a.com';
-
+    const baseUrl = this.getPortalUrl(role);
     const portalUrl = `${baseUrl}/accept-invitation?token=${token}`;
 
     // Créer l'invitation (expire dans 7 jours)
@@ -92,13 +172,55 @@ export class PortalInvitationService {
     email: string;
     contactName: string;
     orderReference: string;
-    role: 'supplier' | 'recipient';
+    role: 'supplier' | 'recipient' | 'logistician' | 'carrier';
     portalUrl: string;
   }): Promise<void> {
     const { email, contactName, orderReference, role, portalUrl } = params;
 
-    const roleLabel = role === 'supplier' ? 'expéditeur' : 'destinataire';
-    const portalLabel = role === 'supplier' ? 'Portail Expéditeur' : 'Portail Destinataire';
+    const roleLabels: Record<string, { label: string; portal: string; features: string[] }> = {
+      supplier: {
+        label: 'expéditeur',
+        portal: 'Portail Expéditeur',
+        features: [
+          'Suivre l\'organisation du chargement',
+          'Confirmer les dates de rendez-vous transporteur',
+          'Consulter les documents de transport',
+          'Communiquer avec le transporteur'
+        ]
+      },
+      recipient: {
+        label: 'destinataire',
+        portal: 'Portail Destinataire',
+        features: [
+          'Suivre la livraison en temps réel',
+          'Confirmer la réception',
+          'Consulter les documents de transport',
+          'Signer le bon de livraison'
+        ]
+      },
+      logistician: {
+        label: 'logisticien',
+        portal: 'Portail Logisticien',
+        features: [
+          'Gérer l\'organisation des transports',
+          'Planifier les rendez-vous',
+          'Suivre toutes les commandes',
+          'Coordonner avec les transporteurs'
+        ]
+      },
+      carrier: {
+        label: 'transporteur',
+        portal: 'Portail Transporteur',
+        features: [
+          'Consulter les détails de la commande',
+          'Organiser le transport',
+          'Mettre à jour le tracking',
+          'Déposer les documents (BL, CMR, POD)'
+        ]
+      }
+    };
+
+    const { label: roleLabel, portal: portalLabel, features } = roleLabels[role] || roleLabels.recipient;
 
     const html = `
       <!DOCTYPE html>
@@ -130,10 +252,7 @@ export class PortalInvitationService {
 
             <p>En tant que ${roleLabel}, vous pouvez accéder au ${portalLabel} SYMPHONI.A pour :</p>
             <ul>
-              <li>Suivre l'avancement de la livraison en temps réel</li>
-              <li>Consulter les documents de transport</li>
-              <li>Confirmer la réception/expédition</li>
-              <li>Communiquer avec le transporteur</li>
+              ${features.map(f => `<li>${f}</li>`).join('\n              ')}
             </ul>
 
             <p style="text-align: center;">

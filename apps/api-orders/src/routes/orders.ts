@@ -8,13 +8,20 @@ import PortalInvitationService from '../services/portal-invitation-service';
 
 const router = Router();
 
-// Fonction pour générer la référence de commande
+// Fonction pour générer la référence de commande unique avec timestamp
 async function generateReference(): Promise<string> {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const count = await Order.countDocuments() + 1;
-  return `CMD-${year}${month}-${count.toString().padStart(5, '0')}`;
+  const day = date.getDate().toString().padStart(2, '0');
+
+  // Format: CMD-YYMMDD-HHMMSS-XXX (avec millisecondes pour unicité)
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  const ms = date.getMilliseconds().toString().padStart(3, '0');
+
+  return `CMD-${year}${month}${day}-${hours}${minutes}${seconds}${ms}`;
 }
 
 // GET /orders - Liste des commandes avec filtres et pagination
@@ -100,6 +107,37 @@ router.get('/:orderId', async (req: Request, res: Response) => {
 // POST /orders - Créer une nouvelle commande
 router.post('/', async (req: Request, res: Response) => {
   try {
+    // Validation des données requises
+    const { pickupAddress, deliveryAddress, dates, goods } = req.body;
+
+    if (!pickupAddress || !pickupAddress.street || !pickupAddress.city || !pickupAddress.postalCode) {
+      return res.status(400).json({
+        error: 'Adresse d\'enlèvement invalide',
+        details: 'pickupAddress doit contenir street, city et postalCode'
+      });
+    }
+
+    if (!deliveryAddress || !deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.postalCode) {
+      return res.status(400).json({
+        error: 'Adresse de livraison invalide',
+        details: 'deliveryAddress doit contenir street, city et postalCode'
+      });
+    }
+
+    if (!dates || !dates.pickupDate || !dates.deliveryDate) {
+      return res.status(400).json({
+        error: 'Dates invalides',
+        details: 'dates doit contenir pickupDate et deliveryDate'
+      });
+    }
+
+    if (!goods || !goods.description || goods.weight === undefined) {
+      return res.status(400).json({
+        error: 'Marchandises invalides',
+        details: 'goods doit contenir description et weight'
+      });
+    }
+
     const orderId = `ord_${uuidv4()}`;
     const reference = await generateReference();
 
@@ -107,12 +145,20 @@ router.post('/', async (req: Request, res: Response) => {
     const industrialId = req.headers['x-industrial-id'] as string || req.body.industrialId;
     const createdBy = req.headers['x-user-id'] as string || req.body.createdBy || 'system';
 
+    if (!industrialId) {
+      return res.status(400).json({
+        error: 'industrialId requis',
+        details: 'Fournir industrialId dans le body ou header x-industrial-id'
+      });
+    }
+
     const orderData = {
+      ...req.body,
       orderId,
       reference,
+      orderNumber: reference, // Ajout pour compatibilité avec l'index MongoDB existant
       industrialId,
       createdBy,
-      ...req.body,
       dates: {
         ...req.body.dates,
         pickupDate: new Date(req.body.dates.pickupDate),
@@ -165,9 +211,36 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     res.status(201).json({ ...order.toObject(), id: order.orderId });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Erreur lors de la création de la commande' });
+
+    // Erreur de validation Mongoose
+    if (error.name === 'ValidationError') {
+      const details = Object.values(error.errors).map((e: any) => e.message).join(', ');
+      return res.status(400).json({
+        error: 'Erreur de validation',
+        details
+      });
+    }
+
+    // Erreur de duplication (référence ou orderId)
+    if (error.code === 11000) {
+      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'unknown';
+      const duplicateValue = error.keyValue ? Object.values(error.keyValue)[0] : 'unknown';
+      console.error(`[Orders] Duplicate key error - Field: ${duplicateField}, Value: ${duplicateValue}`);
+      return res.status(409).json({
+        error: 'Commande déjà existante',
+        details: `Duplication sur le champ: ${duplicateField}`,
+        field: duplicateField,
+        value: duplicateValue
+      });
+    }
+
+    // Erreur MongoDB générale
+    res.status(500).json({
+      error: 'Erreur lors de la création de la commande',
+      details: error.message || 'Erreur inconnue'
+    });
   }
 });
 
