@@ -1,0 +1,7 @@
+[
+  {
+    "Id": "auto-close-target",
+    "Arn": "arn:aws:lambda:eu-central-1:004843574253:function:symphonia-cron-handler",
+    "Input": "{\"action\":\"auto-close\"}"
+  }
+]

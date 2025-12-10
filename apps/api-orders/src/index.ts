@@ -78,7 +78,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.9.0',
+    version: '2.10.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
     endpoints: {
       health: '/health',
@@ -161,6 +161,8 @@ app.get('/', (req, res) => {
         carrierActive: 'GET /api/v1/tracking/carrier/:carrierId/active'
       },
       documents: {
+        uploadUrl: 'POST /api/v1/documents/:orderId/upload-url',
+        downloadUrl: 'GET /api/v1/documents/:documentId/download-url',
         upload: 'POST /api/v1/documents/:orderId/upload',
         list: 'GET /api/v1/documents/:orderId',
         detail: 'GET /api/v1/documents/detail/:documentId',
@@ -225,7 +227,7 @@ mongoose.connect(MONGODB_URI)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.9.0 - Cycle de vie complet activé');
+      console.log('SYMPHONI.A Orders API v2.10.0 - S3 Documents activé');
     });
   })
   .catch((error) => {

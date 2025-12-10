@@ -521,6 +521,109 @@ export const ordersApi = {
       headers: getAuthHeaders()
     });
     return res.json();
+  },
+
+  // ===== Order Events =====
+  getEvents: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== Documents Management =====
+  getDocuments: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  validateDocument: async (documentId: string) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        validatedBy: {
+          id: user.id || 'system',
+          name: user.name || user.companyName || 'Industrial',
+          role: 'industrial'
+        }
+      })
+    });
+    return res.json();
+  },
+
+  rejectDocument: async (documentId: string, reason: string) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/reject`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        rejectedBy: {
+          id: user.id || 'system',
+          name: user.name || user.companyName || 'Industrial',
+          role: 'industrial'
+        },
+        reason
+      })
+    });
+    return res.json();
+  },
+
+  getDocumentDownloadUrl: async (documentId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/download-url`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  checkDocuments: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/check`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== Closure Management =====
+  checkClosureEligibility: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/${orderId}/check`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  closeOrder: async (orderId: string) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/${orderId}/close`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        closedBy: {
+          id: user.id || 'system',
+          name: user.name || user.companyName || 'Industrial'
+        }
+      })
+    });
+    return res.json();
+  },
+
+  getClosureStats: async () => {
+    const industrialId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').industrialId : '';
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/stats?industrialId=${industrialId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== Delivery Stats =====
+  getDeliveryStats: async () => {
+    const industrialId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').industrialId : '';
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/stats?industrialId=${industrialId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
   }
 };
 

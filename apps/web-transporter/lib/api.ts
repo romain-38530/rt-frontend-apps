@@ -290,6 +290,149 @@ export const ordersApi = {
       headers: getAuthHeaders()
     });
     return res.json();
+  },
+
+  // ===== NEW: Order Events =====
+  getEvents: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== NEW: Documents with S3 =====
+  getDocumentUploadUrl: async (orderId: string, data: {
+    type: 'cmr' | 'bl' | 'pod' | 'invoice' | 'photo' | 'damage_report' | 'other';
+    fileName: string;
+    contentType: string;
+  }) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/upload-url`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...data,
+        uploadedBy: {
+          id: user.id || getCarrierId(),
+          name: user.name || user.companyName || 'Transporteur',
+          role: 'carrier'
+        }
+      })
+    });
+    return res.json();
+  },
+
+  uploadToS3: async (uploadUrl: string, file: File): Promise<boolean> => {
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+    return res.ok;
+  },
+
+  confirmDocumentUpload: async (orderId: string, data: {
+    type: string;
+    fileName: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    s3Key: string;
+    s3Bucket: string;
+    location?: { latitude: number; longitude: number; address?: string };
+    notes?: string;
+  }) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...data,
+        uploadedBy: {
+          id: user.id || getCarrierId(),
+          name: user.name || user.companyName || 'Transporteur',
+          role: 'carrier'
+        }
+      })
+    });
+    return res.json();
+  },
+
+  getOrderDocuments: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getDocumentDownloadUrl: async (documentId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/download-url`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  signDocument: async (documentId: string, data: {
+    signedBy: string;
+    signatureData: string;
+    deviceInfo?: string;
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/sign`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // ===== NEW: Delivery Confirmation =====
+  confirmDelivery: async (orderId: string, data: {
+    recipientName: string;
+    signatureData: string;
+    notes?: string;
+    photos?: string[];
+    location?: { latitude: number; longitude: number };
+    issues?: Array<{
+      type: 'damage' | 'shortage' | 'wrong_product' | 'delay' | 'other';
+      description: string;
+      photos?: string[];
+    }>;
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/${orderId}/confirm`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...data,
+        confirmedBy: {
+          id: getCarrierId(),
+          name: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').name || 'Transporteur' : 'Transporteur',
+          role: 'carrier'
+        }
+      })
+    });
+    return res.json();
+  },
+
+  reportDeliveryIssue: async (orderId: string, data: {
+    type: 'damage' | 'shortage' | 'wrong_product' | 'delay' | 'other';
+    description: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    photos?: string[];
+    location?: { latitude: number; longitude: number };
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/${orderId}/issue`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...data,
+        reportedBy: {
+          id: getCarrierId(),
+          name: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').name || 'Transporteur' : 'Transporteur',
+          role: 'carrier'
+        }
+      })
+    });
+    return res.json();
   }
 };
 
