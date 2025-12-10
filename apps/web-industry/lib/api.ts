@@ -1058,3 +1058,204 @@ export const dispatchApi = {
   getDispatchStats,
   TRACKING_PRICING,
 };
+
+// ============================================
+// PREINVOICES API - Préfacturation transporteurs
+// ============================================
+
+export interface PreInvoiceLine {
+  orderId: string;
+  orderReference: string;
+  pickupDate: string;
+  deliveryDate: string;
+  pickupCity: string;
+  deliveryCity: string;
+  baseAmount: number;
+  waitingHours: number;
+  waitingAmount: number;
+  delayHours: number;
+  delayPenalty: number;
+  fuelSurcharge: number;
+  tolls: number;
+  otherCharges: number;
+  totalAmount: number;
+  cmrValidated: boolean;
+  cmrNotes?: string;
+  kpiData: {
+    onTimePickup: boolean;
+    onTimeDelivery: boolean;
+    documentsComplete: boolean;
+    incidentFree: boolean;
+  };
+}
+
+export interface PreInvoice {
+  preInvoiceId: string;
+  preInvoiceNumber: string;
+  period: {
+    month: number;
+    year: number;
+    startDate: string;
+    endDate: string;
+  };
+  industrialId: string;
+  industrialName: string;
+  industrialEmail: string;
+  carrierId: string;
+  carrierName: string;
+  carrierEmail: string;
+  carrierSiret?: string;
+  lines: PreInvoiceLine[];
+  totals: {
+    baseAmount: number;
+    waitingAmount: number;
+    delayPenalty: number;
+    fuelSurcharge: number;
+    tolls: number;
+    otherCharges: number;
+    subtotalHT: number;
+    tvaRate: number;
+    tvaAmount: number;
+    totalTTC: number;
+  };
+  kpis: {
+    totalOrders: number;
+    onTimePickupRate: number;
+    onTimeDeliveryRate: number;
+    documentsCompleteRate: number;
+    incidentFreeRate: number;
+    averageWaitingHours: number;
+    totalWaitingHours: number;
+  };
+  status: 'pending' | 'sent_to_industrial' | 'validated_industrial' | 'invoice_uploaded' | 'invoice_accepted' | 'invoice_rejected' | 'payment_pending' | 'paid' | 'disputed';
+  industrialValidation?: {
+    validatedAt: string;
+    validatedBy: string;
+    comments?: string;
+  };
+  carrierInvoice?: {
+    invoiceNumber: string;
+    invoiceDate: string;
+    invoiceAmount: number;
+    documentId: string;
+    uploadedAt: string;
+  };
+  invoiceControl?: {
+    preInvoiceAmount: number;
+    carrierInvoiceAmount: number;
+    difference: number;
+    differencePercent: number;
+    autoAccepted: boolean;
+  };
+  payment?: {
+    dueDate: string;
+    paymentTermDays: number;
+    daysRemaining: number;
+    paidAt?: string;
+    paidAmount?: number;
+    paymentReference?: string;
+    bankDetails?: {
+      bankName: string;
+      iban: string;
+      bic: string;
+      accountHolder: string;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PreInvoiceStats {
+  totalPreInvoices: number;
+  byStatus: Record<string, number>;
+  totalAmountPending: number;
+  totalAmountPaid: number;
+  averagePaymentDays: number;
+}
+
+export const preinvoicesApi = {
+  // Liste des préfactures avec filtres
+  list: async (filters?: { industrialId?: string; carrierId?: string; status?: string; month?: number; year?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.industrialId) params.append('industrialId', filters.industrialId);
+    if (filters?.carrierId) params.append('carrierId', filters.carrierId);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.month) params.append('month', filters.month.toString());
+    if (filters?.year) params.append('year', filters.year.toString());
+
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Statistiques préfacturation
+  getStats: async (industrialId?: string) => {
+    const params = industrialId ? `?industrialId=${industrialId}` : '';
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/stats${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Détail d'une préfacture
+  get: async (preInvoiceId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Valider une préfacture (industriel)
+  validate: async (preInvoiceId: string, data: {
+    validatedBy: string;
+    comments?: string;
+    adjustments?: { lineIndex: number; adjustedAmount: number; reason: string }[];
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Marquer comme payé
+  markAsPaid: async (preInvoiceId: string, data: {
+    paymentReference: string;
+    paidAmount: number;
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/mark-paid`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Export CSV pour paiements
+  exportPayments: async () => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/export`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Forcer l'envoi des préfactures mensuelles (admin)
+  sendMonthly: async () => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/send-monthly`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Mettre à jour les décomptes de paiement
+  updateCountdowns: async () => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/update-countdowns`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};

@@ -18,7 +18,9 @@ const tracking_1 = __importDefault(require("./routes/tracking"));
 const documents_1 = __importDefault(require("./routes/documents"));
 const delivery_1 = __importDefault(require("./routes/delivery"));
 const closure_1 = __importDefault(require("./routes/closure"));
+const preinvoices_1 = __importDefault(require("./routes/preinvoices"));
 const timeout_scheduler_1 = __importDefault(require("./services/timeout-scheduler"));
+const preinvoice_scheduler_1 = __importDefault(require("./services/preinvoice-scheduler"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3003;
@@ -78,7 +80,7 @@ app.use(express_1.default.json());
 app.get('/', (req, res) => {
     res.json({
         name: 'RT Technologie Orders API',
-        version: '2.9.0',
+        version: '2.11.0',
         description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
         endpoints: {
             health: '/health',
@@ -161,6 +163,8 @@ app.get('/', (req, res) => {
                 carrierActive: 'GET /api/v1/tracking/carrier/:carrierId/active'
             },
             documents: {
+                uploadUrl: 'POST /api/v1/documents/:orderId/upload-url',
+                downloadUrl: 'GET /api/v1/documents/:documentId/download-url',
                 upload: 'POST /api/v1/documents/:orderId/upload',
                 list: 'GET /api/v1/documents/:orderId',
                 detail: 'GET /api/v1/documents/detail/:documentId',
@@ -181,6 +185,16 @@ app.get('/', (req, res) => {
                 autoClose: 'POST /api/v1/closure/auto-close',
                 autoArchive: 'POST /api/v1/closure/auto-archive',
                 stats: 'GET /api/v1/closure/stats'
+            },
+            preinvoices: {
+                list: 'GET /api/v1/preinvoices',
+                stats: 'GET /api/v1/preinvoices/stats',
+                export: 'GET /api/v1/preinvoices/export',
+                sendMonthly: 'POST /api/v1/preinvoices/send-monthly',
+                validate: 'POST /api/v1/preinvoices/:id/validate',
+                uploadInvoice: 'POST /api/v1/preinvoices/:id/upload-invoice',
+                markPaid: 'POST /api/v1/preinvoices/:id/mark-paid',
+                updateCountdowns: 'POST /api/v1/preinvoices/update-countdowns'
             }
         }
     });
@@ -196,6 +210,7 @@ app.use('/api/v1/tracking', tracking_1.default);
 app.use('/api/v1/documents', documents_1.default);
 app.use('/api/v1/delivery', delivery_1.default);
 app.use('/api/v1/closure', closure_1.default);
+app.use('/api/v1/preinvoices', preinvoices_1.default);
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'RT Orders API is running' });
@@ -219,9 +234,11 @@ mongoose_1.default.connect(MONGODB_URI)
     }
     // Démarrer le scheduler de timeouts
     timeout_scheduler_1.default.start();
+    // Démarrer le scheduler de préfacturation (envois mensuels + décomptes)
+    preinvoice_scheduler_1.default.start();
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
-        console.log('SYMPHONI.A Orders API v2.9.0 - Cycle de vie complet activé');
+        console.log('SYMPHONI.A Orders API v2.11.0 - Module préfacturation complet');
     });
 })
     .catch((error) => {
@@ -232,6 +249,7 @@ mongoose_1.default.connect(MONGODB_URI)
 process.on('SIGTERM', () => {
     console.log('SIGTERM received - shutting down gracefully');
     timeout_scheduler_1.default.stop();
+    preinvoice_scheduler_1.default.stop();
     mongoose_1.default.connection.close();
     process.exit(0);
 });

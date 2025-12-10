@@ -42,7 +42,7 @@ export interface IDocument extends MongoDocument {
   uploadedBy: {
     id: string;
     name: string;
-    role: 'carrier' | 'supplier' | 'recipient' | 'industrial' | 'system';
+    role: 'carrier' | 'driver' | 'supplier' | 'recipient' | 'industrial' | 'system';
   };
   uploadedAt: Date;
 
@@ -108,7 +108,7 @@ const DocumentSchema = new Schema<IDocument>({
   uploadedBy: {
     id: { type: String, required: true },
     name: { type: String, required: true },
-    role: { type: String, required: true, enum: ['carrier', 'supplier', 'recipient', 'industrial', 'system'] }
+    role: { type: String, required: true, enum: ['carrier', 'driver', 'supplier', 'recipient', 'industrial', 'system'] }
   },
   uploadedAt: { type: Date, default: Date.now },
 

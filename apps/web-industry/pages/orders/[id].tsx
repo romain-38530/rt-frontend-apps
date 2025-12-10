@@ -1,6 +1,7 @@
 /**
  * Page de détail d'une commande - Portail Industry
  * Affiche les informations complètes et la timeline d'événements
+ * Permet la clôture des commandes livrées
  */
 
 import { useEffect, useState } from 'react';
@@ -8,6 +9,7 @@ import { useSafeRouter } from '../../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
+import { ordersApi } from '../../lib/api';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
@@ -34,6 +36,9 @@ export default function OrderDetailPage() {
   const [events, setEvents] = useState<OrderEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [closureEligibility, setClosureEligibility] = useState<any>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [closureMessage, setClosureMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
@@ -58,6 +63,39 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Verifier l'eligibilite a la cloture
+  const checkClosureEligibility = async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const result = await ordersApi.checkClosureEligibility(id);
+      setClosureEligibility(result);
+    } catch (err) {
+      console.error('Error checking closure eligibility:', err);
+    }
+  };
+
+  // Cloturer la commande
+  const handleCloseOrder = async () => {
+    if (!id || typeof id !== 'string') return;
+
+    setIsClosing(true);
+    setClosureMessage(null);
+
+    try {
+      const result = await ordersApi.closeOrder(id);
+      if (result.success) {
+        setClosureMessage({ type: 'success', text: 'Commande cloturee avec succes' });
+        loadOrder(); // Recharger pour mettre a jour le statut
+      } else {
+        setClosureMessage({ type: 'error', text: result.error || 'Erreur lors de la cloture' });
+      }
+    } catch (err: any) {
+      setClosureMessage({ type: 'error', text: err.message || 'Erreur lors de la cloture' });
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
@@ -66,6 +104,13 @@ export default function OrderDetailPage() {
 
     loadOrder();
   }, [id, router]);
+
+  // Charger l'eligibilite quand la commande est livree
+  useEffect(() => {
+    if (order?.status === 'delivered') {
+      checkClosureEligibility();
+    }
+  }, [order?.status]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -248,6 +293,28 @@ export default function OrderDetailPage() {
                   🗺️ Voir le tracking
                 </button>
               )}
+
+              {/* Bouton Cloturer - visible si delivered */}
+              {order.status === 'delivered' && (
+                <button
+                  onClick={handleCloseOrder}
+                  disabled={isClosing || (closureEligibility && !closureEligibility.eligible)}
+                  style={{
+                    padding: '12px 20px',
+                    background: closureEligibility?.eligible ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#9ca3af',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    cursor: closureEligibility?.eligible ? 'pointer' : 'not-allowed',
+                    boxShadow: closureEligibility?.eligible ? '0 4px 12px rgba(16, 185, 129, 0.4)' : 'none',
+                    transition: 'all 0.2s ease',
+                    opacity: isClosing ? 0.7 : 1,
+                  }}>
+                  {isClosing ? 'Cloture en cours...' : 'Cloturer la commande'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -358,6 +425,89 @@ export default function OrderDetailPage() {
                         {constraint.type}
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section Cloture - visible si delivered */}
+              {order.status === 'delivered' && (
+                <div style={{
+                  ...cardStyle,
+                  border: closureEligibility?.eligible ? '2px solid #10b981' : '2px solid #f59e0b',
+                  background: closureEligibility?.eligible ? '#f0fdf4' : '#fffbeb',
+                }}>
+                  <h2 style={{ ...sectionTitleStyle, color: closureEligibility?.eligible ? '#059669' : '#92400e' }}>
+                    {closureEligibility?.eligible ? 'Prete pour cloture' : 'Cloture en attente'}
+                  </h2>
+
+                  {closureMessage && (
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      backgroundColor: closureMessage.type === 'success' ? '#d1fae5' : '#fee2e2',
+                      color: closureMessage.type === 'success' ? '#065f46' : '#991b1b',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                    }}>
+                      {closureMessage.text}
+                    </div>
+                  )}
+
+                  {closureEligibility ? (
+                    <>
+                      {closureEligibility.eligible ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '32px' }}>✅</span>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669' }}>
+                              Tous les criteres sont remplis
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                              Vous pouvez cloturer cette commande
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '12px' }}>
+                            Criteres manquants :
+                          </div>
+                          <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                            {closureEligibility.blockers?.map((blocker: string, idx: number) => (
+                              <li key={idx} style={{ fontSize: '13px', color: '#78350f', marginBottom: '4px' }}>
+                                {blocker}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                      Verification de l'eligibilite...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Commande cloturee */}
+              {order.status === 'closed' && (
+                <div style={{
+                  ...cardStyle,
+                  border: '2px solid #64748b',
+                  background: '#f8fafc',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '32px' }}>🔒</span>
+                    <div>
+                      <h2 style={{ ...sectionTitleStyle, marginBottom: '4px', color: '#475569' }}>
+                        Commande cloturee
+                      </h2>
+                      <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                        Cette commande est finalisee et archivee
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

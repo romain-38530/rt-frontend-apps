@@ -324,7 +324,7 @@ class DispatchService {
             // Priorité: contact stocké dans Lane > variable d'env > email générique
             const email = carrierInLane.contact?.email ||
                 process.env[`CARRIER_EMAIL_${carrierId}`] ||
-                `${carrierId.replace('carrier_', '')}@transporteur.test`;
+                `carrier-${carrierId.replace('carrier_', '')}@symphonia-controltower.com`;
             const phone = carrierInLane.contact?.phone ||
                 process.env[`CARRIER_PHONE_${carrierId}`];
             return {
@@ -444,7 +444,7 @@ class DispatchService {
             // Pour l'instant, on utilise un email générique basé sur industrialId
             // À terme, récupérer depuis un service de gestion des industriels
             const industrialEmail = process.env[`INDUSTRIAL_EMAIL_${chain.industrialId}`] ||
-                `contact@${chain.industrialId.replace('ind_', '')}.test`;
+                `industrial-${chain.industrialId.replace('ind_', '')}@symphonia-controltower.com`;
             const industrialName = order.industrialName || chain.industrialId;
             await notification_service_1.default.notifyIndustrialDispatchStatus(industrialEmail, industrialName, chain.orderReference, status, carrierName);
             console.log(`[Dispatch] Industrial notified: ${status} for order ${chain.orderReference}`);

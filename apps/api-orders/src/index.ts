@@ -13,7 +13,9 @@ import trackingRoutes from './routes/tracking';
 import documentsRoutes from './routes/documents';
 import deliveryRoutes from './routes/delivery';
 import closureRoutes from './routes/closure';
+import preinvoicesRoutes from './routes/preinvoices';
 import timeoutScheduler from './services/timeout-scheduler';
+import preinvoiceScheduler from './services/preinvoice-scheduler';
 
 dotenv.config();
 
@@ -78,7 +80,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.10.0',
+    version: '2.11.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
     endpoints: {
       health: '/health',
@@ -183,6 +185,16 @@ app.get('/', (req, res) => {
         autoClose: 'POST /api/v1/closure/auto-close',
         autoArchive: 'POST /api/v1/closure/auto-archive',
         stats: 'GET /api/v1/closure/stats'
+      },
+      preinvoices: {
+        list: 'GET /api/v1/preinvoices',
+        stats: 'GET /api/v1/preinvoices/stats',
+        export: 'GET /api/v1/preinvoices/export',
+        sendMonthly: 'POST /api/v1/preinvoices/send-monthly',
+        validate: 'POST /api/v1/preinvoices/:id/validate',
+        uploadInvoice: 'POST /api/v1/preinvoices/:id/upload-invoice',
+        markPaid: 'POST /api/v1/preinvoices/:id/mark-paid',
+        updateCountdowns: 'POST /api/v1/preinvoices/update-countdowns'
       }
     }
   });
@@ -199,6 +211,7 @@ app.use('/api/v1/tracking', trackingRoutes);
 app.use('/api/v1/documents', documentsRoutes);
 app.use('/api/v1/delivery', deliveryRoutes);
 app.use('/api/v1/closure', closureRoutes);
+app.use('/api/v1/preinvoices', preinvoicesRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -225,9 +238,12 @@ mongoose.connect(MONGODB_URI)
     // Démarrer le scheduler de timeouts
     timeoutScheduler.start();
 
+    // Démarrer le scheduler de préfacturation (envois mensuels + décomptes)
+    preinvoiceScheduler.start();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.10.0 - S3 Documents activé');
+      console.log('SYMPHONI.A Orders API v2.11.0 - Module préfacturation complet');
     });
   })
   .catch((error) => {
@@ -239,6 +255,7 @@ mongoose.connect(MONGODB_URI)
 process.on('SIGTERM', () => {
   console.log('SIGTERM received - shutting down gracefully');
   timeoutScheduler.stop();
+  preinvoiceScheduler.stop();
   mongoose.connection.close();
   process.exit(0);
 });

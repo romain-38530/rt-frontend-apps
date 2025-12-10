@@ -1,0 +1,21 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "https://portail-transporteur.symphonia-controltower.com",
+        "https://portail.symphonia-controltower.com",
+        "https://app.symphonia-controltower.com",
+        "https://*.symphonia-controltower.com",
+        "https://*.cloudfront.net",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3004"
+      ],
+      "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { isAuthenticated } from '../../../lib/auth';
 import { FileUpload, DocumentsList, DocumentViewer, useToast } from '@rt/ui-components';
 import { DocumentsService, OrdersService } from '@rt/utils';
+import { ordersApi } from '../../../lib/api';
 import type { Document, DocumentStats } from '@rt/contracts';
 import type { Order } from '@rt/contracts';
 
@@ -92,6 +93,36 @@ export default function DocumentsPage() {
       await loadData();
     } catch (err: any) {
       toast.error(`Erreur lors de la vérification : ${err.message}`);
+    }
+  };
+
+  // Valider un document via l'API Orders (cycle de vie)
+  const handleValidateDocument = async (documentId: string) => {
+    try {
+      const result = await ordersApi.validateDocument(documentId);
+      if (result.success) {
+        toast.success('Document valide avec succes');
+        await loadData();
+      } else {
+        toast.error(result.error || 'Erreur lors de la validation');
+      }
+    } catch (err: any) {
+      toast.error(`Erreur lors de la validation : ${err.message}`);
+    }
+  };
+
+  // Rejeter un document via l'API Orders (cycle de vie)
+  const handleRejectDocument = async (documentId: string, reason: string) => {
+    try {
+      const result = await ordersApi.rejectDocument(documentId, reason);
+      if (result.success) {
+        toast.success('Document rejete');
+        await loadData();
+      } else {
+        toast.error(result.error || 'Erreur lors du rejet');
+      }
+    } catch (err: any) {
+      toast.error(`Erreur lors du rejet : ${err.message}`);
     }
   };
 
@@ -319,6 +350,89 @@ export default function DocumentsPage() {
                 onUploadComplete={handleUploadComplete}
                 onUploadError={(error) => toast.error(`Erreur : ${error}`)}
               />
+            </div>
+          )}
+
+          {/* Section Validation des documents */}
+          {documents.filter((d: any) => d.status === 'pending' || d.status === 'uploaded').length > 0 && (
+            <div
+              style={{
+                padding: '24px',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                marginBottom: '24px',
+                border: '2px solid #fbbf24',
+              }}
+            >
+              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#92400e' }}>
+                En attente de validation ({documents.filter((d: any) => d.status === 'pending' || d.status === 'uploaded').length})
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {documents.filter((d: any) => d.status === 'pending' || d.status === 'uploaded').map((doc: any) => (
+                  <div
+                    key={doc.id || doc.documentId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '16px',
+                      backgroundColor: '#fffbeb',
+                      borderRadius: '8px',
+                      border: '1px solid #fde68a',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>
+                        {doc.type === 'cmr' ? '📄' : doc.type === 'pod' ? '✅' : doc.type === 'bl' ? '📋' : '📎'}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                          {doc.originalName || doc.fileName || doc.type?.toUpperCase()}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {doc.type?.toUpperCase()} - Upload le {new Date(doc.uploadedAt || doc.createdAt).toLocaleDateString('fr-FR')}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleValidateDocument(doc.id || doc.documentId)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Valider
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('Raison du rejet :');
+                          if (reason) handleRejectDocument(doc.id || doc.documentId, reason);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Rejeter
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

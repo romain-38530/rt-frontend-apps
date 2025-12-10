@@ -45,6 +45,34 @@ declare class NotificationService {
      */
     static notifyIndustrialDispatchStatus(industrialEmail: string, industrialName: string, orderReference: string, status: 'carrier_found' | 'escalated' | 'timeout', carrierName?: string): Promise<boolean>;
     /**
+     * Envoie une demande de validation de préfacture à l'industriel
+     */
+    static sendPreInvoiceValidationRequest(industrialEmail: string, industrialName: string, preInvoiceNumber: string, carrierName: string, totalAmount: number, kpis: any, orderCount: number): Promise<boolean>;
+    /**
+     * Notifie le transporteur que sa préfacture est validée
+     */
+    static notifyCarrierPreInvoiceValidated(carrierEmail: string, carrierName: string, preInvoiceNumber: string, totalAmount: number): Promise<boolean>;
+    /**
+     * Notifie le transporteur que sa facture est acceptée
+     */
+    static notifyCarrierInvoiceAccepted(carrierEmail: string, carrierName: string, preInvoiceNumber: string, amount: number, dueDate: Date): Promise<boolean>;
+    /**
+     * Notifie le transporteur que sa facture est rejetée
+     */
+    static notifyCarrierInvoiceRejected(carrierEmail: string, carrierName: string, preInvoiceNumber: string, expectedAmount: number, invoiceAmount: number, difference: number): Promise<boolean>;
+    /**
+     * Notifie le transporteur du paiement envoyé
+     */
+    static notifyCarrierPaymentSent(carrierEmail: string, carrierName: string, preInvoiceNumber: string, amount: number, paymentReference: string): Promise<boolean>;
+    /**
+     * Rappel de paiement imminent à l'industriel
+     */
+    static sendPaymentReminderToIndustrial(industrialEmail: string, industrialName: string, preInvoiceNumber: string, carrierName: string, amount: number, daysRemaining: number, dueDate: Date): Promise<boolean>;
+    /**
+     * Notification de paiement en retard
+     */
+    static sendOverduePaymentAlert(industrialEmail: string, industrialName: string, preInvoiceNumber: string, carrierName: string, amount: number, daysOverdue: number): Promise<boolean>;
+    /**
      * Vérifie l'état de la connexion SMTP
      */
     static checkSmtpConnection(): Promise<{

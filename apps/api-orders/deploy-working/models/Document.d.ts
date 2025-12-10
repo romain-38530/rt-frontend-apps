@@ -21,7 +21,7 @@ export interface IDocument extends MongoDocument {
     uploadedBy: {
         id: string;
         name: string;
-        role: 'carrier' | 'supplier' | 'recipient' | 'industrial' | 'system';
+        role: 'carrier' | 'driver' | 'supplier' | 'recipient' | 'industrial' | 'system';
     };
     uploadedAt: Date;
     validatedBy?: {

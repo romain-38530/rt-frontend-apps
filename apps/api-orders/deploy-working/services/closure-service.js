@@ -12,6 +12,7 @@ const document_service_1 = __importDefault(require("./document-service"));
 const scoring_service_1 = __importDefault(require("./scoring-service"));
 const archive_service_1 = __importDefault(require("./archive-service"));
 const event_service_1 = __importDefault(require("./event-service"));
+const preinvoice_service_1 = __importDefault(require("./preinvoice-service"));
 const nodemailer_1 = __importDefault(require("nodemailer"));
 // Configuration email
 const transporter = nodemailer_1.default.createTransport({
@@ -93,6 +94,17 @@ class ClosureService {
                 actorName: closedBy.name,
                 data: { closedAt: new Date() }
             });
+            // Ajouter à la préfacturation du transporteur (si transporteur assigné)
+            if (order.carrierId) {
+                try {
+                    await preinvoice_service_1.default.addCompletedOrder(order.orderId);
+                    console.log(`[ClosureService] Order ${orderId} added to carrier ${order.carrierId} pre-invoice`);
+                }
+                catch (preInvoiceError) {
+                    console.error(`[ClosureService] Error adding to pre-invoice: ${preInvoiceError.message}`);
+                    // Ne pas bloquer la clôture si la préfacturation échoue
+                }
+            }
             // Notifier les parties
             await this.notifyOrderClosed(order);
             return {
@@ -139,6 +151,16 @@ class ClosureService {
                         source: 'system',
                         data: { automatic: true, closedAt: new Date() }
                     });
+                    // Ajouter à la préfacturation du transporteur (si transporteur assigné)
+                    if (order.carrierId) {
+                        try {
+                            await preinvoice_service_1.default.addCompletedOrder(order.orderId);
+                            console.log(`[ClosureService] Auto-close: Order ${order.orderId} added to carrier ${order.carrierId} pre-invoice`);
+                        }
+                        catch (preInvoiceError) {
+                            console.error(`[ClosureService] Auto-close pre-invoice error: ${preInvoiceError.message}`);
+                        }
+                    }
                     results.closed++;
                 }
                 else {

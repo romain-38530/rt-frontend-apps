@@ -7,6 +7,7 @@ import DocumentService from './document-service';
 import ScoringService from './scoring-service';
 import ArchiveService from './archive-service';
 import EventService from './event-service';
+import PreInvoiceService from './preinvoice-service';
 import nodemailer from 'nodemailer';
 
 // Configuration email
@@ -112,6 +113,17 @@ class ClosureService {
         data: { closedAt: new Date() }
       });
 
+      // Ajouter à la préfacturation du transporteur (si transporteur assigné)
+      if (order.carrierId) {
+        try {
+          await PreInvoiceService.addCompletedOrder(order.orderId);
+          console.log(`[ClosureService] Order ${orderId} added to carrier ${order.carrierId} pre-invoice`);
+        } catch (preInvoiceError: any) {
+          console.error(`[ClosureService] Error adding to pre-invoice: ${preInvoiceError.message}`);
+          // Ne pas bloquer la clôture si la préfacturation échoue
+        }
+      }
+
       // Notifier les parties
       await this.notifyOrderClosed(order);
 
@@ -169,6 +181,16 @@ class ClosureService {
             source: 'system',
             data: { automatic: true, closedAt: new Date() }
           });
+
+          // Ajouter à la préfacturation du transporteur (si transporteur assigné)
+          if (order.carrierId) {
+            try {
+              await PreInvoiceService.addCompletedOrder(order.orderId);
+              console.log(`[ClosureService] Auto-close: Order ${order.orderId} added to carrier ${order.carrierId} pre-invoice`);
+            } catch (preInvoiceError: any) {
+              console.error(`[ClosureService] Auto-close pre-invoice error: ${preInvoiceError.message}`);
+            }
+          }
 
           results.closed++;
         } else {

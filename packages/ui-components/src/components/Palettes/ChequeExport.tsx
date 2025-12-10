@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { useToast } from '../../Toast';
+import { useToast } from '../Toast';
 
 export interface PalletChequeExport {
   chequeId: string;

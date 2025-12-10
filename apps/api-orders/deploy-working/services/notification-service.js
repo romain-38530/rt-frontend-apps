@@ -330,6 +330,283 @@ class NotificationService {
         return this.sendEmail(mailOptions, `industrial ${industrialName} (${industrialEmail})`);
     }
     /**
+     * Envoie une demande de validation de préfacture à l'industriel
+     */
+    static async sendPreInvoiceValidationRequest(industrialEmail, industrialName, preInvoiceNumber, carrierName, totalAmount, kpis, orderCount) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Préfacture à valider</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Réf: ${preInvoiceNumber}</p>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${industrialName},</p>
+            <p>La préfacture du transporteur <strong>${carrierName}</strong> est prête pour validation.</p>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3 style="margin-top: 0;">Résumé</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0;">Nombre de commandes:</td><td style="text-align: right;"><strong>${orderCount}</strong></td></tr>
+                <tr><td style="padding: 8px 0;">Montant total TTC:</td><td style="text-align: right;"><strong>${totalAmount.toFixed(2)} €</strong></td></tr>
+              </table>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3 style="margin-top: 0;">KPIs Transporteur</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 5px 0;">Ponctualité enlèvement:</td><td style="text-align: right;">${kpis.onTimePickupRate}%</td></tr>
+                <tr><td style="padding: 5px 0;">Ponctualité livraison:</td><td style="text-align: right;">${kpis.onTimeDeliveryRate}%</td></tr>
+                <tr><td style="padding: 5px 0;">Documents complets:</td><td style="text-align: right;">${kpis.documentsCompleteRate}%</td></tr>
+                <tr><td style="padding: 5px 0;">Sans incident:</td><td style="text-align: right;">${kpis.incidentFreeRate}%</td></tr>
+                <tr><td style="padding: 5px 0;">Heures d'attente totales:</td><td style="text-align: right;">${kpis.totalWaitingHours}h</td></tr>
+              </table>
+            </div>
+
+            <p>Merci de valider cette préfacture dans les meilleurs délais.</p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${process.env.PORTAL_URL || 'https://portail.symphonia-controltower.com'}/preinvoices/${preInvoiceNumber}"
+                 style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Valider la préfacture
+              </a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: industrialEmail,
+            subject: `[SYMPHONI.A] Préfacture ${preInvoiceNumber} - ${carrierName} - ${totalAmount.toFixed(2)}€ à valider`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+    }
+    /**
+     * Notifie le transporteur que sa préfacture est validée
+     */
+    static async notifyCarrierPreInvoiceValidated(carrierEmail, carrierName, preInvoiceNumber, totalAmount) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Préfacture validée</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Réf: ${preInvoiceNumber}</p>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${carrierName},</p>
+            <p>Votre préfacture <strong>${preInvoiceNumber}</strong> a été validée par l'industriel.</p>
+            <p>Montant validé: <strong>${totalAmount.toFixed(2)} €</strong></p>
+            <p>Vous pouvez maintenant déposer votre facture sur le portail.</p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com'}/preinvoices/${preInvoiceNumber}"
+                 style="background: #059669; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Déposer ma facture
+              </a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: carrierEmail,
+            subject: `[SYMPHONI.A] Préfacture ${preInvoiceNumber} validée - Déposez votre facture`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    }
+    /**
+     * Notifie le transporteur que sa facture est acceptée
+     */
+    static async notifyCarrierInvoiceAccepted(carrierEmail, carrierName, preInvoiceNumber, amount, dueDate) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Facture acceptée</h1>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${carrierName},</p>
+            <p>Votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> a été acceptée.</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <p><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
+              <p><strong>Date de paiement prévue:</strong> ${dueDate.toLocaleDateString('fr-FR')}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: carrierEmail,
+            subject: `[SYMPHONI.A] Facture acceptée - Paiement prévu le ${dueDate.toLocaleDateString('fr-FR')}`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    }
+    /**
+     * Notifie le transporteur que sa facture est rejetée
+     */
+    static async notifyCarrierInvoiceRejected(carrierEmail, carrierName, preInvoiceNumber, expectedAmount, invoiceAmount, difference) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Facture rejetée - Écart de montant</h1>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${carrierName},</p>
+            <p>Votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> présente un écart de montant.</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <p><strong>Montant préfacture:</strong> ${expectedAmount.toFixed(2)} €</p>
+              <p><strong>Montant facture:</strong> ${invoiceAmount.toFixed(2)} €</p>
+              <p><strong>Écart:</strong> ${difference.toFixed(2)} €</p>
+            </div>
+            <p>Merci de corriger votre facture et de la redéposer.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: carrierEmail,
+            subject: `[SYMPHONI.A] Facture rejetée - Écart de ${Math.abs(difference).toFixed(2)}€`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    }
+    /**
+     * Notifie le transporteur du paiement envoyé
+     */
+    static async notifyCarrierPaymentSent(carrierEmail, carrierName, preInvoiceNumber, amount, paymentReference) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Paiement effectué</h1>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${carrierName},</p>
+            <p>Le paiement de votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> a été effectué.</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <p><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
+              <p><strong>Référence paiement:</strong> ${paymentReference}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: carrierEmail,
+            subject: `[SYMPHONI.A] Paiement ${amount.toFixed(2)}€ effectué - Réf: ${paymentReference}`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    }
+    /**
+     * Rappel de paiement imminent à l'industriel
+     */
+    static async sendPaymentReminderToIndustrial(industrialEmail, industrialName, preInvoiceNumber, carrierName, amount, daysRemaining, dueDate) {
+        const urgencyColor = daysRemaining <= 2 ? '#dc2626' : '#f59e0b';
+        const urgencyText = daysRemaining <= 2 ? 'URGENT' : 'Rappel';
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: ${urgencyColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">⚠️ ${urgencyText} - Paiement à effectuer</h1>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${industrialName},</p>
+            <p>Le paiement de la préfacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> arrive à échéance.</p>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${urgencyColor};">
+              <p style="font-size: 24px; margin: 0; color: ${urgencyColor}; font-weight: bold;">
+                ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restant${daysRemaining > 1 ? 's' : ''}
+              </p>
+              <p style="margin: 10px 0 0 0;"><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
+              <p style="margin: 5px 0 0 0;"><strong>Échéance:</strong> ${dueDate.toLocaleDateString('fr-FR')}</p>
+            </div>
+
+            <p>Merci de procéder au règlement dans les délais.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: industrialEmail,
+            subject: `[${urgencyText}] Paiement ${preInvoiceNumber} - ${daysRemaining}j restants - ${amount.toFixed(2)}€`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+    }
+    /**
+     * Notification de paiement en retard
+     */
+    static async sendOverduePaymentAlert(industrialEmail, industrialName, preInvoiceNumber, carrierName, amount, daysOverdue) {
+        const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #991b1b; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">🚨 RETARD DE PAIEMENT</h1>
+          </div>
+          <div style="background: #fef2f2; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${industrialName},</p>
+            <p>Le paiement de la préfacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> est en retard.</p>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #991b1b;">
+              <p style="font-size: 24px; margin: 0; color: #991b1b; font-weight: bold;">
+                Retard: ${daysOverdue} jour${daysOverdue > 1 ? 's' : ''}
+              </p>
+              <p style="margin: 10px 0 0 0;"><strong>Montant dû:</strong> ${amount.toFixed(2)} €</p>
+            </div>
+
+            <p style="color: #991b1b; font-weight: bold;">Merci de régulariser cette situation dans les plus brefs délais.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+            to: industrialEmail,
+            subject: `[RETARD] Paiement ${preInvoiceNumber} - ${daysOverdue}j de retard - ${amount.toFixed(2)}€`,
+            html,
+        };
+        return this.sendEmail(mailOptions, `industrial ${industrialName} (overdue)`);
+    }
+    /**
      * Vérifie l'état de la connexion SMTP
      */
     static async checkSmtpConnection() {

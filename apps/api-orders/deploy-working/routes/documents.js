@@ -9,7 +9,72 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 const express_1 = require("express");
 const document_service_1 = __importDefault(require("../services/document-service"));
+const s3_service_1 = __importDefault(require("../services/s3-service"));
 const router = (0, express_1.Router)();
+/**
+ * POST /api/v1/documents/:orderId/upload-url
+ * Génère une URL pré-signée pour upload direct vers S3
+ */
+router.post('/:orderId/upload-url', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { type, fileName, contentType, uploadedBy } = req.body;
+        if (!type || !fileName || !uploadedBy) {
+            return res.status(400).json({
+                success: false,
+                error: 'type, fileName et uploadedBy sont requis'
+            });
+        }
+        const result = await s3_service_1.default.getUploadUrl({
+            orderId,
+            documentType: type,
+            fileName,
+            contentType: contentType || 'application/octet-stream',
+            uploadedBy
+        });
+        res.json({
+            success: true,
+            ...result,
+            instructions: {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': contentType || 'application/octet-stream'
+                },
+                body: 'Binary file content'
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * GET /api/v1/documents/:documentId/download-url
+ * Génère une URL pré-signée pour téléchargement depuis S3
+ */
+router.get('/:documentId/download-url', async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const document = await document_service_1.default.getDocument(documentId);
+        if (!document) {
+            return res.status(404).json({ success: false, error: 'Document non trouvé' });
+        }
+        if (!document.s3Key) {
+            return res.status(400).json({ success: false, error: 'Document non stocké sur S3' });
+        }
+        const downloadUrl = await s3_service_1.default.getDownloadUrl(document.s3Key);
+        res.json({
+            success: true,
+            downloadUrl,
+            fileName: document.originalName,
+            mimeType: document.mimeType,
+            expiresIn: 3600
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 /**
  * POST /api/v1/documents/:orderId/upload
  * Upload un document pour une commande

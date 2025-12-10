@@ -1,120 +1,62 @@
 /**
- * Page Prefacturation & Facturation Transport - Portail Industriel
- * Integration complete avec billing-api v1.0.0
+ * Page Prefacturation Transport - Portail Industriel
+ * Integration avec api-orders v2.11.0 - Module Prefacturation consolide
  *
  * Fonctionnalites:
- * - Dashboard prefacturations
- * - Validation factures transporteur
- * - Gestion ecarts et contestations
- * - Suivi blocages
- * - Export ERP
+ * - Dashboard prefacturations mensuelles consolidees
+ * - Validation des prefactures par l'industriel
+ * - Suivi des paiements avec decompte J-30
+ * - KPIs transporteurs par periode
+ * - Export pour paiement
  */
 
 import { useEffect, useState } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
-import { isAuthenticated, getAuthToken } from '../lib/auth';
-
-// Types
-interface Prefacturation {
-  prefacturationId: string;
-  orderId: string;
-  transporterId: string;
-  transporterName: string;
-  clientId: string;
-  status: string;
-  orderData: {
-    deliveryDate: string;
-    distance: number;
-    pickupAddress: string;
-    deliveryAddress: string;
-  };
-  calculation: {
-    basePrice: number;
-    optionsPrice: number;
-    waitingTimePrice: number;
-    penalties: number;
-    totalHT: number;
-    tva: number;
-    totalTTC: number;
-  };
-  carrierInvoice?: {
-    invoiceNumber: string;
-    totalHT: number;
-    totalTTC: number;
-    uploadedAt: string;
-  };
-  discrepancies: Array<{
-    type: string;
-    description: string;
-    difference: number;
-    differencePercent: number;
-    status: string;
-  }>;
-  blocks: Array<{
-    type: string;
-    reason: string;
-    active: boolean;
-    blockedAt: string;
-  }>;
-  finalInvoice?: {
-    invoiceNumber: string;
-    generatedAt: string;
-    sentToERP: boolean;
-    erpExportDate?: string;
-    erpSystem?: string;
-  };
-  createdAt: string;
-}
-
-interface BillingStats {
-  prefacturations: {
-    total: number;
-    byStatus: Record<string, number>;
-  };
-  amounts: {
-    totalHT: number;
-    totalTTC: number;
-  };
-  discrepancyRate: number;
-  activeBlocks: number;
-}
+import { isAuthenticated } from '../lib/auth';
+import { preinvoicesApi, PreInvoice, PreInvoiceStats, PreInvoiceLine } from '../lib/api';
 
 export default function BillingPage() {
   const router = useSafeRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_BILLING_API_URL || 'https://d1ciol606nbfs0.cloudfront.net';
 
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'prefacturations' | 'validation' | 'blocks' | 'export'>('dashboard');
-  const [prefacturations, setPrefacturations] = useState<Prefacturation[]>([]);
-  const [stats, setStats] = useState<BillingStats | null>(null);
-  const [selectedPref, setSelectedPref] = useState<Prefacturation | null>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'preinvoices' | 'validation' | 'payments' | 'export'>('dashboard');
+  const [preinvoices, setPreinvoices] = useState<PreInvoice[]>([]);
+  const [stats, setStats] = useState<PreInvoiceStats | null>(null);
+  const [selectedPreinvoice, setSelectedPreinvoice] = useState<PreInvoice | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [periodFilter, setPeriodFilter] = useState<{ month: number; year: number }>({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear()
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Form state for new prefacturation
-  const [newPrefForm, setNewPrefForm] = useState({
-    orderId: '',
-    transporterId: '',
-    distance: 0,
-    palettes: 0,
-    adr: false,
-    express: false,
-    frigo: false
-  });
+  // Validation form state
+  const [validationComments, setValidationComments] = useState('');
 
-  // Form state for ERP export
-  const [erpConfig, setErpConfig] = useState({
-    system: 'generic_api',
-    endpoint: '',
-    companyCode: '',
-    costCenter: ''
-  });
+  // Payment form state
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
 
-  const clientId = 'IND-001'; // TODO: Get from auth context
+  // Get industrialId from localStorage
+  const getIndustrialId = () => {
+    if (typeof window !== 'undefined') {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user.industrialId || user.id || '';
+    }
+    return '';
+  };
+
+  const getUserName = () => {
+    if (typeof window !== 'undefined') {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user.name || user.companyName || 'Industriel';
+    }
+    return 'Industriel';
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -122,75 +64,65 @@ export default function BillingPage() {
       return;
     }
     loadStats();
-    loadPrefacturations();
+    loadPreinvoices();
   }, [router]);
 
-  // API Helper
-  const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
-    const token = getAuthToken();
-    const response = await fetch(`${apiUrl}${endpoint}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: body ? JSON.stringify(body) : undefined
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || data.message || `Erreur ${response.status}`);
-    }
-    return data;
-  };
+  useEffect(() => {
+    loadPreinvoices();
+  }, [statusFilter, periodFilter]);
 
   // Load data
   const loadStats = async () => {
     try {
-      const result = await apiCall(`/api/billing/stats?clientId=${clientId}`);
-      setStats(result.data);
+      const result = await preinvoicesApi.getStats(getIndustrialId());
+      if (result.success) {
+        setStats(result.data);
+      }
     } catch (err: any) {
       console.error('Erreur chargement stats:', err.message);
     }
   };
 
-  const loadPrefacturations = async () => {
+  const loadPreinvoices = async () => {
     try {
-      const filter = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
-      const result = await apiCall(`/api/billing/prefacturations?clientId=${clientId}${filter}&limit=100`);
-      setPrefacturations(result.data || []);
+      setIsLoading(true);
+      const filters: any = {
+        industrialId: getIndustrialId(),
+        month: periodFilter.month,
+        year: periodFilter.year
+      };
+      if (statusFilter !== 'all') {
+        filters.status = statusFilter;
+      }
+      const result = await preinvoicesApi.list(filters);
+      if (result.success) {
+        setPreinvoices(result.data || []);
+      }
     } catch (err: any) {
-      console.error('Erreur chargement prefacturations:', err.message);
+      console.error('Erreur chargement preinvoices:', err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadPrefacturations();
-  }, [statusFilter]);
-
-  // Generate prefacturation
-  const generatePrefacturation = async () => {
+  // Validate preinvoice
+  const validatePreinvoice = async (preInvoiceId: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiCall('/api/billing/prefacturation/generate', 'POST', {
-        orderId: newPrefForm.orderId,
-        transporterId: newPrefForm.transporterId,
-        clientId,
-        orderData: {
-          distance: newPrefForm.distance,
-          deliveryDate: new Date().toISOString()
-        },
-        options: {
-          palettesEchange: newPrefForm.palettes,
-          adr: newPrefForm.adr,
-          express: newPrefForm.express,
-          frigo: newPrefForm.frigo
-        }
+      const result = await preinvoicesApi.validate(preInvoiceId, {
+        validatedBy: getUserName(),
+        comments: validationComments || undefined
       });
-      setSuccess('Prefacturation generee avec succes!');
-      loadPrefacturations();
-      loadStats();
-      setNewPrefForm({ orderId: '', transporterId: '', distance: 0, palettes: 0, adr: false, express: false, frigo: false });
+      if (result.success) {
+        setSuccess('Prefacture validee avec succes!');
+        loadPreinvoices();
+        loadStats();
+        setValidationComments('');
+        setSelectedPreinvoice(null);
+      } else {
+        setError(result.error || 'Erreur validation');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -198,33 +130,29 @@ export default function BillingPage() {
     }
   };
 
-  // Finalize billing
-  const finalizeBilling = async (prefacturationId: string) => {
+  // Mark as paid
+  const markAsPaid = async (preInvoiceId: string) => {
+    if (!paymentRef || !paymentAmount) {
+      setError('Veuillez renseigner la reference et le montant du paiement');
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      await apiCall('/api/billing/finalize', 'POST', { prefacturationId });
-      setSuccess('Facture finalisee avec succes!');
-      loadPrefacturations();
-      loadStats();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Export to ERP
-  const exportToERP = async (prefacturationId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await apiCall('/api/billing/export', 'POST', {
-        prefacturationId,
-        erpConfig
+      const result = await preinvoicesApi.markAsPaid(preInvoiceId, {
+        paymentReference: paymentRef,
+        paidAmount: paymentAmount
       });
-      setSuccess(`Export ${result.data.status} vers ${result.data.erpSystem}`);
-      loadPrefacturations();
+      if (result.success) {
+        setSuccess('Paiement enregistre avec succes!');
+        loadPreinvoices();
+        loadStats();
+        setPaymentRef('');
+        setPaymentAmount(0);
+        setSelectedPreinvoice(null);
+      } else {
+        setError(result.error || 'Erreur enregistrement paiement');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -232,42 +160,27 @@ export default function BillingPage() {
     }
   };
 
-  // Resolve discrepancy
-  const resolveDiscrepancy = async (prefacturationId: string, index: number, resolution: string) => {
+  // Export payments
+  const exportPayments = async () => {
     setIsLoading(true);
     try {
-      await apiCall('/api/billing/discrepancy/resolve', 'POST', {
-        prefacturationId,
-        discrepancyIndex: index,
-        resolution
-      });
-      setSuccess('Ecart resolu');
-      loadPrefacturations();
+      const result = await preinvoicesApi.exportPayments();
+      if (result.success && result.data) {
+        // Download CSV
+        const blob = new Blob([result.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `export-paiements-${periodFilter.year}-${String(periodFilter.month).padStart(2, '0')}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        setSuccess('Export telecharge avec succes!');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Unblock
-  const unblock = async (prefacturationId: string, reason: string) => {
-    setIsLoading(true);
-    try {
-      await apiCall('/api/billing/unblock', 'POST', { prefacturationId, reason });
-      setSuccess('Blocage leve');
-      loadPrefacturations();
-      loadStats();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Download PDF
-  const downloadPDF = (prefacturationId: string) => {
-    window.open(`${apiUrl}/api/billing/invoice/${prefacturationId}/pdf`, '_blank');
   };
 
   // Styles
@@ -303,14 +216,14 @@ export default function BillingPage() {
     background: 'rgba(255,255,255,0.2)'
   };
 
-  const buttonDangerStyle: React.CSSProperties = {
-    ...buttonStyle,
-    background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
-  };
-
   const buttonSuccessStyle: React.CSSProperties = {
     ...buttonStyle,
     background: 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)'
+  };
+
+  const buttonDangerStyle: React.CSSProperties = {
+    ...buttonStyle,
+    background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
   };
 
   const inputStyle: React.CSSProperties = {
@@ -339,40 +252,55 @@ export default function BillingPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'draft': '#95a5a6',
-      'generated': '#3498db',
-      'discrepancy_detected': '#FFA500',
-      'pending_validation': '#9b59b6',
-      'validated': '#00b894',
-      'contested': '#e74c3c',
-      'blocked': '#e74c3c',
-      'finalized': '#00cec9',
-      'exported': '#00D084',
-      'archived': '#636e72'
+      'pending': '#95a5a6',
+      'sent_to_industrial': '#3498db',
+      'validated_industrial': '#00b894',
+      'invoice_uploaded': '#9b59b6',
+      'invoice_accepted': '#00cec9',
+      'invoice_rejected': '#e74c3c',
+      'payment_pending': '#FFA500',
+      'paid': '#00D084',
+      'disputed': '#e74c3c'
     };
     return colors[status] || '#fff';
   };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      'draft': 'Brouillon',
-      'generated': 'Generee',
-      'discrepancy_detected': 'Ecart detecte',
-      'pending_validation': 'En validation',
-      'validated': 'Validee',
-      'contested': 'Contestee',
-      'blocked': 'Bloquee',
-      'finalized': 'Finalisee',
-      'exported': 'Exportee',
-      'archived': 'Archivee'
+      'pending': 'En preparation',
+      'sent_to_industrial': 'En attente validation',
+      'validated_industrial': 'Validee',
+      'invoice_uploaded': 'Facture recue',
+      'invoice_accepted': 'Facture acceptee',
+      'invoice_rejected': 'Facture rejetee',
+      'payment_pending': 'En attente paiement',
+      'paid': 'Payee',
+      'disputed': 'Contestee'
     };
     return labels[status] || status;
   };
 
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-FR');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const getMonthName = (month: number) => {
+    const months = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    return months[month - 1] || '';
+  };
+
+  // Calculate pending payments
+  const pendingPayments = preinvoices.filter(p => ['validated_industrial', 'invoice_accepted', 'payment_pending'].includes(p.status));
+  const totalPending = pendingPayments.reduce((sum, p) => sum + p.totals.totalTTC, 0);
+
   return (
     <>
       <Head>
-        <title>Prefacturation & Facturation - Industriel | SYMPHONI.A</title>
+        <title>Prefacturation Transport - Industriel | SYMPHONI.A</title>
       </Head>
 
       <div style={containerStyle}>
@@ -390,10 +318,10 @@ export default function BillingPage() {
               onClick={() => router.push('/')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', fontWeight: '600' }}
             >
-              ← Retour
+              Retour
             </button>
             <h1 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>
-              Prefacturation & Facturation Transport
+              Prefacturation Transport
             </h1>
             <span style={{
               padding: '4px 12px',
@@ -402,24 +330,24 @@ export default function BillingPage() {
               fontSize: '12px',
               fontWeight: '600'
             }}>
-              Module 3
+              v2.11
             </span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button style={tabStyle(activeTab === 'dashboard')} onClick={() => setActiveTab('dashboard')}>
               Dashboard
             </button>
-            <button style={tabStyle(activeTab === 'prefacturations')} onClick={() => setActiveTab('prefacturations')}>
-              Prefacturations ({prefacturations.length})
+            <button style={tabStyle(activeTab === 'preinvoices')} onClick={() => setActiveTab('preinvoices')}>
+              Prefactures ({preinvoices.length})
             </button>
             <button style={tabStyle(activeTab === 'validation')} onClick={() => setActiveTab('validation')}>
               Validation
             </button>
-            <button style={tabStyle(activeTab === 'blocks')} onClick={() => setActiveTab('blocks')}>
-              Blocages ({stats?.activeBlocks || 0})
+            <button style={tabStyle(activeTab === 'payments')} onClick={() => setActiveTab('payments')}>
+              Paiements
             </button>
             <button style={tabStyle(activeTab === 'export')} onClick={() => setActiveTab('export')}>
-              Export ERP
+              Export
             </button>
           </div>
         </div>
@@ -438,8 +366,34 @@ export default function BillingPage() {
           </div>
         )}
 
+        {/* Period Filter */}
+        <div style={{ padding: '16px 24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <span style={{ fontWeight: '600' }}>Periode:</span>
+          <select
+            style={{ ...inputStyle, width: '150px' }}
+            value={periodFilter.month}
+            onChange={(e) => setPeriodFilter({ ...periodFilter, month: parseInt(e.target.value) })}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+              <option key={m} value={m}>{getMonthName(m)}</option>
+            ))}
+          </select>
+          <select
+            style={{ ...inputStyle, width: '100px' }}
+            value={periodFilter.year}
+            onChange={(e) => setPeriodFilter({ ...periodFilter, year: parseInt(e.target.value) })}
+          >
+            {[2024, 2025, 2026].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <button style={buttonSecondaryStyle} onClick={loadPreinvoices}>
+            Actualiser
+          </button>
+        </div>
+
         {/* Content */}
-        <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
+        <div style={{ padding: '0 24px 24px', maxWidth: '1600px', margin: '0 auto' }}>
 
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
@@ -447,41 +401,45 @@ export default function BillingPage() {
               {/* KPI Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                 <div style={cardStyle}>
-                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Total Prefacturations</div>
-                  <div style={{ fontSize: '32px', fontWeight: '800' }}>{stats?.prefacturations?.total || 0}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Prefactures du mois</div>
+                  <div style={{ fontSize: '32px', fontWeight: '800' }}>{preinvoices.length}</div>
+                  <div style={{ fontSize: '12px', opacity: 0.6 }}>{getMonthName(periodFilter.month)} {periodFilter.year}</div>
                 </div>
                 <div style={cardStyle}>
-                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Montant Total HT</div>
-                  <div style={{ fontSize: '32px', fontWeight: '800', color: '#00D084' }}>
-                    {(stats?.amounts?.totalHT || 0).toLocaleString('fr-FR')} EUR
-                  </div>
-                </div>
-                <div style={cardStyle}>
-                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Taux d'Ecarts</div>
-                  <div style={{ fontSize: '32px', fontWeight: '800', color: (stats?.discrepancyRate || 0) > 20 ? '#e74c3c' : '#00D084' }}>
-                    {stats?.discrepancyRate || 0}%
-                  </div>
-                </div>
-                <div style={cardStyle}>
-                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Blocages Actifs</div>
-                  <div style={{ fontSize: '32px', fontWeight: '800', color: (stats?.activeBlocks || 0) > 0 ? '#e74c3c' : '#00D084' }}>
-                    {stats?.activeBlocks || 0}
+                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Montant Total TTC</div>
+                  <div style={{ fontSize: '28px', fontWeight: '800', color: '#00D084' }}>
+                    {formatCurrency(preinvoices.reduce((sum, p) => sum + p.totals.totalTTC, 0))} EUR
                   </div>
                 </div>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>En Attente Validation</div>
                   <div style={{ fontSize: '32px', fontWeight: '800', color: '#FFA500' }}>
-                    {stats?.prefacturations?.byStatus?.pending_validation || 0}
+                    {preinvoices.filter(p => p.status === 'sent_to_industrial').length}
+                  </div>
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>En Attente Paiement</div>
+                  <div style={{ fontSize: '32px', fontWeight: '800', color: '#3498db' }}>
+                    {pendingPayments.length}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#FFA500' }}>
+                    {formatCurrency(totalPending)} EUR
+                  </div>
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Payees</div>
+                  <div style={{ fontSize: '32px', fontWeight: '800', color: '#00D084' }}>
+                    {preinvoices.filter(p => p.status === 'paid').length}
                   </div>
                 </div>
               </div>
 
-              {/* Status Distribution */}
+              {/* Status Distribution + Quick Actions */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div style={cardStyle}>
                   <h3 style={{ marginBottom: '16px' }}>Repartition par Statut</h3>
                   <div style={{ display: 'grid', gap: '12px' }}>
-                    {stats?.prefacturations?.byStatus && Object.entries(stats.prefacturations.byStatus).map(([status, count]) => (
+                    {stats?.byStatus && Object.entries(stats.byStatus).map(([status, count]) => (
                       <div key={status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{
@@ -501,40 +459,68 @@ export default function BillingPage() {
                   <div style={{ display: 'grid', gap: '12px' }}>
                     <button
                       style={buttonStyle}
-                      onClick={() => setActiveTab('prefacturations')}
+                      onClick={() => { setStatusFilter('sent_to_industrial'); setActiveTab('validation'); }}
                     >
-                      Voir toutes les prefacturations
-                    </button>
-                    <button
-                      style={buttonSecondaryStyle}
-                      onClick={() => { setStatusFilter('discrepancy_detected'); setActiveTab('prefacturations'); }}
-                    >
-                      Traiter les ecarts ({stats?.prefacturations?.byStatus?.discrepancy_detected || 0})
-                    </button>
-                    <button
-                      style={buttonSecondaryStyle}
-                      onClick={() => { setStatusFilter('blocked'); setActiveTab('blocks'); }}
-                    >
-                      Gerer les blocages ({stats?.activeBlocks || 0})
+                      Valider les prefactures ({preinvoices.filter(p => p.status === 'sent_to_industrial').length})
                     </button>
                     <button
                       style={buttonSuccessStyle}
+                      onClick={() => setActiveTab('payments')}
+                    >
+                      Gerer les paiements ({pendingPayments.length})
+                    </button>
+                    <button
+                      style={buttonSecondaryStyle}
                       onClick={() => setActiveTab('export')}
                     >
-                      Exporter vers ERP
+                      Exporter pour comptabilite
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Recent Preinvoices */}
+              <div style={{ ...cardStyle, marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px' }}>Dernieres Prefactures</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {preinvoices.slice(0, 5).map(pi => (
+                    <div key={pi.preInvoiceId} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px',
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: '8px'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '700' }}>{pi.preInvoiceNumber}</div>
+                        <div style={{ fontSize: '13px', opacity: 0.7 }}>{pi.carrierName}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: '700' }}>{formatCurrency(pi.totals.totalTTC)} EUR</div>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          background: `${getStatusColor(pi.status)}30`,
+                          color: getStatusColor(pi.status)
+                        }}>
+                          {getStatusLabel(pi.status)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Prefacturations Tab */}
-          {activeTab === 'prefacturations' && (
+          {/* Preinvoices Tab */}
+          {activeTab === 'preinvoices' && (
             <div>
               {/* Filters */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2>Prefacturations</h2>
+                <h2>Prefactures - {getMonthName(periodFilter.month)} {periodFilter.year}</h2>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <select
                     style={{ ...inputStyle, width: '200px' }}
@@ -542,50 +528,47 @@ export default function BillingPage() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
                     <option value="all">Tous les statuts</option>
-                    <option value="generated">Generees</option>
-                    <option value="discrepancy_detected">Ecarts detectes</option>
-                    <option value="pending_validation">En validation</option>
-                    <option value="validated">Validees</option>
-                    <option value="blocked">Bloquees</option>
-                    <option value="finalized">Finalisees</option>
-                    <option value="exported">Exportees</option>
+                    <option value="sent_to_industrial">En attente validation</option>
+                    <option value="validated_industrial">Validees</option>
+                    <option value="payment_pending">En attente paiement</option>
+                    <option value="paid">Payees</option>
                   </select>
-                  <button style={buttonStyle} onClick={loadPrefacturations}>Actualiser</button>
                 </div>
               </div>
 
               {/* List */}
               <div style={{ display: 'grid', gap: '16px' }}>
-                {prefacturations.map(pref => (
+                {preinvoices.map(pi => (
                   <div
-                    key={pref.prefacturationId}
+                    key={pi.preInvoiceId}
                     style={{
                       ...cardStyle,
                       cursor: 'pointer',
-                      border: selectedPref?.prefacturationId === pref.prefacturationId
+                      border: selectedPreinvoice?.preInvoiceId === pi.preInvoiceId
                         ? '2px solid #667eea'
                         : '1px solid rgba(255,255,255,0.1)'
                     }}
-                    onClick={() => setSelectedPref(selectedPref?.prefacturationId === pref.prefacturationId ? null : pref)}
+                    onClick={() => setSelectedPreinvoice(selectedPreinvoice?.preInvoiceId === pi.preInvoiceId ? null : pi)}
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 150px 150px auto', gap: '16px', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Commande</div>
-                        <div style={{ fontWeight: '700' }}>{pref.orderId}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.6 }}>{pref.prefacturationId}</div>
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Prefacture</div>
+                        <div style={{ fontWeight: '700' }}>{pi.preInvoiceNumber}</div>
+                        <div style={{ fontSize: '12px', opacity: 0.6 }}>{pi.kpis.totalOrders} commandes</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '12px', opacity: 0.7 }}>Transporteur</div>
-                        <div style={{ fontWeight: '600' }}>{pref.transporterName || pref.transporterId}</div>
+                        <div style={{ fontWeight: '600' }}>{pi.carrierName}</div>
+                        <div style={{ fontSize: '11px', opacity: 0.5 }}>{pi.carrierSiret}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Distance</div>
-                        <div>{pref.orderData?.distance || 0} km</div>
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Periode</div>
+                        <div>{getMonthName(pi.period.month)} {pi.period.year}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Montant HT</div>
-                        <div style={{ fontSize: '18px', fontWeight: '700' }}>
-                          {pref.calculation?.totalHT?.toFixed(2)} EUR
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Montant TTC</div>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#00D084' }}>
+                          {formatCurrency(pi.totals.totalTTC)} EUR
                         </div>
                       </div>
                       <div>
@@ -594,120 +577,199 @@ export default function BillingPage() {
                           borderRadius: '12px',
                           fontSize: '12px',
                           fontWeight: '600',
-                          background: `${getStatusColor(pref.status)}30`,
-                          color: getStatusColor(pref.status)
+                          background: `${getStatusColor(pi.status)}30`,
+                          color: getStatusColor(pi.status)
                         }}>
-                          {getStatusLabel(pref.status)}
+                          {getStatusLabel(pi.status)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        {pref.status === 'validated' && (
+                        {pi.status === 'sent_to_industrial' && (
                           <button
                             style={{ ...buttonSuccessStyle, padding: '8px 12px', fontSize: '12px' }}
-                            onClick={(e) => { e.stopPropagation(); finalizeBilling(pref.prefacturationId); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedPreinvoice(pi); setActiveTab('validation'); }}
                           >
-                            Finaliser
+                            Valider
                           </button>
                         )}
-                        {pref.status === 'finalized' && (
-                          <button
-                            style={{ ...buttonStyle, padding: '8px 12px', fontSize: '12px' }}
-                            onClick={(e) => { e.stopPropagation(); downloadPDF(pref.prefacturationId); }}
-                          >
-                            PDF
-                          </button>
+                        {pi.payment?.daysRemaining !== undefined && pi.payment.daysRemaining <= 5 && pi.status !== 'paid' && (
+                          <span style={{ padding: '6px 10px', background: 'rgba(255,165,0,0.3)', borderRadius: '8px', fontSize: '11px', fontWeight: '600' }}>
+                            J-{pi.payment.daysRemaining}
+                          </span>
                         )}
                       </div>
                     </div>
 
                     {/* Expanded Details */}
-                    {selectedPref?.prefacturationId === pref.prefacturationId && (
+                    {selectedPreinvoice?.preInvoiceId === pi.preInvoiceId && (
                       <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
-                          {/* Calculation Details */}
+                          {/* Totals */}
                           <div>
-                            <h4 style={{ marginBottom: '12px' }}>Detail Calcul</h4>
+                            <h4 style={{ marginBottom: '12px' }}>Detail Montants</h4>
                             <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Prix base</span>
-                                <span>{pref.calculation?.basePrice?.toFixed(2)} EUR</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Options</span>
-                                <span>{pref.calculation?.optionsPrice?.toFixed(2)} EUR</span>
+                                <span>Base transport</span>
+                                <span>{formatCurrency(pi.totals.baseAmount)} EUR</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span>Temps attente</span>
-                                <span>{pref.calculation?.waitingTimePrice?.toFixed(2)} EUR</span>
+                                <span>{formatCurrency(pi.totals.waitingAmount)} EUR</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Penalites</span>
-                                <span style={{ color: '#e74c3c' }}>-{pref.calculation?.penalties?.toFixed(2)} EUR</span>
+                                <span>Penalites retard</span>
+                                <span style={{ color: '#e74c3c' }}>-{formatCurrency(pi.totals.delayPenalty)} EUR</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Supplement carburant</span>
+                                <span>{formatCurrency(pi.totals.fuelSurcharge)} EUR</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Peages</span>
+                                <span>{formatCurrency(pi.totals.tolls)} EUR</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '8px' }}>
-                                <span>Total HT</span>
-                                <span>{pref.calculation?.totalHT?.toFixed(2)} EUR</span>
+                                <span>Sous-total HT</span>
+                                <span>{formatCurrency(pi.totals.subtotalHT)} EUR</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>TVA (20%)</span>
-                                <span>{pref.calculation?.tva?.toFixed(2)} EUR</span>
+                                <span>TVA ({pi.totals.tvaRate}%)</span>
+                                <span>{formatCurrency(pi.totals.tvaAmount)} EUR</span>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', color: '#00D084' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', color: '#00D084', fontSize: '16px' }}>
                                 <span>Total TTC</span>
-                                <span>{pref.calculation?.totalTTC?.toFixed(2)} EUR</span>
+                                <span>{formatCurrency(pi.totals.totalTTC)} EUR</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Discrepancies */}
+                          {/* KPIs */}
                           <div>
-                            <h4 style={{ marginBottom: '12px' }}>Ecarts Detectes ({pref.discrepancies?.length || 0})</h4>
-                            {pref.discrepancies?.length === 0 ? (
-                              <p style={{ opacity: 0.6 }}>Aucun ecart</p>
-                            ) : (
-                              <div style={{ display: 'grid', gap: '8px' }}>
-                                {pref.discrepancies?.map((disc, idx) => (
-                                  <div key={idx} style={{ padding: '8px', background: 'rgba(255,165,0,0.2)', borderRadius: '8px' }}>
-                                    <div style={{ fontWeight: '600', fontSize: '13px' }}>{disc.type}</div>
-                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>{disc.description}</div>
-                                    <div style={{ fontSize: '14px', color: '#e74c3c', fontWeight: '700' }}>
-                                      Difference: {disc.difference?.toFixed(2)} EUR ({disc.differencePercent}%)
-                                    </div>
-                                    {disc.status === 'detected' && (
-                                      <button
-                                        style={{ ...buttonSecondaryStyle, padding: '4px 8px', fontSize: '11px', marginTop: '8px' }}
-                                        onClick={() => resolveDiscrepancy(pref.prefacturationId, idx, 'Accepte')}
-                                      >
-                                        Resoudre
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
+                            <h4 style={{ marginBottom: '12px' }}>KPIs Performance</h4>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Ponctualite enlevement</span>
+                                <span style={{ fontWeight: '700', color: pi.kpis.onTimePickupRate >= 90 ? '#00D084' : '#FFA500' }}>
+                                  {pi.kpis.onTimePickupRate.toFixed(1)}%
+                                </span>
                               </div>
-                            )}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Ponctualite livraison</span>
+                                <span style={{ fontWeight: '700', color: pi.kpis.onTimeDeliveryRate >= 90 ? '#00D084' : '#FFA500' }}>
+                                  {pi.kpis.onTimeDeliveryRate.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Documents complets</span>
+                                <span style={{ fontWeight: '700', color: pi.kpis.documentsCompleteRate >= 95 ? '#00D084' : '#FFA500' }}>
+                                  {pi.kpis.documentsCompleteRate.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Sans incident</span>
+                                <span style={{ fontWeight: '700', color: pi.kpis.incidentFreeRate >= 95 ? '#00D084' : '#FFA500' }}>
+                                  {pi.kpis.incidentFreeRate.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px' }}>
+                                <span>Temps attente moyen</span>
+                                <span style={{ fontWeight: '700' }}>{pi.kpis.averageWaitingHours.toFixed(1)}h</span>
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Blocks */}
+                          {/* Payment Info */}
                           <div>
-                            <h4 style={{ marginBottom: '12px' }}>Blocages</h4>
-                            {pref.blocks?.filter(b => b.active).length === 0 ? (
-                              <p style={{ opacity: 0.6 }}>Aucun blocage actif</p>
-                            ) : (
-                              <div style={{ display: 'grid', gap: '8px' }}>
-                                {pref.blocks?.filter(b => b.active).map((block, idx) => (
-                                  <div key={idx} style={{ padding: '8px', background: 'rgba(231,76,60,0.2)', borderRadius: '8px' }}>
-                                    <div style={{ fontWeight: '600', fontSize: '13px' }}>{block.type}</div>
-                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>{block.reason}</div>
-                                    <button
-                                      style={{ ...buttonDangerStyle, padding: '4px 8px', fontSize: '11px', marginTop: '8px' }}
-                                      onClick={() => unblock(pref.prefacturationId, 'Deblocage manuel')}
-                                    >
-                                      Lever le blocage
-                                    </button>
+                            <h4 style={{ marginBottom: '12px' }}>Paiement</h4>
+                            {pi.payment ? (
+                              <div style={{ display: 'grid', gap: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Echeance</span>
+                                  <span>{formatDate(pi.payment.dueDate)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Delai paiement</span>
+                                  <span>{pi.payment.paymentTermDays} jours</span>
+                                </div>
+                                {pi.payment.daysRemaining !== undefined && (
+                                  <div style={{
+                                    padding: '12px',
+                                    background: pi.payment.daysRemaining <= 0 ? 'rgba(231,76,60,0.2)' : pi.payment.daysRemaining <= 5 ? 'rgba(255,165,0,0.2)' : 'rgba(0,208,132,0.2)',
+                                    borderRadius: '8px',
+                                    textAlign: 'center'
+                                  }}>
+                                    <div style={{ fontSize: '24px', fontWeight: '800' }}>
+                                      {pi.payment.daysRemaining <= 0 ? 'ECHU' : `J-${pi.payment.daysRemaining}`}
+                                    </div>
+                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                                      {pi.payment.daysRemaining <= 0 ? 'Paiement en retard' : 'Jours restants'}
+                                    </div>
                                   </div>
-                                ))}
+                                )}
+                                {pi.payment.bankDetails && (
+                                  <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Coordonnees bancaires</div>
+                                    <div style={{ fontSize: '12px' }}>
+                                      <div>{pi.payment.bankDetails.bankName}</div>
+                                      <div style={{ fontFamily: 'monospace' }}>{pi.payment.bankDetails.iban}</div>
+                                      <div style={{ fontFamily: 'monospace' }}>{pi.payment.bankDetails.bic}</div>
+                                    </div>
+                                  </div>
+                                )}
+                                {pi.payment.paidAt && (
+                                  <div style={{ padding: '12px', background: 'rgba(0,208,132,0.2)', borderRadius: '8px' }}>
+                                    <div style={{ fontWeight: '600', color: '#00D084' }}>Paye le {formatDate(pi.payment.paidAt)}</div>
+                                    <div style={{ fontSize: '13px' }}>Ref: {pi.payment.paymentReference}</div>
+                                    <div style={{ fontSize: '13px' }}>Montant: {formatCurrency(pi.payment.paidAmount || 0)} EUR</div>
+                                  </div>
+                                )}
                               </div>
+                            ) : (
+                              <p style={{ opacity: 0.6 }}>Information de paiement non disponible</p>
                             )}
+                          </div>
+                        </div>
+
+                        {/* Order Lines */}
+                        <div style={{ marginTop: '24px' }}>
+                          <h4 style={{ marginBottom: '12px' }}>Commandes ({pi.lines.length})</h4>
+                          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                                  <th style={{ textAlign: 'left', padding: '8px', opacity: 0.7 }}>Commande</th>
+                                  <th style={{ textAlign: 'left', padding: '8px', opacity: 0.7 }}>Trajet</th>
+                                  <th style={{ textAlign: 'left', padding: '8px', opacity: 0.7 }}>Date livraison</th>
+                                  <th style={{ textAlign: 'right', padding: '8px', opacity: 0.7 }}>Base</th>
+                                  <th style={{ textAlign: 'right', padding: '8px', opacity: 0.7 }}>Attente</th>
+                                  <th style={{ textAlign: 'right', padding: '8px', opacity: 0.7 }}>Penalite</th>
+                                  <th style={{ textAlign: 'right', padding: '8px', opacity: 0.7 }}>Total</th>
+                                  <th style={{ textAlign: 'center', padding: '8px', opacity: 0.7 }}>CMR</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pi.lines.map((line, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <td style={{ padding: '8px' }}>{line.orderReference}</td>
+                                    <td style={{ padding: '8px' }}>{line.pickupCity} - {line.deliveryCity}</td>
+                                    <td style={{ padding: '8px' }}>{formatDate(line.deliveryDate)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right' }}>{formatCurrency(line.baseAmount)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right' }}>{formatCurrency(line.waitingAmount)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right', color: '#e74c3c' }}>-{formatCurrency(line.delayPenalty)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600' }}>{formatCurrency(line.totalAmount)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'center' }}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        width: '16px',
+                                        height: '16px',
+                                        borderRadius: '50%',
+                                        background: line.cmrValidated ? '#00D084' : '#e74c3c'
+                                      }} />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </div>
@@ -715,9 +777,11 @@ export default function BillingPage() {
                   </div>
                 ))}
 
-                {prefacturations.length === 0 && (
+                {preinvoices.length === 0 && (
                   <div style={cardStyle}>
-                    <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucune prefacturation trouvee.</p>
+                    <p style={{ opacity: 0.6, textAlign: 'center' }}>
+                      Aucune prefacture pour {getMonthName(periodFilter.month)} {periodFilter.year}
+                    </p>
                   </div>
                 )}
               </div>
@@ -726,172 +790,198 @@ export default function BillingPage() {
 
           {/* Validation Tab */}
           {activeTab === 'validation' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '24px' }}>
-              {/* Generate Prefacturation Form */}
-              <div style={cardStyle}>
-                <h3 style={{ marginBottom: '16px' }}>Generer une Prefacturation</h3>
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>ID Commande</label>
-                    <input
-                      style={inputStyle}
-                      placeholder="ORD-XXXXX"
-                      value={newPrefForm.orderId}
-                      onChange={(e) => setNewPrefForm({ ...newPrefForm, orderId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>ID Transporteur</label>
-                    <input
-                      style={inputStyle}
-                      placeholder="TRP-XXXXX"
-                      value={newPrefForm.transporterId}
-                      onChange={(e) => setNewPrefForm({ ...newPrefForm, transporterId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Distance (km)</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      value={newPrefForm.distance}
-                      onChange={(e) => setNewPrefForm({ ...newPrefForm, distance: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Palettes echange</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      value={newPrefForm.palettes}
-                      onChange={(e) => setNewPrefForm({ ...newPrefForm, palettes: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={newPrefForm.adr}
-                        onChange={(e) => setNewPrefForm({ ...newPrefForm, adr: e.target.checked })}
-                      />
-                      ADR
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={newPrefForm.express}
-                        onChange={(e) => setNewPrefForm({ ...newPrefForm, express: e.target.checked })}
-                      />
-                      Express
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={newPrefForm.frigo}
-                        onChange={(e) => setNewPrefForm({ ...newPrefForm, frigo: e.target.checked })}
-                      />
-                      Frigo
-                    </label>
-                  </div>
-                  <button
-                    style={buttonStyle}
-                    onClick={generatePrefacturation}
-                    disabled={isLoading || !newPrefForm.orderId || !newPrefForm.transporterId}
-                  >
-                    {isLoading ? 'Generation...' : 'Generer Prefacturation'}
-                  </button>
-                </div>
-              </div>
-
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '24px' }}>
               {/* Pending Validation List */}
               <div>
-                <h3 style={{ marginBottom: '16px' }}>En Attente de Validation Transporteur</h3>
+                <h3 style={{ marginBottom: '16px' }}>Prefactures en Attente de Validation</h3>
                 <div style={{ display: 'grid', gap: '12px' }}>
-                  {prefacturations.filter(p => ['generated', 'pending_validation', 'discrepancy_detected'].includes(p.status)).map(pref => (
-                    <div key={pref.prefacturationId} style={cardStyle}>
+                  {preinvoices.filter(p => p.status === 'sent_to_industrial').map(pi => (
+                    <div
+                      key={pi.preInvoiceId}
+                      style={{
+                        ...cardStyle,
+                        cursor: 'pointer',
+                        border: selectedPreinvoice?.preInvoiceId === pi.preInvoiceId ? '2px solid #667eea' : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                      onClick={() => setSelectedPreinvoice(pi)}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <div style={{ fontWeight: '700' }}>{pref.orderId}</div>
-                          <div style={{ fontSize: '13px', opacity: 0.7 }}>{pref.transporterName || pref.transporterId}</div>
+                          <div style={{ fontWeight: '700' }}>{pi.preInvoiceNumber}</div>
+                          <div style={{ fontSize: '13px', opacity: 0.7 }}>{pi.carrierName}</div>
+                          <div style={{ fontSize: '12px', opacity: 0.5 }}>{pi.kpis.totalOrders} commandes</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '18px', fontWeight: '700' }}>{pref.calculation?.totalHT?.toFixed(2)} EUR</div>
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '8px',
-                            fontSize: '11px',
-                            background: `${getStatusColor(pref.status)}30`,
-                            color: getStatusColor(pref.status)
-                          }}>
-                            {getStatusLabel(pref.status)}
-                          </span>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#00D084' }}>{formatCurrency(pi.totals.totalTTC)} EUR</div>
+                          <div style={{ fontSize: '12px', opacity: 0.6 }}>
+                            Recu le {formatDate(pi.createdAt)}
+                          </div>
                         </div>
                       </div>
-                      {pref.discrepancies?.length > 0 && (
-                        <div style={{ marginTop: '12px', padding: '8px', background: 'rgba(255,165,0,0.2)', borderRadius: '8px' }}>
-                          {pref.discrepancies.length} ecart(s) detecte(s)
-                        </div>
-                      )}
                     </div>
                   ))}
-                  {prefacturations.filter(p => ['generated', 'pending_validation', 'discrepancy_detected'].includes(p.status)).length === 0 && (
+                  {preinvoices.filter(p => p.status === 'sent_to_industrial').length === 0 && (
                     <div style={cardStyle}>
-                      <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucune prefacturation en attente.</p>
+                      <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucune prefacture en attente de validation.</p>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Validation Form */}
+              <div style={cardStyle}>
+                <h3 style={{ marginBottom: '16px' }}>Valider la Prefacture</h3>
+                {selectedPreinvoice && selectedPreinvoice.status === 'sent_to_industrial' ? (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                      <div style={{ fontWeight: '700' }}>{selectedPreinvoice.preInvoiceNumber}</div>
+                      <div style={{ fontSize: '13px', opacity: 0.7 }}>{selectedPreinvoice.carrierName}</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#00D084', marginTop: '8px' }}>
+                        {formatCurrency(selectedPreinvoice.totals.totalTTC)} EUR TTC
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Commentaires (optionnel)</label>
+                      <textarea
+                        style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
+                        placeholder="Ajoutez un commentaire..."
+                        value={validationComments}
+                        onChange={(e) => setValidationComments(e.target.value)}
+                      />
+                    </div>
+
+                    <button
+                      style={buttonSuccessStyle}
+                      onClick={() => validatePreinvoice(selectedPreinvoice.preInvoiceId)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Validation...' : 'Valider la prefacture'}
+                    </button>
+
+                    <button
+                      style={buttonDangerStyle}
+                      onClick={() => {
+                        // TODO: Implement dispute
+                        setError('Fonctionnalite de contestation a venir');
+                      }}
+                    >
+                      Contester
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ opacity: 0.6 }}>Selectionnez une prefacture a valider</p>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Blocks Tab */}
-          {activeTab === 'blocks' && (
-            <div>
-              <h2 style={{ marginBottom: '24px' }}>Blocages Actifs</h2>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {prefacturations.filter(p => p.blocks?.some(b => b.active)).map(pref => (
-                  <div key={pref.prefacturationId} style={cardStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '16px' }}>{pref.orderId}</div>
-                        <div style={{ fontSize: '13px', opacity: 0.7 }}>{pref.transporterName}</div>
-                      </div>
-                      <div style={{ fontSize: '18px', fontWeight: '700' }}>
-                        {pref.calculation?.totalHT?.toFixed(2)} EUR
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
-                      {pref.blocks?.filter(b => b.active).map((block, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(231,76,60,0.2)', borderRadius: '8px' }}>
-                          <div>
-                            <div style={{ fontWeight: '600' }}>
-                              {block.type === 'missing_documents' && 'Documents Manquants'}
-                              {block.type === 'vigilance' && 'Devoir de Vigilance'}
-                              {block.type === 'pallets' && 'Palettes Europe'}
-                              {block.type === 'late' && 'Retard'}
-                              {block.type === 'manual' && 'Blocage Manuel'}
-                            </div>
-                            <div style={{ fontSize: '13px', opacity: 0.8 }}>{block.reason}</div>
-                            <div style={{ fontSize: '11px', opacity: 0.6 }}>
-                              Depuis le {new Date(block.blockedAt).toLocaleDateString('fr-FR')}
-                            </div>
-                          </div>
-                          <button
-                            style={buttonDangerStyle}
-                            onClick={() => unblock(pref.prefacturationId, 'Deblocage manuel')}
-                            disabled={isLoading}
-                          >
-                            Lever le blocage
-                          </button>
+          {/* Payments Tab */}
+          {activeTab === 'payments' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '24px' }}>
+              {/* Pending Payments */}
+              <div>
+                <h3 style={{ marginBottom: '16px' }}>Paiements en Attente ({pendingPayments.length})</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {pendingPayments.map(pi => (
+                    <div
+                      key={pi.preInvoiceId}
+                      style={{
+                        ...cardStyle,
+                        cursor: 'pointer',
+                        border: selectedPreinvoice?.preInvoiceId === pi.preInvoiceId ? '2px solid #667eea' : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                      onClick={() => {
+                        setSelectedPreinvoice(pi);
+                        setPaymentAmount(pi.totals.totalTTC);
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: '700' }}>{pi.preInvoiceNumber}</div>
+                          <div style={{ fontSize: '13px', opacity: 0.7 }}>{pi.carrierName}</div>
                         </div>
-                      ))}
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#00D084' }}>{formatCurrency(pi.totals.totalTTC)} EUR</div>
+                          {pi.payment?.daysRemaining !== undefined && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              background: pi.payment.daysRemaining <= 0 ? 'rgba(231,76,60,0.3)' : pi.payment.daysRemaining <= 5 ? 'rgba(255,165,0,0.3)' : 'rgba(0,208,132,0.3)'
+                            }}>
+                              {pi.payment.daysRemaining <= 0 ? 'ECHU' : `J-${pi.payment.daysRemaining}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                  {pendingPayments.length === 0 && (
+                    <div style={cardStyle}>
+                      <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucun paiement en attente.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Form */}
+              <div style={cardStyle}>
+                <h3 style={{ marginBottom: '16px' }}>Enregistrer un Paiement</h3>
+                {selectedPreinvoice && ['validated_industrial', 'invoice_accepted', 'payment_pending'].includes(selectedPreinvoice.status) ? (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                      <div style={{ fontWeight: '700' }}>{selectedPreinvoice.preInvoiceNumber}</div>
+                      <div style={{ fontSize: '13px', opacity: 0.7 }}>{selectedPreinvoice.carrierName}</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#00D084', marginTop: '8px' }}>
+                        {formatCurrency(selectedPreinvoice.totals.totalTTC)} EUR TTC
+                      </div>
+                    </div>
+
+                    {selectedPreinvoice.payment?.bankDetails && (
+                      <div style={{ padding: '12px', background: 'rgba(102, 126, 234, 0.2)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Coordonnees bancaires</div>
+                        <div style={{ fontSize: '13px' }}>
+                          <div style={{ fontWeight: '600' }}>{selectedPreinvoice.payment.bankDetails.accountHolder}</div>
+                          <div>{selectedPreinvoice.payment.bankDetails.bankName}</div>
+                          <div style={{ fontFamily: 'monospace', marginTop: '4px' }}>IBAN: {selectedPreinvoice.payment.bankDetails.iban}</div>
+                          <div style={{ fontFamily: 'monospace' }}>BIC: {selectedPreinvoice.payment.bankDetails.bic}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Reference du paiement</label>
+                      <input
+                        style={inputStyle}
+                        placeholder="VIR-XXXXXX"
+                        value={paymentRef}
+                        onChange={(e) => setPaymentRef(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Montant paye (EUR)</label>
+                      <input
+                        style={inputStyle}
+                        type="number"
+                        step="0.01"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <button
+                      style={buttonSuccessStyle}
+                      onClick={() => markAsPaid(selectedPreinvoice.preInvoiceId)}
+                      disabled={isLoading || !paymentRef || !paymentAmount}
+                    >
+                      {isLoading ? 'Enregistrement...' : 'Confirmer le paiement'}
+                    </button>
                   </div>
-                ))}
-                {prefacturations.filter(p => p.blocks?.some(b => b.active)).length === 0 && (
-                  <div style={cardStyle}>
-                    <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucun blocage actif.</p>
-                  </div>
+                ) : (
+                  <p style={{ opacity: 0.6 }}>Selectionnez une prefacture a payer</p>
                 )}
               </div>
             </div>
@@ -899,118 +989,50 @@ export default function BillingPage() {
 
           {/* Export Tab */}
           {activeTab === 'export' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '24px' }}>
-              {/* ERP Config */}
-              <div style={cardStyle}>
-                <h3 style={{ marginBottom: '16px' }}>Configuration ERP</h3>
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Systeme ERP</label>
-                    <select
-                      style={inputStyle}
-                      value={erpConfig.system}
-                      onChange={(e) => setErpConfig({ ...erpConfig, system: e.target.value })}
-                    >
-                      <option value="generic_api">API Generique (JSON)</option>
-                      <option value="sap">SAP (FI/CO)</option>
-                      <option value="oracle">Oracle E-Business Suite</option>
-                      <option value="sage_x3">Sage X3</option>
-                      <option value="divalto">Divalto</option>
-                      <option value="dynamics_365">Microsoft Dynamics 365</option>
-                      <option value="odoo">Odoo ERP</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Endpoint API</label>
-                    <input
-                      style={inputStyle}
-                      placeholder="https://erp.example.com/api/invoices"
-                      value={erpConfig.endpoint}
-                      onChange={(e) => setErpConfig({ ...erpConfig, endpoint: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Code Societe</label>
-                    <input
-                      style={inputStyle}
-                      placeholder="1000"
-                      value={erpConfig.companyCode}
-                      onChange={(e) => setErpConfig({ ...erpConfig, companyCode: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', opacity: 0.8 }}>Centre de Cout</label>
-                    <input
-                      style={inputStyle}
-                      placeholder="TRANS-001"
-                      value={erpConfig.costCenter}
-                      onChange={(e) => setErpConfig({ ...erpConfig, costCenter: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Ready for Export */}
-              <div>
-                <h3 style={{ marginBottom: '16px' }}>Factures Prates pour Export</h3>
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {prefacturations.filter(p => p.status === 'finalized').map(pref => (
-                    <div key={pref.prefacturationId} style={cardStyle}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: '700' }}>{pref.finalInvoice?.invoiceNumber || pref.orderId}</div>
-                          <div style={{ fontSize: '13px', opacity: 0.7 }}>{pref.transporterName}</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '18px', fontWeight: '700' }}>{pref.calculation?.totalTTC?.toFixed(2)} EUR</div>
-                            <div style={{ fontSize: '11px', opacity: 0.6 }}>
-                              {pref.finalInvoice?.generatedAt && new Date(pref.finalInvoice.generatedAt).toLocaleDateString('fr-FR')}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              style={{ ...buttonSecondaryStyle, padding: '8px 12px', fontSize: '12px' }}
-                              onClick={() => downloadPDF(pref.prefacturationId)}
-                            >
-                              PDF
-                            </button>
-                            <button
-                              style={{ ...buttonSuccessStyle, padding: '8px 12px', fontSize: '12px' }}
-                              onClick={() => exportToERP(pref.prefacturationId)}
-                              disabled={isLoading}
-                            >
-                              Exporter
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+            <div>
+              <h2 style={{ marginBottom: '24px' }}>Export Comptabilite</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div style={cardStyle}>
+                  <h3 style={{ marginBottom: '16px' }}>Export CSV Paiements</h3>
+                  <p style={{ opacity: 0.7, marginBottom: '16px' }}>
+                    Exportez la liste des paiements a effectuer pour import dans votre logiciel comptable.
+                  </p>
+                  <div style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '14px', opacity: 0.7 }}>Paiements en attente</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700' }}>{pendingPayments.length}</div>
+                    <div style={{ fontSize: '14px', color: '#FFA500' }}>
+                      Total: {formatCurrency(totalPending)} EUR
                     </div>
-                  ))}
-                  {prefacturations.filter(p => p.status === 'finalized').length === 0 && (
-                    <div style={cardStyle}>
-                      <p style={{ opacity: 0.6, textAlign: 'center' }}>Aucune facture prete pour export.</p>
-                    </div>
-                  )}
+                  </div>
+                  <button
+                    style={buttonStyle}
+                    onClick={exportPayments}
+                    disabled={isLoading || pendingPayments.length === 0}
+                  >
+                    {isLoading ? 'Export...' : 'Telecharger CSV'}
+                  </button>
                 </div>
 
-                <h3 style={{ margin: '32px 0 16px' }}>Factures Deja Exportees</h3>
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {prefacturations.filter(p => p.status === 'exported').map(pref => (
-                    <div key={pref.prefacturationId} style={{ ...cardStyle, background: 'rgba(0,208,132,0.1)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: '700' }}>{pref.finalInvoice?.invoiceNumber}</div>
-                          <div style={{ fontSize: '13px', opacity: 0.7 }}>
-                            Exporte le {pref.finalInvoice?.erpExportDate && new Date(pref.finalInvoice.erpExportDate).toLocaleDateString('fr-FR')}
-                          </div>
-                        </div>
-                        <span style={{ padding: '4px 12px', background: 'rgba(0,208,132,0.3)', borderRadius: '12px', fontSize: '12px', fontWeight: '600' }}>
-                          {pref.finalInvoice?.erpSystem || 'ERP'}
-                        </span>
-                      </div>
+                <div style={cardStyle}>
+                  <h3 style={{ marginBottom: '16px' }}>Resume Mensuel</h3>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Total prefactures</span>
+                      <span style={{ fontWeight: '700' }}>{preinvoices.length}</span>
                     </div>
-                  ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Montant total HT</span>
+                      <span style={{ fontWeight: '700' }}>{formatCurrency(preinvoices.reduce((s, p) => s + p.totals.subtotalHT, 0))} EUR</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>TVA collectee</span>
+                      <span style={{ fontWeight: '700' }}>{formatCurrency(preinvoices.reduce((s, p) => s + p.totals.tvaAmount, 0))} EUR</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
+                      <span>Total TTC</span>
+                      <span style={{ fontWeight: '700', color: '#00D084' }}>{formatCurrency(preinvoices.reduce((s, p) => s + p.totals.totalTTC, 0))} EUR</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

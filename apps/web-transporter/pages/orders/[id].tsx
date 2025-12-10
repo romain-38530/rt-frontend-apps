@@ -1,6 +1,7 @@
 /**
  * Page de détail d'une commande - Portail Transporter
  * Affiche les informations complètes et la timeline d'événements
+ * Permet la confirmation de livraison et l'upload de documents
  */
 
 import { useEffect, useState } from 'react';
@@ -8,6 +9,8 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
+import { ordersApi } from '../../lib/api';
+import { DeliveryConfirmation, DocumentUpload } from '../../components';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
@@ -34,6 +37,9 @@ export default function OrderDetailPage() {
   const [events, setEvents] = useState<OrderEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeliveryConfirmation, setShowDeliveryConfirmation] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [documents, setDocuments] = useState<any[]>([]);
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
@@ -58,6 +64,32 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Charger les documents de la commande
+  const loadDocuments = async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const result = await ordersApi.getOrderDocuments(id);
+      if (result.success) {
+        setDocuments(result.documents || []);
+      }
+    } catch (err) {
+      console.error('Error loading documents:', err);
+    }
+  };
+
+  // Confirmation de livraison reussie
+  const handleDeliverySuccess = () => {
+    setShowDeliveryConfirmation(false);
+    loadOrder();
+    loadDocuments();
+  };
+
+  // Document uploade avec succes
+  const handleDocumentUploadSuccess = (documentId: string) => {
+    console.log('Document uploaded:', documentId);
+    loadDocuments();
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
@@ -65,6 +97,7 @@ export default function OrderDetailPage() {
     }
 
     loadOrder();
+    loadDocuments();
   }, [id, router]);
 
   const formatDate = (dateString: string) => {
@@ -200,13 +233,38 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                {formatPrice(order.estimatedPrice || order.finalPrice, order.currency)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                  {formatPrice(order.estimatedPrice || order.finalPrice, order.currency)}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                  Créée le {formatDate(order.createdAt)}
+                </div>
               </div>
-              <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                Créée le {formatDate(order.createdAt)}
-              </div>
+
+              {/* Bouton Confirmer Livraison - visible si arrived_delivery ou in_transit */}
+              {['arrived_delivery', 'in_transit', 'loaded'].includes(order.status) && (
+                <button
+                  onClick={() => setShowDeliveryConfirmation(true)}
+                  style={{
+                    padding: '12px 20px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  Confirmer livraison
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -320,6 +378,121 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Section Documents */}
+              <div style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ ...sectionTitleStyle, marginBottom: 0 }}>📎 Documents ({documents.length})</h2>
+                  <button
+                    onClick={() => setShowDocumentUpload(!showDocumentUpload)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: showDocumentUpload ? '#ef4444' : '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showDocumentUpload ? 'Fermer' : '+ Ajouter'}
+                  </button>
+                </div>
+
+                {/* Zone d'upload */}
+                {showDocumentUpload && (
+                  <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <DocumentUpload
+                        orderId={order.orderId}
+                        documentType="cmr"
+                        onSuccess={handleDocumentUploadSuccess}
+                        onError={(err) => console.error(err)}
+                      />
+                      <DocumentUpload
+                        orderId={order.orderId}
+                        documentType="pod"
+                        onSuccess={handleDocumentUploadSuccess}
+                        onError={(err) => console.error(err)}
+                      />
+                      <DocumentUpload
+                        orderId={order.orderId}
+                        documentType="photo"
+                        onSuccess={handleDocumentUploadSuccess}
+                        onError={(err) => console.error(err)}
+                        label="Photo de livraison"
+                      />
+                      <DocumentUpload
+                        orderId={order.orderId}
+                        documentType="damage_report"
+                        onSuccess={handleDocumentUploadSuccess}
+                        onError={(err) => console.error(err)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Liste des documents */}
+                {documents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>
+                    Aucun document pour le moment
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {documents.map((doc: any) => (
+                      <div
+                        key={doc.documentId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '20px' }}>
+                            {doc.type === 'cmr' ? '📄' : doc.type === 'pod' ? '✅' : doc.type === 'photo' ? '📷' : '📎'}
+                          </span>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                              {doc.originalName || doc.type.toUpperCase()}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {doc.type.toUpperCase()} - {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {doc.status === 'validated' && (
+                            <span style={{ padding: '4px 8px', backgroundColor: '#d1fae5', color: '#059669', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                              Valide
+                            </span>
+                          )}
+                          <button
+                            onClick={async () => {
+                              const result = await ordersApi.getDocumentDownloadUrl(doc.documentId);
+                              if (result.success) window.open(result.downloadUrl, '_blank');
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: 'white',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Telecharger
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Colonne secondaire - Timeline */}
@@ -399,6 +572,16 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmation de livraison */}
+      {showDeliveryConfirmation && (
+        <DeliveryConfirmation
+          orderId={order.orderId}
+          orderReference={order.reference}
+          onSuccess={handleDeliverySuccess}
+          onCancel={() => setShowDeliveryConfirmation(false)}
+        />
+      )}
     </>
   );
 }
