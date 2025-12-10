@@ -1126,4 +1126,215 @@ export const tmsSyncApi = {
   }
 };
 
+// ============================================
+// PRE-INVOICES API - Prefacturation consolidee
+// ============================================
+
+export interface PreInvoiceLine {
+  orderId: string;
+  orderReference: string;
+  pickupCity: string;
+  deliveryCity: string;
+  deliveryDate: string;
+  baseAmount: number;
+  waitingAmount: number;
+  fuelSurcharge: number;
+  tolls: number;
+  delayPenalty: number;
+  totalAmount: number;
+  cmrValidated: boolean;
+}
+
+export interface PreInvoice {
+  preInvoiceId: string;
+  preInvoiceNumber: string;
+  period: {
+    month: number;
+    year: number;
+    startDate: string;
+    endDate: string;
+  };
+  industrialId: string;
+  industrialName: string;
+  industrialEmail: string;
+  carrierId: string;
+  carrierName: string;
+  carrierSiret: string;
+  lines: PreInvoiceLine[];
+  totals: {
+    baseAmount: number;
+    waitingAmount: number;
+    fuelSurcharge: number;
+    tolls: number;
+    delayPenalty: number;
+    subtotalHT: number;
+    tvaRate: number;
+    tvaAmount: number;
+    totalTTC: number;
+  };
+  kpis: {
+    totalOrders: number;
+    onTimePickupRate: number;
+    onTimeDeliveryRate: number;
+    documentsCompleteRate: number;
+    incidentFreeRate: number;
+    averageWaitingHours: number;
+  };
+  status: 'pending' | 'sent_to_industrial' | 'validated_industrial' | 'invoice_uploaded' | 'invoice_accepted' | 'invoice_rejected' | 'payment_pending' | 'paid' | 'disputed';
+  carrierInvoice?: {
+    uploadedAt: string;
+    fileName: string;
+    s3Key: string;
+    invoiceNumber: string;
+    invoiceAmount: number;
+    matchScore: number;
+    discrepancies: Array<{ field: string; expected: any; received: any }>;
+    status: 'pending_review' | 'accepted' | 'rejected';
+    rejectionReason?: string;
+  };
+  payment?: {
+    dueDate: string;
+    paymentTermDays: number;
+    daysRemaining?: number;
+    paidAt?: string;
+    paymentReference?: string;
+    paidAmount?: number;
+    bankDetails?: {
+      iban: string;
+      bic: string;
+      bankName: string;
+      accountHolder: string;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PreInvoiceStats {
+  total: number;
+  totalAmount: number;
+  byStatus: Record<string, number>;
+  pendingValidation: number;
+  awaitingPayment: number;
+  paid: number;
+}
+
+export const preinvoicesApi = {
+  /**
+   * Liste des prefactures du transporteur
+   */
+  list: async (filters?: { industrialId?: string; status?: string; month?: number; year?: number }) => {
+    const carrierId = getCarrierId();
+    const params = new URLSearchParams({ carrierId });
+    if (filters?.industrialId) params.append('industrialId', filters.industrialId);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.month) params.append('month', filters.month.toString());
+    if (filters?.year) params.append('year', filters.year.toString());
+
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Statistiques prefactures du transporteur
+   */
+  getStats: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/stats?carrierId=${carrierId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Detail d'une prefacture
+   */
+  get: async (preInvoiceId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Upload facture transporteur (pre-signed URL)
+   */
+  getInvoiceUploadUrl: async (preInvoiceId: string, data: { fileName: string; contentType: string }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice/upload-url`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Upload fichier vers S3
+   */
+  uploadToS3: async (uploadUrl: string, file: File): Promise<boolean> => {
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+    return res.ok;
+  },
+
+  /**
+   * Confirmer upload facture transporteur
+   */
+  confirmInvoiceUpload: async (preInvoiceId: string, data: {
+    fileName: string;
+    s3Key: string;
+    invoiceNumber: string;
+    invoiceAmount: number;
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Telecharger facture transporteur
+   */
+  getInvoiceDownloadUrl: async (preInvoiceId: string) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice/download-url`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Contester une prefacture
+   */
+  dispute: async (preInvoiceId: string, data: { reason: string; details?: string }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/dispute`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Exporter les prefactures en CSV
+   */
+  exportCsv: async (filters?: { month?: number; year?: number }) => {
+    const carrierId = getCarrierId();
+    const params = new URLSearchParams({ carrierId });
+    if (filters?.month) params.append('month', filters.month.toString());
+    if (filters?.year) params.append('year', filters.year.toString());
+
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/export?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.text();
+  }
+};
+
 export default planningApi;

@@ -405,26 +405,26 @@ export default function OrderDetailPage() {
                   <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <DocumentUpload
-                        orderId={order.orderId}
+                        orderId={order.id}
                         documentType="cmr"
                         onSuccess={handleDocumentUploadSuccess}
                         onError={(err) => console.error(err)}
                       />
                       <DocumentUpload
-                        orderId={order.orderId}
+                        orderId={order.id}
                         documentType="pod"
                         onSuccess={handleDocumentUploadSuccess}
                         onError={(err) => console.error(err)}
                       />
                       <DocumentUpload
-                        orderId={order.orderId}
+                        orderId={order.id}
                         documentType="photo"
                         onSuccess={handleDocumentUploadSuccess}
                         onError={(err) => console.error(err)}
                         label="Photo de livraison"
                       />
                       <DocumentUpload
-                        orderId={order.orderId}
+                        orderId={order.id}
                         documentType="damage_report"
                         onSuccess={handleDocumentUploadSuccess}
                         onError={(err) => console.error(err)}
@@ -576,7 +576,7 @@ export default function OrderDetailPage() {
       {/* Modal de confirmation de livraison */}
       {showDeliveryConfirmation && (
         <DeliveryConfirmation
-          orderId={order.orderId}
+          orderId={order.id}
           orderReference={order.reference}
           onSuccess={handleDeliverySuccess}
           onCancel={() => setShowDeliveryConfirmation(false)}
