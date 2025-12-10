@@ -180,7 +180,7 @@ class NotificationService {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphoni-a.com>',
+      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
       to: carrierEmail,
       subject: `[SYMPHONI.A] 🚚 Nouvelle demande - ${pickupCity} → ${deliveryCity} - Réf. ${orderReference}`,
       html,
@@ -258,7 +258,7 @@ class NotificationService {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphoni-a.com>',
+      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
       to: carrierEmail,
       subject: `[URGENT] ⚠️ ${minutesRemaining} min restantes - Réf. ${orderReference}`,
       html,
@@ -317,7 +317,7 @@ class NotificationService {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphoni-a.com>',
+      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
       to: carrierEmail,
       subject: `[SYMPHONI.A] ✓ Transport confirmé - Réf. ${orderReference}`,
       html,
@@ -387,7 +387,7 @@ class NotificationService {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphoni-a.com>',
+      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
       to: industrialEmail,
       subject: `[SYMPHONI.A] ${subject}`,
       html,

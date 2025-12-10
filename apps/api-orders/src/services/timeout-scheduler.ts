@@ -109,7 +109,7 @@ class TimeoutScheduler {
         const carrierEmail = await this.getCarrierEmail(currentAttempt.carrierId, chain.laneId);
 
         if (carrierEmail) {
-          const responseUrl = `${process.env.PORTAL_URL || 'https://portail.symphoni-a.com'}/dispatch/respond/${chain.chainId}`;
+          const responseUrl = `${process.env.PORTAL_URL || 'https://portail.symphonia-controltower.com'}/dispatch/respond/${chain.chainId}`;
 
           await NotificationService.sendTimeoutReminder({
             carrierId: currentAttempt.carrierId,

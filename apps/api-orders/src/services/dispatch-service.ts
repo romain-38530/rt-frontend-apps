@@ -357,7 +357,7 @@ class DispatchService {
       }
 
       // Construire l'URL de réponse
-      const baseUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com';
+      const baseUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
       const responseUrl = `${baseUrl}/dispatch/respond/${chain.chainId}?carrier=${attempt.carrierId}`;
 
       // Envoyer la notification
@@ -541,7 +541,7 @@ class DispatchService {
       // Envoyer notification de confirmation au transporteur
       const carrierInfo = await this.getCarrierInfo(carrierId, chain.laneId || '');
       if (carrierInfo?.email) {
-        const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com';
+        const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
         await NotificationService.sendCarrierConfirmation(
           carrierInfo.email,
           attempt.carrierName,

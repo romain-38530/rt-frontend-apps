@@ -20,12 +20,12 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-ord
 // Middleware - CORS configuration compatible with EB environment
 // Liste des origines autorisées pour SYMPHONI.A
 const defaultOrigins = [
-  'https://portail-transporteur.symphoni-a.com',
-  'https://portail.symphoni-a.com',
-  'https://symphoni-a.com',
-  'https://www.symphoni-a.com',
-  'https://app.symphoni-a.com',
-  'https://admin.symphoni-a.com',
+  'https://portail-transporteur.symphonia-controltower.com',
+  'https://portail.symphonia-controltower.com',
+  'https://symphonia-controltower.com',
+  'https://www.symphonia-controltower.com',
+  'https://app.symphonia-controltower.com',
+  'https://admin.symphonia-controltower.com',
   // CloudFront distributions
   'https://d2jq0u0kdciqvq.cloudfront.net',  // Marketing
   'https://d38w2u4cxj2s8a.cloudfront.net',  // Backoffice
@@ -50,8 +50,8 @@ app.use(cors({
     if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
       return callback(null, true);
     }
-    // Allow all *.symphoni-a.com subdomains
-    if (origin.endsWith('.symphoni-a.com')) {
+    // Allow all *.symphonia-controltower.com subdomains
+    if (origin.endsWith('.symphonia-controltower.com')) {
       return callback(null, true);
     }
     // Allow all *.cloudfront.net (AWS CloudFront)

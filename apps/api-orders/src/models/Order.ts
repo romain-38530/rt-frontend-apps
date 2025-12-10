@@ -50,19 +50,37 @@ export interface IOrderDates {
   deliveryTimeSlotEnd?: string;
 }
 
+// Informations véhicule du transporteur
+export interface IVehicleInfo {
+  truckPlate?: string;       // Plaque tracteur
+  trailerPlate?: string;     // Plaque remorque
+  driverName?: string;       // Nom du chauffeur
+  driverPhone?: string;      // Téléphone du chauffeur
+}
+
+// RDV pris par le transporteur
+export interface IAppointments {
+  pickupAppointment?: Date;           // RDV de chargement confirmé
+  pickupAppointmentSlot?: string;     // Créneau (ex: "08:00-10:00")
+  pickupConfirmedAt?: Date;           // Date de confirmation
+  deliveryAppointment?: Date;         // RDV de livraison confirmé
+  deliveryAppointmentSlot?: string;   // Créneau
+  deliveryConfirmedAt?: Date;         // Date de confirmation
+}
+
 export interface IOrder extends Document {
   orderId: string;
   reference: string;
   status: OrderStatus;
   trackingLevel: TrackingLevel;
   industrialId: string;
-  logisticianId?: string;  // Si logistique externalisée
-  logisticianManaged?: boolean;  // Si true, logisticien gère le transport
+  logisticianId?: string;
+  logisticianManaged?: boolean;
   carrierId?: string;
+  carrierName?: string;
   supplierId?: string;
   recipientId?: string;
-  // Flux de la marchandise
-  flowType?: 'inbound' | 'outbound';  // inbound = fournisseur->industriel, outbound = industriel->destinataire
+  flowType?: 'inbound' | 'outbound';
   pickupAddress: IAddress;
   deliveryAddress: IAddress;
   dates: IOrderDates;
@@ -70,7 +88,10 @@ export interface IOrder extends Document {
   constraints: IConstraint[];
   estimatedPrice?: number;
   finalPrice?: number;
+  agreedPrice?: number;
   currency: string;
+  vehicleInfo?: IVehicleInfo;
+  appointments?: IAppointments;
   currentLocation?: {
     latitude: number;
     longitude: number;
@@ -83,6 +104,7 @@ export interface IOrder extends Document {
   updatedAt: Date;
   createdBy: string;
   notes?: string;
+  carrierNotes?: string;
 }
 
 const AddressSchema = new Schema<IAddress>({
@@ -125,6 +147,22 @@ const OrderDatesSchema = new Schema<IOrderDates>({
   deliveryTimeSlotEnd: String
 }, { _id: false });
 
+const VehicleInfoSchema = new Schema<IVehicleInfo>({
+  truckPlate: String,
+  trailerPlate: String,
+  driverName: String,
+  driverPhone: String
+}, { _id: false });
+
+const AppointmentsSchema = new Schema<IAppointments>({
+  pickupAppointment: Date,
+  pickupAppointmentSlot: String,
+  pickupConfirmedAt: Date,
+  deliveryAppointment: Date,
+  deliveryAppointmentSlot: String,
+  deliveryConfirmedAt: Date
+}, { _id: false });
+
 const OrderSchema = new Schema<IOrder>({
   orderId: { type: String, required: true, unique: true },
   reference: { type: String, required: true, unique: true },
@@ -140,6 +178,7 @@ const OrderSchema = new Schema<IOrder>({
   logisticianId: { type: String, index: true },
   logisticianManaged: { type: Boolean, default: false },
   carrierId: { type: String, index: true },
+  carrierName: String,
   supplierId: { type: String, index: true },
   recipientId: { type: String, index: true },
   flowType: { type: String, enum: ['inbound', 'outbound'] },
@@ -150,7 +189,10 @@ const OrderSchema = new Schema<IOrder>({
   constraints: [ConstraintSchema],
   estimatedPrice: Number,
   finalPrice: Number,
+  agreedPrice: Number,
   currency: { type: String, default: 'EUR' },
+  vehicleInfo: VehicleInfoSchema,
+  appointments: AppointmentsSchema,
   currentLocation: {
     latitude: Number,
     longitude: Number,
@@ -160,10 +202,10 @@ const OrderSchema = new Schema<IOrder>({
   documentIds: [String],
   portalInvitations: [String],
   createdBy: { type: String, required: true },
-  notes: String
+  notes: String,
+  carrierNotes: String
 }, { timestamps: true });
 
-// Indexes for efficient queries
 OrderSchema.index({ status: 1, industrialId: 1 });
 OrderSchema.index({ 'dates.pickupDate': 1 });
 OrderSchema.index({ 'dates.deliveryDate': 1 });
