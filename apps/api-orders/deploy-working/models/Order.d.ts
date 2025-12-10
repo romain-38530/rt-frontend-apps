@@ -40,6 +40,20 @@ export interface IOrderDates {
     deliveryTimeSlotStart?: string;
     deliveryTimeSlotEnd?: string;
 }
+export interface IVehicleInfo {
+    truckPlate?: string;
+    trailerPlate?: string;
+    driverName?: string;
+    driverPhone?: string;
+}
+export interface IAppointments {
+    pickupAppointment?: Date;
+    pickupAppointmentSlot?: string;
+    pickupConfirmedAt?: Date;
+    deliveryAppointment?: Date;
+    deliveryAppointmentSlot?: string;
+    deliveryConfirmedAt?: Date;
+}
 export interface IOrder extends Document {
     orderId: string;
     reference: string;
@@ -49,6 +63,7 @@ export interface IOrder extends Document {
     logisticianId?: string;
     logisticianManaged?: boolean;
     carrierId?: string;
+    carrierName?: string;
     supplierId?: string;
     recipientId?: string;
     flowType?: 'inbound' | 'outbound';
@@ -59,7 +74,10 @@ export interface IOrder extends Document {
     constraints: IConstraint[];
     estimatedPrice?: number;
     finalPrice?: number;
+    agreedPrice?: number;
     currency: string;
+    vehicleInfo?: IVehicleInfo;
+    appointments?: IAppointments;
     currentLocation?: {
         latitude: number;
         longitude: number;
@@ -72,6 +90,7 @@ export interface IOrder extends Document {
     updatedAt: Date;
     createdBy: string;
     notes?: string;
+    carrierNotes?: string;
 }
 declare const _default: mongoose.Model<IOrder, {}, {}, {}, mongoose.Document<unknown, {}, IOrder, {}, {}> & IOrder & Required<{
     _id: mongoose.Types.ObjectId;

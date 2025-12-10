@@ -11,6 +11,7 @@ const express_1 = require("express");
 const dispatch_service_1 = __importDefault(require("../services/dispatch-service"));
 const DispatchChain_1 = __importDefault(require("../models/DispatchChain"));
 const Order_1 = __importDefault(require("../models/Order"));
+const event_service_1 = __importDefault(require("../services/event-service"));
 const router = (0, express_1.Router)();
 /**
  * GET /api/v1/carrier-portal/order/:chainId
@@ -142,7 +143,7 @@ router.post('/accept/:chainId', async (req, res) => {
                 orderReference: updatedChain.orderReference,
                 status: updatedChain.status,
                 assignedCarrier: updatedChain.assignedCarrierName,
-                portalUrl: `${process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com'}/orders/${chain.orderId}`
+                portalUrl: `${process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com'}/orders/${chain.orderId}`
             }
         });
     }
@@ -325,7 +326,7 @@ router.get('/quick-respond/:chainId', async (req, res) => {
         const { carrier: carrierId, action } = req.query;
         if (!carrierId || !action) {
             // Rediriger vers le portail pour compléter la réponse
-            const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com';
+            const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
             return res.redirect(`${portalUrl}/dispatch/respond/${chainId}?carrier=${carrierId}`);
         }
         const chain = await DispatchChain_1.default.findOne({ chainId });
@@ -369,7 +370,7 @@ router.get('/quick-respond/:chainId', async (req, res) => {
         // Traiter l'action
         if (action === 'accept') {
             await dispatch_service_1.default.handleCarrierAccept(chainId, carrierId);
-            const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com';
+            const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
             return res.send(`
         <html>
           <head>
@@ -410,7 +411,7 @@ router.get('/quick-respond/:chainId', async (req, res) => {
       `);
         }
         // Action inconnue - rediriger vers portail
-        const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphoni-a.com';
+        const portalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
         res.redirect(`${portalUrl}/dispatch/respond/${chainId}?carrier=${carrierId}`);
     }
     catch (error) {
@@ -423,6 +424,118 @@ router.get('/quick-respond/:chainId', async (req, res) => {
         </body>
       </html>
     `);
+    }
+});
+/**
+ * GET /api/v1/carrier-portal/order-details/:orderId
+ */
+router.get('/order-details/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { carrierId } = req.query;
+        if (!carrierId)
+            return res.status(400).json({ success: false, error: 'carrierId est requis' });
+        const order = await Order_1.default.findOne({ orderId, carrierId });
+        if (!order)
+            return res.status(404).json({ success: false, error: 'Commande non trouvée' });
+        res.json({
+            success: true,
+            order: {
+                orderId: order.orderId, reference: order.reference, status: order.status,
+                pickup: { address: order.pickupAddress?.street, city: order.pickupAddress?.city, postalCode: order.pickupAddress?.postalCode, contactName: order.pickupAddress?.contactName, contactPhone: order.pickupAddress?.contactPhone, requestedDate: order.dates?.pickupDate },
+                delivery: { address: order.deliveryAddress?.street, city: order.deliveryAddress?.city, postalCode: order.deliveryAddress?.postalCode, contactName: order.deliveryAddress?.contactName, contactPhone: order.deliveryAddress?.contactPhone, requestedDate: order.dates?.deliveryDate },
+                goods: order.goods, vehicleInfo: order.vehicleInfo || null, appointments: order.appointments || null, carrierNotes: order.carrierNotes
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * PUT /api/v1/carrier-portal/order/:orderId/vehicle
+ */
+router.put('/order/:orderId/vehicle', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { carrierId, truckPlate, trailerPlate, driverName, driverPhone } = req.body;
+        if (!carrierId)
+            return res.status(400).json({ success: false, error: 'carrierId est requis' });
+        const order = await Order_1.default.findOne({ orderId, carrierId });
+        if (!order)
+            return res.status(404).json({ success: false, error: 'Commande non trouvée' });
+        if (!['carrier_accepted', 'in_transit', 'arrived_pickup'].includes(order.status)) {
+            return res.status(400).json({ success: false, error: 'Modification non autorisée' });
+        }
+        order.vehicleInfo = { truckPlate: truckPlate || order.vehicleInfo?.truckPlate, trailerPlate: trailerPlate || order.vehicleInfo?.trailerPlate, driverName: driverName || order.vehicleInfo?.driverName, driverPhone: driverPhone || order.vehicleInfo?.driverPhone };
+        await order.save();
+        await event_service_1.default.createEvent({ orderId, eventType: 'documents.uploaded', source: 'carrier', orderReference: order.reference, description: 'Plaques: ' + (truckPlate || '-') + ' / ' + (trailerPlate || '-'), data: { vehicleInfo: order.vehicleInfo }, actorId: carrierId });
+        res.json({ success: true, message: 'Vehicule mis a jour', vehicleInfo: order.vehicleInfo });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * PUT /api/v1/carrier-portal/order/:orderId/appointments
+ */
+router.put('/order/:orderId/appointments', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { carrierId, pickupAppointment, pickupAppointmentSlot, deliveryAppointment, deliveryAppointmentSlot } = req.body;
+        if (!carrierId)
+            return res.status(400).json({ success: false, error: 'carrierId est requis' });
+        const order = await Order_1.default.findOne({ orderId, carrierId });
+        if (!order)
+            return res.status(404).json({ success: false, error: 'Commande non trouvée' });
+        if (!['carrier_accepted', 'in_transit', 'arrived_pickup', 'loaded'].includes(order.status)) {
+            return res.status(400).json({ success: false, error: 'RDV non autorise' });
+        }
+        if (!order.appointments)
+            order.appointments = {};
+        if (pickupAppointment) {
+            order.appointments.pickupAppointment = new Date(pickupAppointment);
+            order.appointments.pickupAppointmentSlot = pickupAppointmentSlot;
+            order.appointments.pickupConfirmedAt = new Date();
+        }
+        if (deliveryAppointment) {
+            order.appointments.deliveryAppointment = new Date(deliveryAppointment);
+            order.appointments.deliveryAppointmentSlot = deliveryAppointmentSlot;
+            order.appointments.deliveryConfirmedAt = new Date();
+        }
+        await order.save();
+        await event_service_1.default.createEvent({ orderId, eventType: 'documents.uploaded', source: 'carrier', orderReference: order.reference, description: 'RDV mis a jour', data: { appointments: order.appointments }, actorId: carrierId });
+        res.json({ success: true, message: 'RDV mis a jour', appointments: order.appointments });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * PUT /api/v1/carrier-portal/order/:orderId/status
+ */
+router.put('/order/:orderId/status', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { carrierId, status, location, comment } = req.body;
+        if (!carrierId || !status)
+            return res.status(400).json({ success: false, error: 'carrierId et status requis' });
+        const order = await Order_1.default.findOne({ orderId, carrierId });
+        if (!order)
+            return res.status(404).json({ success: false, error: 'Commande non trouvée' });
+        const transitions = { 'carrier_accepted': ['in_transit'], 'in_transit': ['arrived_pickup'], 'arrived_pickup': ['loaded'], 'loaded': ['in_transit', 'arrived_delivery'], 'arrived_delivery': ['delivered'] };
+        if (!transitions[order.status]?.includes(status))
+            return res.status(400).json({ success: false, error: 'Transition non autorisee' });
+        const prev = order.status;
+        order.status = status;
+        if (location?.latitude)
+            order.currentLocation = { latitude: location.latitude, longitude: location.longitude, timestamp: new Date() };
+        await order.save();
+        await event_service_1.default.createEvent({ orderId, eventType: 'order.delivered', source: 'carrier', orderReference: order.reference, description: 'Statut: ' + status, data: { previousStatus: prev, newStatus: status }, actorId: carrierId });
+        res.json({ success: true, message: 'Statut: ' + status, order: { orderId, status, previousStatus: prev } });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 exports.default = router;

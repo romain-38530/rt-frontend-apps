@@ -14,6 +14,7 @@ const lanes_1 = __importDefault(require("./routes/lanes"));
 const scoring_1 = __importDefault(require("./routes/scoring"));
 const archive_1 = __importDefault(require("./routes/archive"));
 const carrier_portal_1 = __importDefault(require("./routes/carrier-portal"));
+const tracking_1 = __importDefault(require("./routes/tracking"));
 const timeout_scheduler_1 = __importDefault(require("./services/timeout-scheduler"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -22,12 +23,12 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-ord
 // Middleware - CORS configuration compatible with EB environment
 // Liste des origines autorisées pour SYMPHONI.A
 const defaultOrigins = [
-    'https://portail-transporteur.symphoni-a.com',
-    'https://portail.symphoni-a.com',
-    'https://symphoni-a.com',
-    'https://www.symphoni-a.com',
-    'https://app.symphoni-a.com',
-    'https://admin.symphoni-a.com',
+    'https://portail-transporteur.symphonia-controltower.com',
+    'https://portail.symphonia-controltower.com',
+    'https://symphonia-controltower.com',
+    'https://www.symphonia-controltower.com',
+    'https://app.symphonia-controltower.com',
+    'https://admin.symphonia-controltower.com',
     // CloudFront distributions
     'https://d2jq0u0kdciqvq.cloudfront.net', // Marketing
     'https://d38w2u4cxj2s8a.cloudfront.net', // Backoffice
@@ -51,8 +52,8 @@ app.use((0, cors_1.default)({
         if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
             return callback(null, true);
         }
-        // Allow all *.symphoni-a.com subdomains
-        if (origin.endsWith('.symphoni-a.com')) {
+        // Allow all *.symphonia-controltower.com subdomains
+        if (origin.endsWith('.symphonia-controltower.com')) {
             return callback(null, true);
         }
         // Allow all *.cloudfront.net (AWS CloudFront)
@@ -156,6 +157,7 @@ app.use('/api/v1/lanes', lanes_1.default);
 app.use('/api/v1/scoring', scoring_1.default);
 app.use('/api/v1/archive', archive_1.default);
 app.use('/api/v1/carrier-portal', carrier_portal_1.default);
+app.use('/api/v1/tracking', tracking_1.default);
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'RT Orders API is running' });

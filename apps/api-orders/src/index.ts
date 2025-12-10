@@ -9,6 +9,7 @@ import lanesRoutes from './routes/lanes';
 import scoringRoutes from './routes/scoring';
 import archiveRoutes from './routes/archive';
 import carrierPortalRoutes from './routes/carrier-portal';
+import trackingRoutes from './routes/tracking';
 import timeoutScheduler from './services/timeout-scheduler';
 
 dotenv.config();
@@ -157,6 +158,7 @@ app.use('/api/v1/lanes', lanesRoutes);
 app.use('/api/v1/scoring', scoringRoutes);
 app.use('/api/v1/archive', archiveRoutes);
 app.use('/api/v1/carrier-portal', carrierPortalRoutes);
+app.use('/api/v1/tracking', trackingRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

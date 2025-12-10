@@ -73,6 +73,20 @@ const OrderDatesSchema = new mongoose_1.Schema({
     deliveryTimeSlotStart: String,
     deliveryTimeSlotEnd: String
 }, { _id: false });
+const VehicleInfoSchema = new mongoose_1.Schema({
+    truckPlate: String,
+    trailerPlate: String,
+    driverName: String,
+    driverPhone: String
+}, { _id: false });
+const AppointmentsSchema = new mongoose_1.Schema({
+    pickupAppointment: Date,
+    pickupAppointmentSlot: String,
+    pickupConfirmedAt: Date,
+    deliveryAppointment: Date,
+    deliveryAppointmentSlot: String,
+    deliveryConfirmedAt: Date
+}, { _id: false });
 const OrderSchema = new mongoose_1.Schema({
     orderId: { type: String, required: true, unique: true },
     reference: { type: String, required: true, unique: true },
@@ -88,6 +102,7 @@ const OrderSchema = new mongoose_1.Schema({
     logisticianId: { type: String, index: true },
     logisticianManaged: { type: Boolean, default: false },
     carrierId: { type: String, index: true },
+    carrierName: String,
     supplierId: { type: String, index: true },
     recipientId: { type: String, index: true },
     flowType: { type: String, enum: ['inbound', 'outbound'] },
@@ -98,7 +113,10 @@ const OrderSchema = new mongoose_1.Schema({
     constraints: [ConstraintSchema],
     estimatedPrice: Number,
     finalPrice: Number,
+    agreedPrice: Number,
     currency: { type: String, default: 'EUR' },
+    vehicleInfo: VehicleInfoSchema,
+    appointments: AppointmentsSchema,
     currentLocation: {
         latitude: Number,
         longitude: Number,
@@ -108,9 +126,9 @@ const OrderSchema = new mongoose_1.Schema({
     documentIds: [String],
     portalInvitations: [String],
     createdBy: { type: String, required: true },
-    notes: String
+    notes: String,
+    carrierNotes: String
 }, { timestamps: true });
-// Indexes for efficient queries
 OrderSchema.index({ status: 1, industrialId: 1 });
 OrderSchema.index({ 'dates.pickupDate': 1 });
 OrderSchema.index({ 'dates.deliveryDate': 1 });

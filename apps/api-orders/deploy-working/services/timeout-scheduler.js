@@ -95,7 +95,7 @@ class TimeoutScheduler {
                 // Récupérer l'email du transporteur depuis la Lane
                 const carrierEmail = await this.getCarrierEmail(currentAttempt.carrierId, chain.laneId);
                 if (carrierEmail) {
-                    const responseUrl = `${process.env.PORTAL_URL || 'https://portail.symphoni-a.com'}/dispatch/respond/${chain.chainId}`;
+                    const responseUrl = `${process.env.PORTAL_URL || 'https://portail.symphonia-controltower.com'}/dispatch/respond/${chain.chainId}`;
                     await notification_service_1.default.sendTimeoutReminder({
                         carrierId: currentAttempt.carrierId,
                         carrierName: currentAttempt.carrierName,

@@ -28,15 +28,15 @@ class PortalInvitationService {
     static getPortalUrl(role) {
         switch (role) {
             case 'supplier':
-                return process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphoni-a.com';
+                return process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphonia-controltower.com';
             case 'recipient':
-                return process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphoni-a.com';
+                return process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphonia-controltower.com';
             case 'logistician':
-                return process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphoni-a.com';
+                return process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphonia-controltower.com';
             case 'carrier':
-                return process.env.CARRIER_PORTAL_URL || 'https://carrier.symphoni-a.com';
+                return process.env.CARRIER_PORTAL_URL || 'https://carrier.symphonia-controltower.com';
             default:
-                return 'https://symphoni-a.com';
+                return 'https://symphonia-controltower.com';
         }
     }
     /**
@@ -224,7 +224,7 @@ class PortalInvitationService {
       </html>
     `;
         await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphoni-a.com>',
+            from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
             to: email,
             subject: `[SYMPHONI.A] Accès ${portalLabel} - Commande ${orderReference}`,
             html,
@@ -272,8 +272,8 @@ class PortalInvitationService {
         invitation.expiresAt = new Date();
         invitation.expiresAt.setDate(invitation.expiresAt.getDate() + 7);
         const baseUrl = invitation.role === 'supplier'
-            ? process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphoni-a.com'
-            : process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphoni-a.com';
+            ? process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphonia-controltower.com'
+            : process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphonia-controltower.com';
         invitation.portalUrl = `${baseUrl}/accept-invitation?token=${invitation.token}`;
         await invitation.save();
         // Renvoyer l'email (récupérer la référence de commande)
