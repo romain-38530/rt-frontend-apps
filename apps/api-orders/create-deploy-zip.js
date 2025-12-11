@@ -6,7 +6,7 @@ const archiver = require('C:/Users/rtard/AppData/Roaming/npm/node_modules/archiv
 const fs = require('fs');
 const path = require('path');
 
-const OUTPUT_FILE = 'v2.14.0-ai-reports-v2.zip';
+const OUTPUT_FILE = 'v2.15.0-palette-integration.zip';
 const SOURCE_DIR = path.join(__dirname, 'deploy-working');
 
 // Supprime l'ancien fichier s'il existe

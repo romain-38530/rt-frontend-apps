@@ -11,6 +11,8 @@ import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
 import { ordersApi } from '../../lib/api';
 import { DeliveryConfirmation, DocumentUpload } from '../../components';
+import PaletteExchange from '../../components/PaletteExchange';
+import { palettesOrderApi, PalletTracking } from '../../lib/palettes-api';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
@@ -40,6 +42,7 @@ export default function OrderDetailPage() {
   const [showDeliveryConfirmation, setShowDeliveryConfirmation] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [palletTracking, setPalletTracking] = useState<PalletTracking | null>(null);
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
@@ -77,6 +80,19 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Charger le suivi des palettes
+  const loadPalletTracking = async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const result = await palettesOrderApi.getStatus(id);
+      if (result.palletTracking) {
+        setPalletTracking(result.palletTracking);
+      }
+    } catch (err) {
+      console.error('Error loading pallet tracking:', err);
+    }
+  };
+
   // Confirmation de livraison reussie
   const handleDeliverySuccess = () => {
     setShowDeliveryConfirmation(false);
@@ -98,6 +114,7 @@ export default function OrderDetailPage() {
 
     loadOrder();
     loadDocuments();
+    loadPalletTracking();
   }, [id, router]);
 
   const formatDate = (dateString: string) => {
@@ -558,6 +575,33 @@ export default function OrderDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Suivi des palettes Europe */}
+              {order.goods.palettes && order.goods.palettes > 0 && (
+                <div style={cardStyle}>
+                  <PaletteExchange
+                    orderId={order.id}
+                    orderReference={order.reference}
+                    orderStatus={order.status}
+                    palletTracking={palletTracking || undefined}
+                    senderInfo={{
+                      id: order.pickupAddress.contactName || 'sender',
+                      name: order.pickupAddress.contactName || 'Expéditeur',
+                      type: 'expediteur'
+                    }}
+                    recipientInfo={{
+                      id: order.deliveryAddress.contactName || 'recipient',
+                      name: order.deliveryAddress.contactName || 'Destinataire',
+                      type: 'destinataire'
+                    }}
+                    expectedPallets={order.goods.palettes}
+                    onUpdate={() => {
+                      loadOrder();
+                      loadPalletTracking();
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Notes */}
               {order.notes && (

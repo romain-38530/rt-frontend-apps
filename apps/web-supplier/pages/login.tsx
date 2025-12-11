@@ -131,7 +131,7 @@ export default function Login() {
                       fontSize: '14px',
                       fontWeight: language === lang ? '600' : '400',
                       color: '#333'
-                    >}
+                    }}
                   >
                     {languageNames[lang]}
                   </button>
