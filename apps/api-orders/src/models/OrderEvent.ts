@@ -54,7 +54,12 @@ export type OrderEventType =
   | 'score_calculated'
   | 'order.completed'
   | 'order.archived'
-  | 'order.closed';
+  | 'order.closed'
+  // Palettes Europe
+  | 'pallet.pickup.confirmed'
+  | 'pallet.delivery.confirmed'
+  | 'pallet.dispute.created'
+  | 'pallet.settled';
 
 export interface IOrderEvent extends Document {
   eventId: string;

@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -16,6 +16,7 @@ import closureRoutes from './routes/closure';
 import preinvoicesRoutes from './routes/preinvoices';
 import analyticsRoutes from './routes/analytics';
 import aiReportsRoutes from './routes/ai-reports';
+import palettesRoutes from './routes/palettes';
 import timeoutScheduler from './services/timeout-scheduler';
 import preinvoiceScheduler from './services/preinvoice-scheduler';
 import aiReportScheduler from './services/ai-report-scheduler';
@@ -28,7 +29,7 @@ const PORT = process.env.PORT || 3003;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-orders';
 
 // Middleware - CORS configuration compatible with EB environment
-// Liste des origines autorisées pour SYMPHONI.A
+// Liste des origines autorisÃ©es pour SYMPHONI.A
 const defaultOrigins = [
   'https://portail-transporteur.symphonia-controltower.com',
   'https://portail.symphonia-controltower.com',
@@ -233,6 +234,7 @@ app.use('/api/v1/closure', closureRoutes);
 app.use('/api/v1/preinvoices', preinvoicesRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/ai-reports', aiReportsRoutes);
+app.use('/api/v1/palettes', palettesRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -250,7 +252,7 @@ mongoose.connect(MONGODB_URI)
   .then(async () => {
     console.log('Connected to MongoDB');
 
-    // Supprimer l'index orderNumber problématique (legacy index pas dans le schéma)
+    // Supprimer l'index orderNumber problÃ©matique (legacy index pas dans le schÃ©ma)
     try {
       await mongoose.connection.collection('orders').dropIndex('orderNumber_1');
       console.log('[Startup] Dropped legacy orderNumber_1 index');
@@ -262,13 +264,13 @@ mongoose.connect(MONGODB_URI)
       }
     }
 
-    // Démarrer le scheduler de timeouts
+    // DÃ©marrer le scheduler de timeouts
     timeoutScheduler.start();
 
-    // Démarrer le scheduler de préfacturation (envois mensuels + décomptes)
+    // DÃ©marrer le scheduler de prÃ©facturation (envois mensuels + dÃ©comptes)
     preinvoiceScheduler.start();
 
-    // Démarrer le scheduler de rapports IA mensuels
+    // DÃ©marrer le scheduler de rapports IA mensuels
     aiReportScheduler.start();
 
     app.listen(PORT, () => {
