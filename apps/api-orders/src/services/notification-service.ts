@@ -600,6 +600,63 @@ class NotificationService {
   }
 
   /**
+   * Notifie l'industriel qu'une facture transporteur a été déposée
+   */
+  static async notifyIndustrialInvoiceUploaded(
+    industrialEmail: string,
+    industrialName: string,
+    preInvoiceNumber: string,
+    carrierName: string,
+    invoiceNumber: string,
+    invoiceAmount: number,
+    preInvoiceAmount: number
+  ): Promise<boolean> {
+    const difference = invoiceAmount - preInvoiceAmount;
+    const differencePercent = Math.abs(difference / preInvoiceAmount * 100).toFixed(1);
+    const statusColor = Math.abs(difference / preInvoiceAmount) <= 0.01 ? '#10b981' : '#f59e0b';
+    const statusText = Math.abs(difference / preInvoiceAmount) <= 0.01 ? 'Acceptation automatique' : 'Vérification requise';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">📄 Facture transporteur reçue</h1>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${industrialName},</p>
+            <p>Le transporteur <strong>${carrierName}</strong> a déposé sa facture pour la préfacture <strong>${preInvoiceNumber}</strong>.</p>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${statusColor};">
+              <p style="margin: 0 0 10px 0;"><strong>N° Facture:</strong> ${invoiceNumber}</p>
+              <p style="margin: 0 0 10px 0;"><strong>Montant préfacture:</strong> ${preInvoiceAmount.toFixed(2)} €</p>
+              <p style="margin: 0 0 10px 0;"><strong>Montant facture:</strong> ${invoiceAmount.toFixed(2)} €</p>
+              <p style="margin: 0 0 10px 0;"><strong>Écart:</strong> ${difference >= 0 ? '+' : ''}${difference.toFixed(2)} € (${differencePercent}%)</p>
+              <p style="margin: 0; padding: 8px; background: ${statusColor}20; border-radius: 4px; color: ${statusColor}; font-weight: bold;">
+                ${statusText}
+              </p>
+            </div>
+
+            <p>Le contrôle automatique a été effectué. Si la facture est acceptée, le décompte de paiement (30 jours) démarre automatiquement.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
+      to: industrialEmail,
+      subject: `[SYMPHONI.A] 📄 Facture ${carrierName} reçue - ${preInvoiceNumber}`,
+      html,
+    };
+
+    return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+  }
+
+  /**
    * Notifie le transporteur du paiement envoyé
    */
   static async notifyCarrierPaymentSent(

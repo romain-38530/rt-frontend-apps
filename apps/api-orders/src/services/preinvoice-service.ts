@@ -479,6 +479,17 @@ class PreInvoiceService {
 
       await preInvoice.save();
 
+      // Notifier l'industriel qu'une facture a été déposée
+      await NotificationService.notifyIndustrialInvoiceUploaded(
+        preInvoice.industrialEmail,
+        preInvoice.industrialName,
+        preInvoice.preInvoiceNumber,
+        preInvoice.carrierName,
+        invoiceData.invoiceNumber,
+        invoiceData.invoiceAmount,
+        preInvoice.totals.totalTTC
+      );
+
       // Lancer le contrôle automatique
       return await this.performInvoiceControl(preInvoiceId);
 

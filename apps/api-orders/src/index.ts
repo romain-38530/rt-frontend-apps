@@ -14,8 +14,12 @@ import documentsRoutes from './routes/documents';
 import deliveryRoutes from './routes/delivery';
 import closureRoutes from './routes/closure';
 import preinvoicesRoutes from './routes/preinvoices';
+import analyticsRoutes from './routes/analytics';
+import aiReportsRoutes from './routes/ai-reports';
 import timeoutScheduler from './services/timeout-scheduler';
 import preinvoiceScheduler from './services/preinvoice-scheduler';
+import aiReportScheduler from './services/ai-report-scheduler';
+import NotificationService from './services/notification-service';
 
 dotenv.config();
 
@@ -80,8 +84,8 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.11.0',
-    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet',
+    version: '2.14.0',
+    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics',
     endpoints: {
       health: '/health',
       orders: {
@@ -195,6 +199,21 @@ app.get('/', (req, res) => {
         uploadInvoice: 'POST /api/v1/preinvoices/:id/upload-invoice',
         markPaid: 'POST /api/v1/preinvoices/:id/mark-paid',
         updateCountdowns: 'POST /api/v1/preinvoices/update-countdowns'
+      },
+      aiReports: {
+        industrialLatest: 'GET /api/v1/ai-reports/industrial/:industrialId/latest',
+        industrialHistory: 'GET /api/v1/ai-reports/industrial/:industrialId/history',
+        carrierLatest: 'GET /api/v1/ai-reports/carrier/:carrierId/latest',
+        carrierHistory: 'GET /api/v1/ai-reports/carrier/:carrierId/history',
+        logisticianLatest: 'GET /api/v1/ai-reports/logistician/:userId/latest',
+        logisticianHistory: 'GET /api/v1/ai-reports/logistician/:userId/history',
+        getReport: 'GET /api/v1/ai-reports/:reportId',
+        generateIndustrial: 'POST /api/v1/ai-reports/generate/industrial',
+        generateCarrier: 'POST /api/v1/ai-reports/generate/carrier',
+        generateLogistician: 'POST /api/v1/ai-reports/generate/logistician',
+        feedback: 'POST /api/v1/ai-reports/:reportId/feedback',
+        triggerMonthly: 'POST /api/v1/ai-reports/trigger-monthly',
+        stats: 'GET /api/v1/ai-reports/stats'
       }
     }
   });
@@ -212,10 +231,18 @@ app.use('/api/v1/documents', documentsRoutes);
 app.use('/api/v1/delivery', deliveryRoutes);
 app.use('/api/v1/closure', closureRoutes);
 app.use('/api/v1/preinvoices', preinvoicesRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/ai-reports', aiReportsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'RT Orders API is running' });
+});
+
+// SMTP health check
+app.get('/health/smtp', async (req, res) => {
+  const result = await NotificationService.checkSmtpConnection();
+  res.json(result);
 });
 
 // Connect to MongoDB and start server
@@ -241,9 +268,12 @@ mongoose.connect(MONGODB_URI)
     // Démarrer le scheduler de préfacturation (envois mensuels + décomptes)
     preinvoiceScheduler.start();
 
+    // Démarrer le scheduler de rapports IA mensuels
+    aiReportScheduler.start();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.11.0 - Module préfacturation complet');
+      console.log('SYMPHONI.A Orders API v2.14.0 - AI Analytics Reports');
     });
   })
   .catch((error) => {
@@ -256,6 +286,7 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM received - shutting down gracefully');
   timeoutScheduler.stop();
   preinvoiceScheduler.stop();
+  aiReportScheduler.stop();
   mongoose.connection.close();
   process.exit(0);
 });
