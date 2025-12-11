@@ -135,6 +135,7 @@ interface RecoveryRequest {
 
 export default function PalettesCircularPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State
@@ -180,16 +181,13 @@ export default function PalettesCircularPage() {
 
   const companyId = 'IND-001'; // TODO: Get from auth context
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadLedger();
-    loadCheques();
-    loadDisputes();
-    loadNearbySites();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   // API Helper
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {

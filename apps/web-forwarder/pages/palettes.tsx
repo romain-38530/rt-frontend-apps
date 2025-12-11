@@ -50,7 +50,7 @@ export default function PalettesPage() {
       return;
     }
     fetchPalettes();
-  }, [router]);
+  }, []);
 
   return (
     <>

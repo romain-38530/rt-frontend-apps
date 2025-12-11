@@ -30,6 +30,7 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: s
 
 export default function OrderDetailPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const { id } = router.query;
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -103,7 +104,7 @@ export default function OrderDetailPage() {
     }
 
     loadOrder();
-  }, [id, router]);
+  }, [id]);
 
   // Charger l'eligibilite quand la commande est livree
   useEffect(() => {

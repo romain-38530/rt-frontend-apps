@@ -213,7 +213,7 @@ export default function PalettesCircularPage() {
     loadSites();
     loadLedger();
     loadDisputes();
-  }, [router]);
+  }, []);
 
   // API Helper
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {

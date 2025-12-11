@@ -27,6 +27,7 @@ interface Appointment {
 
 export default function RdvTransporteursPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net';
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -44,13 +45,13 @@ export default function RdvTransporteursPage() {
     refused: 2
   });
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadAppointments();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const loadAppointments = async () => {
     setLoading(true);

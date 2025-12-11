@@ -251,7 +251,7 @@ export default function ScoringPage() {
       return;
     }
     loadLeaderboard();
-  }, [router]);
+  }, []);
 
   // Helper pour couleur de score
   const getScoreColor = (score: number) => {

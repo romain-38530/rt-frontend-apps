@@ -81,7 +81,7 @@ export default function StorageMarketLogisticianPage() {
       fetchOpportunities();
       fetchMyCapacities();
     }
-  }, [router]);
+  }, []);
 
   const fetchOpportunities = async () => {
     setLoading(true);

@@ -136,7 +136,7 @@ export default function OrdersPage() {
     }
 
     loadOrders();
-  }, [router]);
+  }, []);
 
   return (
     <>

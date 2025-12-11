@@ -116,7 +116,7 @@ export default function SubscriptionPage() {
     }
     setUser(getUser());
     fetchSubscription();
-  }, [router]);
+  }, []);
 
   const handleSelectPlan = async (planId: string) => {
     try {

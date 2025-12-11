@@ -186,7 +186,7 @@ export default function DocumentsPage() {
       return;
     }
     loadData();
-  }, [router]);
+  }, []);
 
   const getDocTypeLabel = (type: string) => {
     switch (type) {

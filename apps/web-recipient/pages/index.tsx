@@ -27,7 +27,7 @@ export default function HomePage() {
       localStorage.setItem('userSubscription', JSON.stringify(defaultSub));
     }
     setLoading(false);
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (

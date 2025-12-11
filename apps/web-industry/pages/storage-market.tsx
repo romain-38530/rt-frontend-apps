@@ -73,6 +73,7 @@ const CERTIFICATIONS = [
 
 export default function StorageMarketPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'detail' | 'responses'>('list');
   const [needs, setNeeds] = useState<StorageNeed[]>([]);
   const [responses, setResponses] = useState<LogisticianResponse[]>([]);
@@ -101,13 +102,13 @@ export default function StorageMarketPage() {
     },
   });
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-    } else {
-      fetchNeeds();
-    }
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const fetchNeeds = async () => {
     setLoading(true);

@@ -70,7 +70,7 @@ export default function TmssyncPage() {
       return;
     }
     loadSyncStatus();
-  }, [router]);
+  }, []);
 
   return (
     <>

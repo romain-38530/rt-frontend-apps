@@ -83,7 +83,7 @@ export default function SubscriptionPage() {
     setUser(getUser());
     fetchCurrentPlan();
     setLoading(false);
-  }, [router]);
+  }, []);
 
   const handleSelectPlan = async (planId: string) => {
     try {

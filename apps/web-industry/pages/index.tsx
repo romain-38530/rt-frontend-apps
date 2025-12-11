@@ -5,40 +5,18 @@ import { isAuthenticated, getUser, logout } from '../lib/auth';
 
 export default function HomePage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    const currentUser = getUser();
-    setUser(currentUser);
+  useEffect(() => { setMounted(true); }, []);
 
-    // Charger l'abonnement depuis l'utilisateur (API) ou localStorage (fallback)
-    if (currentUser?.subscription) {
-      // Subscription from API (new format)
-      const sub = {
-        tier: currentUser.subscription.plan || 'free',
-        status: currentUser.subscription.status || 'active',
-        features: currentUser.subscription.features || []
-      };
-      setSubscription(sub);
-    } else {
-      // Fallback: localStorage
-      const sub = localStorage.getItem('userSubscription');
-      if (sub) {
-        setSubscription(JSON.parse(sub));
-      } else {
-        const defaultSub = { tier: 'free', status: 'active' };
-        setSubscription(defaultSub);
-        localStorage.setItem('userSubscription', JSON.stringify(defaultSub));
-      }
-    }
-    setLoading(false);
-  }, [router]);
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   if (loading) {
     return (

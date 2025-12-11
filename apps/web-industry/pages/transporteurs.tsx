@@ -29,6 +29,7 @@ interface FilterState {
 
 export default function TransporteursPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('list');
 
   // Data state
@@ -276,14 +277,13 @@ export default function TransporteursPage() {
   // EFFETS
   // ==========================================================================
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadCarriers();
-    loadStats();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   useEffect(() => {
     if (activeTab === 'vigilance') loadAlerts();

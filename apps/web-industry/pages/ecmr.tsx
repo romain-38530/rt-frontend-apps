@@ -52,6 +52,7 @@ interface ECMR {
 
 export default function ECMRPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
 
   const [ecmrs, setEcmrs] = useState<ECMR[]>([]);
@@ -71,13 +72,13 @@ export default function ECMRPage() {
     disputed: 6
   });
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadECMRs();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const loadECMRs = async () => {
     setLoading(true);

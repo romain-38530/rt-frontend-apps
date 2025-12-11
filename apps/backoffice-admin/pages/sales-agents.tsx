@@ -131,7 +131,7 @@ export default function SalesAgentsPage() {
     }
     setUser(getUser());
     loadData();
-  }, [router]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);

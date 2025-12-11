@@ -165,7 +165,7 @@ export default function VigilancePage() {
       return;
     }
     loadVigilance();
-  }, [router]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

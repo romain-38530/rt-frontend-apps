@@ -115,7 +115,7 @@ export default function OrderDetailPage() {
     loadOrder();
     loadDocuments();
     loadPalletTracking();
-  }, [id, router]);
+  }, [id]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

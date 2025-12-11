@@ -15,6 +15,7 @@ interface ProductionLine {
 
 export default function ProductionPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [production, setProduction] = useState<ProductionLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +44,13 @@ export default function ProductionPage() {
     }
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    fetchProduction();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const getTauxColor = (taux: number): string => {
     if (taux >= 100) return '#00D084';

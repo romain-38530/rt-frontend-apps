@@ -73,6 +73,7 @@ interface ScoreCriteria {
 
 export default function ScoringPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const scoringApiUrl = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net/api/v1';
 
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'calculate' | 'history' | 'search'>('leaderboard');
@@ -245,13 +246,13 @@ export default function ScoringPage() {
   };
 
   // Chargement initial
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadLeaderboard();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   // Helper pour couleur de score
   const getScoreColor = (score: number) => {

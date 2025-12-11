@@ -69,7 +69,7 @@ export default function SubscriptionPage() {
       setCurrentTier(tier);
     }
     setLoading(false);
-  }, [router]);
+  }, []);
 
   const handleSelectPlan = (planId: string) => {
     const subscription = {

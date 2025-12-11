@@ -50,7 +50,7 @@ export default function StoragePage() {
       return;
     }
     fetchSpaces();
-  }, [router]);
+  }, []);
 
   return (
     <>

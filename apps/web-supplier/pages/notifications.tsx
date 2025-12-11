@@ -64,7 +64,7 @@ export default function NotificationsPage() {
       return;
     }
     fetchNotifications();
-  }, [router]);
+  }, []);
 
   return (
     <>

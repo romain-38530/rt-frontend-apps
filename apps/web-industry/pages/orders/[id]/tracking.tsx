@@ -18,6 +18,7 @@ import type { Order } from '@rt/contracts';
 
 export default function TrackingPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const { id } = router.query;
   const { toast } = useToast();
 
@@ -96,7 +97,7 @@ export default function TrackingPage() {
     }
 
     loadData();
-  }, [id, router]);
+  }, [id]);
 
   // Générer les marqueurs pour la carte
   const getMapMarkers = (): MapMarker[] => {

@@ -26,6 +26,7 @@ import {
 
 export default function DispatchConfigPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
 
   // ID industriel (a recuperer du contexte auth)
   const industrielId = 'IND-001';
@@ -168,15 +169,13 @@ export default function DispatchConfigPage() {
   // EFFETS
   // ==========================================================================
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadConfig();
-    loadLanes();
-    loadStats();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   useEffect(() => {
     if (error || success) {

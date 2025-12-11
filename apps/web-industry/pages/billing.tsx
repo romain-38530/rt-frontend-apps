@@ -18,6 +18,7 @@ import { preinvoicesApi, PreInvoice, PreInvoiceStats, PreInvoiceLine } from '../
 
 export default function BillingPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
 
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'preinvoices' | 'validation' | 'payments' | 'export'>('dashboard');
@@ -58,14 +59,13 @@ export default function BillingPage() {
     return 'Industriel';
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadStats();
-    loadPreinvoices();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   useEffect(() => {
     loadPreinvoices();

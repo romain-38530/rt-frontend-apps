@@ -109,7 +109,7 @@ export default function SubscriptionsPage() {
     }
     setUser(getUser());
     loadData();
-  }, [router]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);

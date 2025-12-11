@@ -355,7 +355,7 @@ export default function ChatbotPage() {
     }
     loadConversations();
     loadFAQs();
-  }, [router]);
+  }, []);
 
   // Helper pour couleur de priorite
   const getPriorityColor = (priority: string) => {

@@ -14,6 +14,7 @@ interface Notification {
 
 export default function NotificationsPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,13 +85,13 @@ export default function NotificationsPage() {
     }
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    fetchNotifications();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

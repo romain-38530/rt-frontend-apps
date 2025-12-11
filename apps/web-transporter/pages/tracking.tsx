@@ -298,7 +298,7 @@ export default function TrackingPage() {
       router.push('/login');
       return;
     }
-  }, [router]);
+  }, []);
 
   // Styles
   const containerStyle: React.CSSProperties = {

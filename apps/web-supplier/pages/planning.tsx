@@ -55,7 +55,7 @@ export default function PlanningPage() {
       return;
     }
     fetchEvents();
-  }, [router]);
+  }, []);
 
   return (
     <>

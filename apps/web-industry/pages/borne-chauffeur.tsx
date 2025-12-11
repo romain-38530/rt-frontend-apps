@@ -26,6 +26,7 @@ interface DriverCheckin {
 
 export default function BorneChauffeurPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'queue' | 'checkin'>('dashboard');
@@ -42,13 +43,13 @@ export default function BorneChauffeurPage() {
     avgWaitTime: 12
   });
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadDrivers();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const loadDrivers = async () => {
     setLoading(true);

@@ -9,6 +9,7 @@ interface Stats { totalSessions: number; successRate: number; avgResponseTime: n
 
 export default function AffretiaPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d393yiia4ig3bw.cloudfront.net';
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'bourse' | 'tracking' | 'vigilance' | 'stats'>('dashboard');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -33,7 +34,13 @@ export default function AffretiaPage() {
     return data;
   }, [apiUrl]);
 
-  useEffect(() => { if (!isAuthenticated()) { router.push('/login'); return; } loadSessions(); loadStats(); }, [router]);
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const triggerAffretIA = async () => { if (!triggerForm.orderId) { setError('Order ID requis'); return; } try { setLoading(true); const data = await apiCall('/affretia/trigger', 'POST', { orderId: triggerForm.orderId, reason: triggerForm.reason || 'Declenchement manuel', triggerType: 'manual', organizationId: 'org-demo' }); setSuccessMsg('Session ' + data.data.sessionId + ' creee'); setTriggerForm({ orderId: '', reason: '' }); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };

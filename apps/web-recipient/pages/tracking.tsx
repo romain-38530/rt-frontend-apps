@@ -51,7 +51,7 @@ export default function TrackingPage() {
       return;
     }
     fetchShipments();
-  }, [router]);
+  }, []);
 
   return (
     <>

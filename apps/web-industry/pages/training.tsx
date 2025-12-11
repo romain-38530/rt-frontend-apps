@@ -15,6 +15,7 @@ interface TrainingModule {
 
 export default function TrainingPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [modules, setModules] = useState<TrainingModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,13 +72,13 @@ export default function TrainingPage() {
     }
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    fetchModules();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   return (
     <>

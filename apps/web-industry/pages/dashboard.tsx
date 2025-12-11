@@ -5,6 +5,7 @@ import { isAuthenticated } from '../lib/auth';
 
 export default function DashboardPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const [kpis, setKpis] = useState({
@@ -14,11 +15,13 @@ export default function DashboardPage() {
     satisfaction: { value: '96%', trend: '+2%', color: '#00D084' }
   });
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-    }
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   return (
     <>

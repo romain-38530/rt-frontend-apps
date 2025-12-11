@@ -17,6 +17,7 @@ interface StorageSpace {
 
 export default function StoragePage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
   const [spaces, setSpaces] = useState<StorageSpace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,13 +63,13 @@ export default function StoragePage() {
     }
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    fetchSpaces();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   return (
     <>

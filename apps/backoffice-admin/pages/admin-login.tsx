@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
     if (isAuthenticated()) {
       router.push('/account-pricing');
     }
-  }, [router]);
+  }, []);
 
   // Gérer les changements dans le formulaire
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

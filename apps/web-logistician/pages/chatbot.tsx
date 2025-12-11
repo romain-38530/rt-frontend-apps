@@ -199,7 +199,7 @@ export default function ChatbotPage() {
       return;
     }
     loadConversations();
-  }, [router]);
+  }, []);
 
   // Styles
   const containerStyle: React.CSSProperties = {

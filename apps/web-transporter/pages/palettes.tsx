@@ -173,7 +173,7 @@ export default function PalettesCircularPage() {
     loadCheques();
     loadLedger();
     loadDisputes();
-  }, [router]);
+  }, []);
 
   // API Helper
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {

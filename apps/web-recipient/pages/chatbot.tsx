@@ -51,7 +51,7 @@ export default function ChatbotPage() {
     if (!isAuthenticated()) {
       router.push('/login');
     }
-  }, [router]);
+  }, []);
 
   return (
     <>

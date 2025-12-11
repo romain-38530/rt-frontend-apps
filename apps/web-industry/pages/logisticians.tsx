@@ -32,6 +32,7 @@ const ACCESS_LABELS: Record<OrderAccessLevel, { label: string; description: stri
 
 export default function LogisticiansPage() {
   const router = useSafeRouter();
+  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,14 +57,13 @@ export default function LogisticiansPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LogisticianStatus | 'all'>('all');
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    setUser(getUser());
-    loadData();
-  }, [router]);
+    if (!mounted) return;
+    if (!isAuthenticated()) { router.push('/login'); return; }
+    // Load data
+  }, [mounted]);
 
   const loadData = async () => {
     setLoading(true);

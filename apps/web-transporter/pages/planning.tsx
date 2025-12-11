@@ -188,7 +188,7 @@ export default function PlanningPage() {
     if (!isAuthenticated()) {
       router.push('/login');
     }
-  }, [router]);
+  }, []);
 
   // Load initial data from API
   useEffect(() => {

@@ -50,7 +50,7 @@ export default function TrainingPage() {
       return;
     }
     fetchModules();
-  }, [router]);
+  }, []);
 
   return (
     <>

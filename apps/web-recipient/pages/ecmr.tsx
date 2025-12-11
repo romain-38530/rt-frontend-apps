@@ -43,7 +43,7 @@ export default function EcmrPage() {
       return;
     }
     fetchDocuments();
-  }, [router]);
+  }, []);
 
   return (
     <>

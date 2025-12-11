@@ -198,7 +198,7 @@ export default function BoursePage() {
       return;
     }
     loadOffers();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     loadOffers();
