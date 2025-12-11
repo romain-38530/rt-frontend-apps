@@ -404,6 +404,347 @@ export const chatbotAdminApi = {
   },
 };
 
+// CRM API
+export const crmApi = {
+  // Dashboard
+  getDashboard: async () => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/dashboard`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  // Salons
+  getSalons: async (filters?: { pays?: string; statut?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.pays) params.append('pays', filters.pays);
+    if (filters?.statut) params.append('statut', filters.statut);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/salons${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createSalon: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/salons`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getSalon: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/salons/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  updateSalon: async (id: string, data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/salons/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Companies
+  getCompanies: async (filters?: { pays?: string; secteur?: string; statut?: string; commercialId?: string; search?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.pays) params.append('pays', filters.pays);
+    if (filters?.secteur) params.append('secteur', filters.secteur);
+    if (filters?.statut) params.append('statut', filters.statut);
+    if (filters?.commercialId) params.append('commercialId', filters.commercialId);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createCompany: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getCompany: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  updateCompany: async (id: string, data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  enrichCompany: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}/enrich`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  assignCompany: async (id: string, commercialId: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}/assign`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ commercialId }),
+    });
+    return res.json();
+  },
+
+  // Contacts
+  getContacts: async (filters?: { entrepriseId?: string; emailStatus?: string; contactStatus?: string; search?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.entrepriseId) params.append('entrepriseId', filters.entrepriseId);
+    if (filters?.emailStatus) params.append('emailStatus', filters.emailStatus);
+    if (filters?.contactStatus) params.append('contactStatus', filters.contactStatus);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/contacts${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createContact: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/contacts`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getContact: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/contacts/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  updateContact: async (id: string, data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/contacts/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  verifyContactEmail: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/contacts/${id}/verify-email`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  // Emails
+  getEmails: async (filters?: { contactId?: string; entrepriseId?: string; statut?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.contactId) params.append('contactId', filters.contactId);
+    if (filters?.entrepriseId) params.append('entrepriseId', filters.entrepriseId);
+    if (filters?.statut) params.append('statut', filters.statut);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/emails${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  sendEmail: async (data: { contactId: string; templateId?: string; sujet?: string; corps?: string; typeEmail?: string }) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/emails/send`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Templates
+  getTemplates: async (filters?: { type?: string; langue?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.langue) params.append('langue', filters.langue);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/templates${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createTemplate: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/templates`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  updateTemplate: async (id: string, data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/templates/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Scraping
+  scrapeSalon: async (id: string, options?: { maxPages?: number; delay?: number }) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/salons/${id}/scrape`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(options || {}),
+    });
+    return res.json();
+  },
+  getScrapingAdapters: async () => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/scraping/adapters`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  testScraping: async (data: { url: string; adapter?: string; maxPages?: number }) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/scraping/test`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Discovery - Decouverte de salons
+  discoverSalons: async (params?: { year?: number; countries?: string; discover?: boolean }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.year) queryParams.append('year', String(params.year));
+    if (params?.countries) queryParams.append('countries', params.countries);
+    if (params?.discover) queryParams.append('discover', 'true');
+    const queryString = queryParams.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/discovery/salons${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  importDiscoveredSalon: async (salon: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/discovery/import`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ salon }),
+    });
+    return res.json();
+  },
+
+  // Enrichissement
+  enrichCompany: async (companyId: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/enrichment/company/${companyId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  enrichSalonCompanies: async (salonId: string, limit?: number) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/enrichment/salon/${salonId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ limit: limit || 50 }),
+    });
+    return res.json();
+  },
+  enrichBatch: async (limit?: number) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/enrichment/batch`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ limit: limit || 20 }),
+    });
+    return res.json();
+  },
+
+  // Pool de leads
+  getPool: async (filters?: {
+    page?: number;
+    limit?: number;
+    pays?: string;
+    secteur?: string;
+    minScore?: number;
+    priorite?: number;
+    hasContacts?: boolean;
+    search?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    if (filters?.pays) params.append('pays', filters.pays);
+    if (filters?.secteur) params.append('secteur', filters.secteur);
+    if (filters?.minScore) params.append('minScore', String(filters.minScore));
+    if (filters?.priorite) params.append('priorite', String(filters.priorite));
+    if (filters?.hasContacts) params.append('hasContacts', 'true');
+    if (filters?.search) params.append('search', filters.search);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  getPoolStats: async () => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  addToPool: async (data: { companyIds?: string[]; salonId?: string; criteria?: any; priorite?: number }) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/add`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  removeFromPool: async (companyIds: string[]) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/remove`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ companyIds }),
+    });
+    return res.json();
+  },
+  claimLead: async (companyId: string, commercialId: string, commercialName?: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/claim/${companyId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ commercialId, commercialName }),
+    });
+    return res.json();
+  },
+  releaseLead: async (companyId: string, commercialId: string, reason?: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/release/${companyId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ commercialId, reason }),
+    });
+    return res.json();
+  },
+  getMyLeads: async (commercialId: string, filters?: { page?: number; limit?: number; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    if (filters?.status) params.append('status', filters.status);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/pool/my-leads/${commercialId}${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+};
+
 // Health Check API
 export const healthApi = {
   checkAll: async () => {

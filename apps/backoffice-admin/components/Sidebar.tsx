@@ -1,4 +1,4 @@
-import { Home, Building2, DollarSign, Package, Activity, Settings, Menu, X } from 'lucide-react';
+import { Home, Building2, DollarSign, Package, Activity, Settings, Menu, X, Target } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { LogoCompact } from '../../../src/components/Logo';
@@ -11,6 +11,7 @@ interface SidebarProps {
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
   { icon: Building2, label: 'Organisations', href: '/orgs' },
+  { icon: Target, label: 'CRM Leads', href: '/crm' },
   { icon: DollarSign, label: 'Tarifs', href: '/pricing' },
   { icon: Package, label: 'Palettes', href: '/palettes' },
   { icon: Activity, label: 'Etat des services', href: '/health' },

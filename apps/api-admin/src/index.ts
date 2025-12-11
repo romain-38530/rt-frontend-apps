@@ -17,6 +17,7 @@ import apiKeysRoutes from './routes/api-keys';
 import auditRoutes from './routes/audit';
 import announcementsRoutes from './routes/announcements';
 import dashboardRoutes from './routes/dashboard';
+import crmRoutes from './routes/crm';
 
 // Middleware
 import { authenticateAdmin } from './middleware/auth';
@@ -135,6 +136,42 @@ app.get('/', (req, res) => {
         create: 'POST /api/v1/admin/announcements',
         update: 'PUT /api/v1/admin/announcements/:id',
         delete: 'DELETE /api/v1/admin/announcements/:id'
+      },
+
+      // CRM Lead Generation
+      crm: {
+        dashboard: 'GET /api/v1/admin/crm/dashboard',
+        salons: {
+          list: 'GET /api/v1/admin/crm/salons',
+          create: 'POST /api/v1/admin/crm/salons',
+          get: 'GET /api/v1/admin/crm/salons/:id',
+          update: 'PUT /api/v1/admin/crm/salons/:id'
+        },
+        companies: {
+          list: 'GET /api/v1/admin/crm/companies',
+          create: 'POST /api/v1/admin/crm/companies',
+          get: 'GET /api/v1/admin/crm/companies/:id',
+          update: 'PUT /api/v1/admin/crm/companies/:id',
+          enrich: 'POST /api/v1/admin/crm/companies/:id/enrich',
+          assign: 'POST /api/v1/admin/crm/companies/:id/assign'
+        },
+        contacts: {
+          list: 'GET /api/v1/admin/crm/contacts',
+          create: 'POST /api/v1/admin/crm/contacts',
+          get: 'GET /api/v1/admin/crm/contacts/:id',
+          update: 'PUT /api/v1/admin/crm/contacts/:id',
+          verifyEmail: 'POST /api/v1/admin/crm/contacts/:id/verify-email'
+        },
+        emails: {
+          list: 'GET /api/v1/admin/crm/emails',
+          send: 'POST /api/v1/admin/crm/emails/send',
+          webhook: 'POST /api/v1/admin/crm/emails/webhook'
+        },
+        templates: {
+          list: 'GET /api/v1/admin/crm/templates',
+          create: 'POST /api/v1/admin/crm/templates',
+          update: 'PUT /api/v1/admin/crm/templates/:id'
+        }
       }
     }
   });
@@ -159,6 +196,7 @@ app.use('/api/v1/admin/modules', authenticateAdmin, modulesRoutes);
 app.use('/api/v1/admin/api-keys', authenticateAdmin, apiKeysRoutes);
 app.use('/api/v1/admin/audit', authenticateAdmin, auditRoutes);
 app.use('/api/v1/admin/announcements', authenticateAdmin, announcementsRoutes);
+app.use('/api/v1/admin/crm', crmRoutes); // CRM routes (auth handled internally, webhook needs to be public)
 app.use('/api/v1/admin', authenticateAdmin, dashboardRoutes);
 
 // Error handling
