@@ -70,6 +70,36 @@ export interface IAppointments {
   deliveryConfirmedAt?: Date;         // Date de confirmation
 }
 
+// Suivi des palettes Europe
+export type PalletType = 'EURO_EPAL' | 'EURO_EPAL_2' | 'DEMI_PALETTE' | 'PALETTE_PERDUE';
+
+export interface IPalletExchange {
+  quantity: number;
+  palletType: PalletType;
+  givenBySender?: number;      // Pickup: données par expéditeur
+  takenByCarrier?: number;     // Pickup: prises par transporteur
+  givenByCarrier?: number;     // Delivery: données par transporteur
+  receivedByRecipient?: number; // Delivery: reçues par destinataire
+  chequeId?: string;
+  status?: string;
+  confirmedAt?: Date;
+  confirmedBy?: string;
+  photos?: string[];
+  signature?: string;
+  notes?: string;
+}
+
+export interface IPalletTracking {
+  enabled: boolean;
+  palletType?: PalletType;
+  expectedQuantity?: number;
+  pickup?: IPalletExchange;
+  delivery?: IPalletExchange;
+  balance?: number;             // Différence (positif = transporteur doit, négatif = destinataire doit)
+  settled?: boolean;            // Compte soldé
+  settledAt?: Date;
+}
+
 export interface IOrder extends Document {
   orderId: string;
   reference: string;
@@ -108,6 +138,7 @@ export interface IOrder extends Document {
   createdBy: string;
   notes?: string;
   carrierNotes?: string;
+  palletTracking?: IPalletTracking;
 }
 
 const AddressSchema = new Schema<IAddress>({
@@ -168,6 +199,33 @@ const AppointmentsSchema = new Schema<IAppointments>({
   deliveryConfirmedAt: Date
 }, { _id: false });
 
+const PalletExchangeSchema = new Schema<IPalletExchange>({
+  quantity: { type: Number, required: true },
+  palletType: { type: String, enum: ['EURO_EPAL', 'EURO_EPAL_2', 'DEMI_PALETTE', 'PALETTE_PERDUE'], required: true },
+  givenBySender: Number,
+  takenByCarrier: Number,
+  givenByCarrier: Number,
+  receivedByRecipient: Number,
+  chequeId: String,
+  status: String,
+  confirmedAt: Date,
+  confirmedBy: String,
+  photos: [String],
+  signature: String,
+  notes: String
+}, { _id: false });
+
+const PalletTrackingSchema = new Schema<IPalletTracking>({
+  enabled: { type: Boolean, default: false },
+  palletType: { type: String, enum: ['EURO_EPAL', 'EURO_EPAL_2', 'DEMI_PALETTE', 'PALETTE_PERDUE'] },
+  expectedQuantity: Number,
+  pickup: PalletExchangeSchema,
+  delivery: PalletExchangeSchema,
+  balance: Number,
+  settled: Boolean,
+  settledAt: Date
+}, { _id: false });
+
 const OrderSchema = new Schema<IOrder>({
   orderId: { type: String, required: true, unique: true },
   reference: { type: String, required: true, unique: true },
@@ -209,7 +267,8 @@ const OrderSchema = new Schema<IOrder>({
   portalInvitations: [String],
   createdBy: { type: String, required: true },
   notes: String,
-  carrierNotes: String
+  carrierNotes: String,
+  palletTracking: PalletTrackingSchema
 }, { timestamps: true });
 
 OrderSchema.index({ status: 1, industrialId: 1 });

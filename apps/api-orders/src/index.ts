@@ -85,8 +85,8 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.14.0',
-    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics',
+    version: '2.15.1',
+    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Palettes Europe',
     endpoints: {
       health: '/health',
       orders: {
@@ -215,6 +215,12 @@ app.get('/', (req, res) => {
         feedback: 'POST /api/v1/ai-reports/:reportId/feedback',
         triggerMonthly: 'POST /api/v1/ai-reports/trigger-monthly',
         stats: 'GET /api/v1/ai-reports/stats'
+      },
+      palettes: {
+        status: 'GET /api/v1/palettes/:orderId/status',
+        pickup: 'POST /api/v1/palettes/:orderId/pickup',
+        delivery: 'POST /api/v1/palettes/:orderId/delivery',
+        companyBalance: 'GET /api/v1/palettes/company/:companyId/balance'
       }
     }
   });
@@ -275,7 +281,7 @@ mongoose.connect(MONGODB_URI)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.14.0 - AI Analytics Reports');
+      console.log('SYMPHONI.A Orders API v2.15.1 - Palettes Europe Integration');
     });
   })
   .catch((error) => {
