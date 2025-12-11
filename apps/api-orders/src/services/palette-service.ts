@@ -45,7 +45,10 @@ class PaletteService {
       };
       await order.save();
 
-      await EventService.createEvent({ orderId, orderReference: order.reference, eventType: 'pallet.pickup.confirmed', source: 'carrier', data: { action: 'pallet_pickup_confirmed', chequeId } });
+      // Event creation non-blocking
+      try {
+        await EventService.createEvent({ orderId, orderReference: order.reference, eventType: 'pallet.pickup.confirmed', source: 'carrier', data: { action: 'pallet_pickup_confirmed', chequeId } });
+      } catch (e) { console.error('[PaletteService] event error:', e); }
 
       return { success: true, chequeId, balance: params.takenByCarrier - params.givenBySender };
     } catch (error: any) {
@@ -86,7 +89,10 @@ class PaletteService {
       if (tracking.settled) tracking.settledAt = new Date();
       await order.save();
 
-      await EventService.createEvent({ orderId, orderReference: order.reference, eventType: 'pallet.delivery.confirmed', source: 'recipient', data: { action: 'pallet_delivery_confirmed', balance: finalBalance } });
+      // Event creation non-blocking
+      try {
+        await EventService.createEvent({ orderId, orderReference: order.reference, eventType: 'pallet.delivery.confirmed', source: 'recipient', data: { action: 'pallet_delivery_confirmed', balance: finalBalance } });
+      } catch (e) { console.error('[PaletteService] event error:', e); }
 
       return { success: true, balance: finalBalance };
     } catch (error: any) {
