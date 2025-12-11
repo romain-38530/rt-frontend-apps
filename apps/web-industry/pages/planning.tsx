@@ -46,6 +46,7 @@ export default function PlanningPage() {
   const [loading, setLoading] = useState(true);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [showDockModal, setShowDockModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -56,21 +57,29 @@ export default function PlanningPage() {
     occupancyRate: 62
   });
 
+  // Client-side only mounting
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
     loadData();
-  }, [router]);
+  }, [mounted]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       // Charger les sites depuis l'API
-      const data = await planningApi.getSites();
+      const response = await planningApi.getSites();
+      const data = response || {};
 
-      if (data.data && data.data.length > 0) {
+      if (data.data && Array.isArray(data.data) && data.data.length > 0) {
         // Transformer les donnees API pour inclure les docks
         const sitesWithDocks = await Promise.all(
           data.data.map(async (site: any) => {
@@ -79,7 +88,7 @@ export default function PlanningPage() {
               return {
                 ...site,
                 id: site._id || site.id,
-                docks: docksData.data || []
+                docks: Array.isArray(docksData?.data) ? docksData.data : []
               };
             } catch {
               return { ...site, id: site._id || site.id, docks: [] };
@@ -87,10 +96,10 @@ export default function PlanningPage() {
           })
         );
         setSites(sitesWithDocks);
-        setSelectedSite(sitesWithDocks[0]);
+        setSelectedSite(sitesWithDocks[0] || null);
 
         // Update stats
-        const totalDocks = sitesWithDocks.reduce((acc: number, s: Site) => acc + s.docks.length, 0);
+        const totalDocks = sitesWithDocks.reduce((acc: number, s: Site) => acc + (s.docks?.length || 0), 0);
         setStats(prev => ({
           ...prev,
           totalSites: sitesWithDocks.length,
@@ -102,7 +111,7 @@ export default function PlanningPage() {
         setSelectedSite(mockSites[0]);
       }
     } catch (error) {
-      console.log('API unavailable, using mock data');
+      console.log('API unavailable, using mock data:', error);
       setSites(mockSites);
       setSelectedSite(mockSites[0]);
     }
@@ -215,7 +224,8 @@ export default function PlanningPage() {
     }
   };
 
-  if (loading) {
+  // Wait for client-side mount
+  if (!mounted || loading) {
     return (
       <div style={{
         minHeight: '100vh',
