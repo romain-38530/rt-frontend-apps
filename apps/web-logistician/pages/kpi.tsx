@@ -16,9 +16,50 @@ import {
   Timer,
   XCircle,
   Activity,
+  Brain,
+  Sparkles,
+  Target,
+  Lightbulb,
+  ChevronRight,
+  FileText,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
 import kpiApi, { LogisticsKPIs as APILogisticsKPIs, CarrierScore } from '@shared/services/kpi-api';
+
+// API URL pour les rapports IA
+const ORDERS_API = process.env.NEXT_PUBLIC_ORDERS_API || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+
+interface AIReport {
+  reportId: string;
+  reportType: string;
+  period: { month: number; year: number };
+  status: string;
+  executiveSummary: {
+    overview: string;
+    keyFindings: string[];
+    mainRecommendation: string;
+    confidenceScore: number;
+  };
+  alerts: Array<{ type: string; severity: string; message: string; metric?: string }>;
+  recommendations: Array<{
+    priority: string;
+    category: string;
+    title: string;
+    description: string;
+    expectedImpact: string;
+    implementation: { difficulty: string; timeframe: string };
+  }>;
+  actionPlan: {
+    immediate: string[];
+    shortTerm: string[];
+    mediumTerm: string[];
+  };
+  nextMonthTargets: Array<{ metric: string; currentValue: number; targetValue: number; unit: string }>;
+  createdAt: string;
+  userFeedback?: { rating: number; helpful: boolean };
+}
 
 interface LogisticsKPIs {
   dockPerformance: {
@@ -64,20 +105,106 @@ export default function LogisticianKPIPage() {
   const [kpis, setKpis] = useState<LogisticsKPIs | null>(null);
   const [selectedSite, setSelectedSite] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [aiReport, setAiReport] = useState<AIReport | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiSection, setShowAiSection] = useState(true);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
-    setUser(getUser());
+    const currentUser = getUser();
+    setUser(currentUser);
     loadKPIs();
+    if (currentUser?.userId || currentUser?.id) {
+      loadAIReport(currentUser.userId || currentUser.id);
+    }
 
     if (autoRefresh) {
       const interval = setInterval(loadKPIs, 30000);
       return () => clearInterval(interval);
     }
   }, [router, selectedSite, autoRefresh]);
+
+  const loadAIReport = async (userId: string) => {
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/logistician/${userId}/latest`);
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(!!data.report.userFeedback);
+      }
+    } catch (error) {
+      console.error('Erreur chargement rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateAIReport = async () => {
+    const userId = user?.userId || user?.id;
+    if (!userId) return;
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/generate/logistician`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId,
+          userName: user.name || user.email || 'Logisticien'
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(false);
+      }
+    } catch (error) {
+      console.error('Erreur generation rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const submitFeedback = async (rating: number, helpful: boolean) => {
+    if (!aiReport?.reportId) return;
+    try {
+      await fetch(`${ORDERS_API}/ai-reports/${aiReport.reportId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, helpful })
+      });
+      setFeedbackSent(true);
+    } catch (error) {
+      console.error('Erreur envoi feedback:', error);
+    }
+  };
+
+  const getMonthName = (month: number) => {
+    const months = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    return months[month - 1] || '';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-700 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default: return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500';
+      case 'warning': return 'bg-orange-500';
+      default: return 'bg-blue-500';
+    }
+  };
 
   const loadKPIs = async () => {
     setLoading(true);
@@ -477,6 +604,213 @@ export default function LogisticianKPIPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* AI Analysis Section */}
+              <div className="bg-white rounded-lg shadow p-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    Analyse IA & Recommandations
+                    <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Powered by Claude
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {!aiReport && !aiLoading && (
+                      <button
+                        onClick={generateAIReport}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Generer
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowAiSection(!showAiSection)}
+                      className="p-1.5 text-gray-500 hover:text-gray-700"
+                    >
+                      <ChevronRight className={`w-4 h-4 transition-transform ${showAiSection ? 'rotate-90' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {showAiSection && (
+                  <>
+                    {aiLoading ? (
+                      <div className="p-6 bg-gray-50 rounded-lg">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-3"></div>
+                          <p className="text-sm text-gray-600">Analyse IA en cours...</p>
+                        </div>
+                      </div>
+                    ) : aiReport ? (
+                      <div className="space-y-4">
+                        {/* Executive Summary */}
+                        <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium text-purple-900 flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Synthese {getMonthName(aiReport.period.month)} {aiReport.period.year}
+                              </h4>
+                            </div>
+                            <span className="text-sm text-purple-700 font-medium">
+                              Confiance: {aiReport.executiveSummary.confidenceScore}%
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mb-3">{aiReport.executiveSummary.overview}</p>
+                          <div className="p-3 bg-white/60 rounded-lg">
+                            <h5 className="text-xs font-medium text-purple-800 mb-1 flex items-center gap-1">
+                              <Lightbulb className="w-3 h-3" />
+                              Recommandation principale
+                            </h5>
+                            <p className="text-sm text-gray-700">{aiReport.executiveSummary.mainRecommendation}</p>
+                          </div>
+                        </div>
+
+                        {/* Key Findings & Alerts */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Points cles
+                            </h4>
+                            <ul className="space-y-2">
+                              {aiReport.executiveSummary.keyFindings.slice(0, 3).map((finding, idx) => (
+                                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <ChevronRight className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                  {finding}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {aiReport.alerts && aiReport.alerts.length > 0 && (
+                            <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                              <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                Alertes
+                              </h4>
+                              <ul className="space-y-2">
+                                {aiReport.alerts.slice(0, 3).map((alert, idx) => (
+                                  <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                    <span className={`w-2 h-2 rounded-full mt-1.5 ${getSeverityColor(alert.severity)}`}></span>
+                                    {alert.message}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Top Recommendations */}
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-teal-600" />
+                            Actions recommandees
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {aiReport.recommendations.slice(0, 4).map((rec, idx) => (
+                              <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-start justify-between mb-1">
+                                  <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(rec.priority)}`}>
+                                    {rec.priority === 'critical' ? 'Critique' :
+                                     rec.priority === 'high' ? 'Haute' :
+                                     rec.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                                  </span>
+                                  <span className="text-xs text-green-600">{rec.expectedImpact}</span>
+                                </div>
+                                <p className="font-medium text-gray-900 text-sm">{rec.title}</p>
+                                <p className="text-xs text-gray-600 mt-1">{rec.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Plan */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                            <h5 className="text-xs font-medium text-red-800 mb-2">Immediat</h5>
+                            <ul className="space-y-1">
+                              {aiReport.actionPlan.immediate.slice(0, 2).map((action, idx) => (
+                                <li key={idx} className="text-xs text-gray-700 flex items-start gap-1">
+                                  <ChevronRight className="w-3 h-3 text-red-500 mt-0.5" />
+                                  {action}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                            <h5 className="text-xs font-medium text-orange-800 mb-2">Court terme</h5>
+                            <ul className="space-y-1">
+                              {aiReport.actionPlan.shortTerm.slice(0, 2).map((action, idx) => (
+                                <li key={idx} className="text-xs text-gray-700 flex items-start gap-1">
+                                  <ChevronRight className="w-3 h-3 text-orange-500 mt-0.5" />
+                                  {action}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+                            <h5 className="text-xs font-medium text-teal-800 mb-2">Moyen terme</h5>
+                            <ul className="space-y-1">
+                              {aiReport.actionPlan.mediumTerm.slice(0, 2).map((action, idx) => (
+                                <li key={idx} className="text-xs text-gray-700 flex items-start gap-1">
+                                  <ChevronRight className="w-3 h-3 text-teal-500 mt-0.5" />
+                                  {action}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        {/* Feedback */}
+                        {!feedbackSent ? (
+                          <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                            <span className="text-sm text-gray-600">Ce rapport vous a-t-il ete utile ?</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => submitFeedback(5, true)}
+                                className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs"
+                              >
+                                <ThumbsUp className="w-3 h-3" />
+                                Oui
+                              </button>
+                              <button
+                                onClick={() => submitFeedback(2, false)}
+                                className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs"
+                              >
+                                <ThumbsDown className="w-3 h-3" />
+                                Non
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700 text-sm">
+                            <CheckCircle className="w-4 h-4" />
+                            Merci pour votre feedback !
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-6 bg-gray-50 rounded-lg text-center">
+                        <Brain className="w-10 h-10 text-purple-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-600 mb-3">
+                          Obtenez des recommandations personnalisees pour optimiser vos operations logistiques.
+                        </p>
+                        <button
+                          onClick={generateAIReport}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          Generer un rapport IA
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </>
           )}

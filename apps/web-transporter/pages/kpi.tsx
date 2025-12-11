@@ -17,9 +17,48 @@ import {
   Shield,
   Calendar,
   BarChart3,
+  Brain,
+  Sparkles,
+  Lightbulb,
+  ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
 import { scoringApi } from '../lib/api';
+
+// API URL pour les rapports IA
+const ORDERS_API = process.env.NEXT_PUBLIC_ORDERS_API || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+
+interface AIReport {
+  reportId: string;
+  reportType: string;
+  period: { month: number; year: number };
+  status: string;
+  executiveSummary: {
+    overview: string;
+    keyFindings: string[];
+    mainRecommendation: string;
+    confidenceScore: number;
+  };
+  alerts: Array<{ type: string; severity: string; message: string; metric?: string }>;
+  recommendations: Array<{
+    priority: string;
+    category: string;
+    title: string;
+    description: string;
+    expectedImpact: string;
+    implementation: { difficulty: string; timeframe: string };
+  }>;
+  actionPlan: {
+    immediate: string[];
+    shortTerm: string[];
+    mediumTerm: string[];
+  };
+  nextMonthTargets: Array<{ metric: string; currentValue: number; targetValue: number; unit: string }>;
+  createdAt: string;
+  userFeedback?: { rating: number; helpful: boolean };
+}
 
 interface CarrierScore {
   score: number;
@@ -58,15 +97,101 @@ export default function TransporterKPIPage() {
   const [loading, setLoading] = useState(true);
   const [scoreData, setScoreData] = useState<CarrierScore | null>(null);
   const [period, setPeriod] = useState('monthly');
+  const [aiReport, setAiReport] = useState<AIReport | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiSection, setShowAiSection] = useState(true);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
-    setUser(getUser());
+    const currentUser = getUser();
+    setUser(currentUser);
     loadScore();
+    if (currentUser?.carrierId || currentUser?.companyId) {
+      loadAIReport(currentUser.carrierId || currentUser.companyId);
+    }
   }, [router, period]);
+
+  const loadAIReport = async (carrierId: string) => {
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/carrier/${carrierId}/latest`);
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(!!data.report.userFeedback);
+      }
+    } catch (error) {
+      console.error('Erreur chargement rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateAIReport = async () => {
+    const carrierId = user?.carrierId || user?.companyId;
+    if (!carrierId) return;
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/generate/carrier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrierId: carrierId,
+          carrierName: user.companyName || 'Transporteur'
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(false);
+      }
+    } catch (error) {
+      console.error('Erreur generation rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const submitFeedback = async (rating: number, helpful: boolean) => {
+    if (!aiReport?.reportId) return;
+    try {
+      await fetch(`${ORDERS_API}/ai-reports/${aiReport.reportId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, helpful })
+      });
+      setFeedbackSent(true);
+    } catch (error) {
+      console.error('Erreur envoi feedback:', error);
+    }
+  };
+
+  const getMonthName = (month: number) => {
+    const months = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    return months[month - 1] || '';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-700 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default: return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500';
+      case 'warning': return 'bg-orange-500';
+      default: return 'bg-blue-500';
+    }
+  };
 
   const loadScore = async () => {
     setLoading(true);
@@ -360,23 +485,166 @@ export default function TransporterKPIPage() {
                   })}
                 </div>
 
-                {/* Recommendations */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h3 className="font-medium text-blue-800 mb-2">Axes d'amelioration</h3>
-                  <ul className="space-y-2 text-sm text-blue-700">
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-400">•</span>
-                      <span>Ameliorez votre qualite de tracking (+10 pts potentiels)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-400">•</span>
-                      <span>Adoptez le module Premium pour booster votre score (+2 pts)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-400">•</span>
-                      <span>Reduisez votre temps de reponse moyen de 3 min pour atteindre le Top 10</span>
-                    </li>
-                  </ul>
+                {/* AI Analysis Section */}
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-purple-600" />
+                      Analyse IA & Recommandations
+                      <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Powered by Claude
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {!aiReport && !aiLoading && (
+                        <button
+                          onClick={generateAIReport}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          Generer
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowAiSection(!showAiSection)}
+                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                      >
+                        <ChevronRight className={`w-4 h-4 transition-transform ${showAiSection ? 'rotate-90' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showAiSection && (
+                    <>
+                      {aiLoading ? (
+                        <div className="p-6 bg-gray-50 rounded-lg">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-3"></div>
+                            <p className="text-sm text-gray-600">Analyse IA en cours...</p>
+                          </div>
+                        </div>
+                      ) : aiReport ? (
+                        <div className="space-y-4">
+                          {/* Executive Summary */}
+                          <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-medium text-purple-900 flex items-center gap-2">
+                                  <FileText className="w-4 h-4" />
+                                  Synthese {getMonthName(aiReport.period.month)} {aiReport.period.year}
+                                </h4>
+                              </div>
+                              <span className="text-sm text-purple-700 font-medium">
+                                Confiance: {aiReport.executiveSummary.confidenceScore}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-3">{aiReport.executiveSummary.overview}</p>
+                            <div className="p-3 bg-white/60 rounded-lg">
+                              <h5 className="text-xs font-medium text-purple-800 mb-1 flex items-center gap-1">
+                                <Lightbulb className="w-3 h-3" />
+                                Recommandation principale
+                              </h5>
+                              <p className="text-sm text-gray-700">{aiReport.executiveSummary.mainRecommendation}</p>
+                            </div>
+                          </div>
+
+                          {/* Key Findings */}
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-medium text-blue-800 mb-2">Points cles identifies</h4>
+                            <ul className="space-y-2">
+                              {aiReport.executiveSummary.keyFindings.map((finding, idx) => (
+                                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                  {finding}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Top Recommendations */}
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                              <Target className="w-4 h-4 text-blue-600" />
+                              Actions recommandees
+                            </h4>
+                            {aiReport.recommendations.slice(0, 3).map((rec, idx) => (
+                              <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-start justify-between mb-1">
+                                  <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(rec.priority)}`}>
+                                    {rec.priority === 'critical' ? 'Critique' :
+                                     rec.priority === 'high' ? 'Haute' :
+                                     rec.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                                  </span>
+                                  <span className="text-xs text-green-600">{rec.expectedImpact}</span>
+                                </div>
+                                <p className="font-medium text-gray-900 text-sm">{rec.title}</p>
+                                <p className="text-xs text-gray-600 mt-1">{rec.description}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Action Plan Summary */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                              <h5 className="text-xs font-medium text-red-800 mb-1">Immediat</h5>
+                              <p className="text-xs text-gray-700">{aiReport.actionPlan.immediate[0]}</p>
+                            </div>
+                            <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                              <h5 className="text-xs font-medium text-orange-800 mb-1">Court terme</h5>
+                              <p className="text-xs text-gray-700">{aiReport.actionPlan.shortTerm[0]}</p>
+                            </div>
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <h5 className="text-xs font-medium text-blue-800 mb-1">Moyen terme</h5>
+                              <p className="text-xs text-gray-700">{aiReport.actionPlan.mediumTerm[0]}</p>
+                            </div>
+                          </div>
+
+                          {/* Feedback */}
+                          {!feedbackSent ? (
+                            <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                              <span className="text-sm text-gray-600">Utile ?</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => submitFeedback(5, true)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs"
+                                >
+                                  <ThumbsUp className="w-3 h-3" />
+                                  Oui
+                                </button>
+                                <button
+                                  onClick={() => submitFeedback(2, false)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs"
+                                >
+                                  <ThumbsDown className="w-3 h-3" />
+                                  Non
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700 text-sm">
+                              <CheckCircle className="w-4 h-4" />
+                              Merci pour votre feedback !
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-gray-50 rounded-lg text-center">
+                          <Brain className="w-10 h-10 text-purple-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-600 mb-3">
+                            Obtenez des recommandations personnalisees pour ameliorer votre score.
+                          </p>
+                          <button
+                            onClick={generateAIReport}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Generer un rapport IA
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </>

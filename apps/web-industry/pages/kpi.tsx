@@ -18,9 +18,51 @@ import {
   RefreshCw,
   Leaf,
   BarChart3,
+  Brain,
+  Sparkles,
+  Target,
+  Lightbulb,
+  ChevronRight,
+  Calendar,
+  ThumbsUp,
+  ThumbsDown,
+  Star,
 } from 'lucide-react';
 import { isAuthenticated, getUser } from '../lib/auth';
 import kpiApi, { IndustryKPIs, CarrierScore } from '@shared/services/kpi-api';
+
+// API URL pour les rapports IA
+const ORDERS_API = process.env.NEXT_PUBLIC_ORDERS_API || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+
+interface AIReport {
+  reportId: string;
+  reportType: string;
+  period: { month: number; year: number };
+  status: string;
+  executiveSummary: {
+    overview: string;
+    keyFindings: string[];
+    mainRecommendation: string;
+    confidenceScore: number;
+  };
+  alerts: Array<{ type: string; severity: string; message: string; metric?: string }>;
+  recommendations: Array<{
+    priority: string;
+    category: string;
+    title: string;
+    description: string;
+    expectedImpact: string;
+    implementation: { difficulty: string; timeframe: string };
+  }>;
+  actionPlan: {
+    immediate: string[];
+    shortTerm: string[];
+    mediumTerm: string[];
+  };
+  nextMonthTargets: Array<{ metric: string; currentValue: number; targetValue: number; unit: string }>;
+  createdAt: string;
+  userFeedback?: { rating: number; helpful: boolean };
+}
 
 interface IndustryKPIsExtended {
   qualityOfService: {
@@ -56,15 +98,100 @@ export default function IndustryKPIPage() {
   const [kpis, setKpis] = useState<IndustryKPIsExtended | null>(null);
   const [topCarriers, setTopCarriers] = useState<CarrierScore[]>([]);
   const [period, setPeriod] = useState('monthly');
+  const [aiReport, setAiReport] = useState<AIReport | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiSection, setShowAiSection] = useState(true);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
-    setUser(getUser());
+    const currentUser = getUser();
+    setUser(currentUser);
     loadKPIs();
+    if (currentUser?.companyId) {
+      loadAIReport(currentUser.companyId);
+    }
   }, [router, period]);
+
+  const loadAIReport = async (industrialId: string) => {
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/industrial/${industrialId}/latest`);
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(!!data.report.userFeedback);
+      }
+    } catch (error) {
+      console.error('Erreur chargement rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateAIReport = async () => {
+    if (!user?.companyId) return;
+    setAiLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API}/ai-reports/generate/industrial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industrialId: user.companyId,
+          industrialName: user.companyName || 'Industriel'
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.report) {
+        setAiReport(data.report);
+        setFeedbackSent(false);
+      }
+    } catch (error) {
+      console.error('Erreur generation rapport IA:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const submitFeedback = async (rating: number, helpful: boolean) => {
+    if (!aiReport?.reportId) return;
+    try {
+      await fetch(`${ORDERS_API}/ai-reports/${aiReport.reportId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, helpful })
+      });
+      setFeedbackSent(true);
+    } catch (error) {
+      console.error('Erreur envoi feedback:', error);
+    }
+  };
+
+  const getMonthName = (month: number) => {
+    const months = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    return months[month - 1] || '';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-700 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default: return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500';
+      case 'warning': return 'bg-orange-500';
+      default: return 'bg-blue-500';
+    }
+  };
 
   const loadKPIs = async () => {
     setLoading(true);
@@ -452,6 +579,258 @@ export default function IndustryKPIPage() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* AI Analysis Section */}
+          <section className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Brain className="w-5 h-5 text-purple-600" />
+                Analyse IA & Recommandations
+                <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Powered by Claude
+                </span>
+              </h2>
+              <div className="flex items-center gap-2">
+                {!aiReport && !aiLoading && (
+                  <button
+                    onClick={generateAIReport}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Generer un rapport
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAiSection(!showAiSection)}
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                >
+                  <ChevronRight className={`w-5 h-5 transition-transform ${showAiSection ? 'rotate-90' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {showAiSection && (
+              <>
+                {aiLoading ? (
+                  <div className="bg-white rounded-lg shadow p-8">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                      <p className="text-gray-600">Analyse IA en cours...</p>
+                      <p className="text-sm text-gray-400 mt-1">Claude analyse vos KPIs transporteurs</p>
+                    </div>
+                  </div>
+                ) : aiReport ? (
+                  <div className="space-y-6">
+                    {/* Executive Summary */}
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl shadow p-6 border border-purple-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5" />
+                            Synthese Executive
+                          </h3>
+                          <p className="text-sm text-purple-600">
+                            {getMonthName(aiReport.period.month)} {aiReport.period.year}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">Indice de confiance</p>
+                            <p className="text-lg font-bold text-purple-700">{aiReport.executiveSummary.confidenceScore}%</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-gray-700 mb-4">{aiReport.executiveSummary.overview}</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-purple-800 mb-2">Points cles</h4>
+                          <ul className="space-y-1">
+                            {aiReport.executiveSummary.keyFindings.map((finding, idx) => (
+                              <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                {finding}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="p-4 bg-white/60 rounded-lg">
+                          <h4 className="text-sm font-medium text-purple-800 mb-2 flex items-center gap-1">
+                            <Lightbulb className="w-4 h-4" />
+                            Recommandation principale
+                          </h4>
+                          <p className="text-sm text-gray-700">{aiReport.executiveSummary.mainRecommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Alerts */}
+                    {aiReport.alerts && aiReport.alerts.length > 0 && (
+                      <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          Alertes detectees
+                        </h3>
+                        <div className="space-y-3">
+                          {aiReport.alerts.map((alert, idx) => (
+                            <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className={`w-2 h-2 rounded-full mt-2 ${getSeverityColor(alert.severity)}`}></div>
+                              <div>
+                                <p className="font-medium text-gray-800">{alert.message}</p>
+                                {alert.metric && (
+                                  <p className="text-sm text-gray-500">Metrique: {alert.metric}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recommendations */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        Recommandations detaillees
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {aiReport.recommendations.slice(0, 4).map((rec, idx) => (
+                          <div key={idx} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(rec.priority)}`}>
+                                {rec.priority === 'critical' ? 'Critique' :
+                                 rec.priority === 'high' ? 'Haute' :
+                                 rec.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                              </span>
+                              <span className="text-xs text-gray-500">{rec.category}</span>
+                            </div>
+                            <h4 className="font-medium text-gray-900 mb-1">{rec.title}</h4>
+                            <p className="text-sm text-gray-600 mb-3">{rec.description}</p>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-green-600">Impact: {rec.expectedImpact}</span>
+                              <span className="text-gray-400">{rec.implementation.timeframe}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Plan */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-green-600" />
+                        Plan d'action
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                          <h4 className="font-medium text-red-800 mb-2">Immediat</h4>
+                          <ul className="space-y-2">
+                            {aiReport.actionPlan.immediate.map((action, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ChevronRight className="w-4 h-4 text-red-500 mt-0.5" />
+                                {action}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                          <h4 className="font-medium text-orange-800 mb-2">Court terme (1-2 sem)</h4>
+                          <ul className="space-y-2">
+                            {aiReport.actionPlan.shortTerm.map((action, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ChevronRight className="w-4 h-4 text-orange-500 mt-0.5" />
+                                {action}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h4 className="font-medium text-blue-800 mb-2">Moyen terme (1 mois)</h4>
+                          <ul className="space-y-2">
+                            {aiReport.actionPlan.mediumTerm.map((action, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ChevronRight className="w-4 h-4 text-blue-500 mt-0.5" />
+                                {action}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Targets */}
+                    {aiReport.nextMonthTargets && aiReport.nextMonthTargets.length > 0 && (
+                      <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <Target className="w-5 h-5 text-purple-600" />
+                          Objectifs mois prochain
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {aiReport.nextMonthTargets.map((target, idx) => (
+                            <div key={idx} className="p-4 bg-gray-50 rounded-lg text-center">
+                              <p className="text-sm text-gray-500 mb-1">{target.metric}</p>
+                              <p className="text-lg font-bold text-gray-900">
+                                {target.currentValue} → {target.targetValue}{target.unit}
+                              </p>
+                              <p className="text-xs text-green-600">
+                                +{((target.targetValue - target.currentValue) / target.currentValue * 100).toFixed(1)}%
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feedback */}
+                    {!feedbackSent && (
+                      <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                        <p className="text-sm text-gray-600">Ce rapport vous a-t-il ete utile ?</p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => submitFeedback(5, true)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm"
+                          >
+                            <ThumbsUp className="w-4 h-4" />
+                            Oui
+                          </button>
+                          <button
+                            onClick={() => submitFeedback(2, false)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+                          >
+                            <ThumbsDown className="w-4 h-4" />
+                            Non
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {feedbackSent && (
+                      <div className="bg-green-50 rounded-lg p-4 flex items-center gap-2 text-green-700">
+                        <CheckCircle className="w-5 h-5" />
+                        <p className="text-sm">Merci pour votre feedback !</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                    <Brain className="w-12 h-12 text-purple-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun rapport IA disponible</h3>
+                    <p className="text-gray-500 mb-4">
+                      Generez votre premier rapport d'analyse pour obtenir des recommandations personnalisees.
+                    </p>
+                    <button
+                      onClick={generateAIReport}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Generer un rapport IA
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </section>
         </div>
       </div>
