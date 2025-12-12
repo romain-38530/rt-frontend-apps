@@ -643,14 +643,7 @@ export const crmApi = {
     return res.json();
   },
 
-  // Enrichissement
-  enrichCompany: async (companyId: string) => {
-    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/enrichment/company/${companyId}`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-    });
-    return res.json();
-  },
+  // Enrichissement batch
   enrichSalonCompanies: async (salonId: string, limit?: number) => {
     const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/enrichment/salon/${salonId}`, {
       method: 'POST',
