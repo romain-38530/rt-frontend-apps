@@ -3,7 +3,22 @@
  * Utilise des sources web pour trouver des salons a scraper
  */
 
-import puppeteer, { Browser, Page } from 'puppeteer';
+// Dynamic import for puppeteer (optional dependency)
+let puppeteerModule: any = null;
+type Browser = any;
+type Page = any;
+
+async function loadPuppeteer(): Promise<any> {
+  if (!puppeteerModule) {
+    try {
+      puppeteerModule = await import('puppeteer');
+    } catch (e) {
+      console.warn('Puppeteer not available - salon discovery features disabled');
+      throw new Error('Puppeteer not installed. Salon discovery features are not available.');
+    }
+  }
+  return puppeteerModule.default || puppeteerModule;
+}
 
 interface DiscoveredSalon {
   nom: string;
@@ -129,6 +144,7 @@ class SalonDiscoveryService {
 
   async initBrowser(): Promise<Browser> {
     if (!this.browser) {
+      const puppeteer = await loadPuppeteer();
       this.browser = await puppeteer.launch({
         headless: true,
         args: [

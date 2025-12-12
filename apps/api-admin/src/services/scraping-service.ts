@@ -3,8 +3,24 @@
  * Utilise Puppeteer pour le scraping dynamique et Cheerio pour le HTML statique
  */
 
-import puppeteer, { Browser, Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
+
+// Dynamic import for puppeteer (optional dependency)
+let puppeteerModule: any = null;
+type Browser = any;
+type Page = any;
+
+async function loadPuppeteer(): Promise<any> {
+  if (!puppeteerModule) {
+    try {
+      puppeteerModule = await import('puppeteer');
+    } catch (e) {
+      console.warn('Puppeteer not available - scraping features disabled');
+      throw new Error('Puppeteer not installed. Scraping features are not available.');
+    }
+  }
+  return puppeteerModule.default || puppeteerModule;
+}
 
 export interface ScrapedCompany {
   raisonSociale: string;
@@ -61,7 +77,7 @@ class ScrapingService {
 
   async initBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
+      this.browser = await (await loadPuppeteer()).launch({
         headless: true,
         args: [
           '--no-sandbox',
