@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
-// Metadata SEO optimisée
+// Metadata SEO optimisee
 export const metadata: Metadata = {
   title: {
-    default: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    default: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     template: '%s | SYMPHONI.A'
   },
   description: 'SYMPHONI.A propose une solution TMS cloud innovante pour optimiser la gestion du transport et de la logistique. Inscription en ligne simple et rapide. Essai gratuit disponible.',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     description: 'Solution TMS cloud pour optimiser votre gestion du transport et de la logistique',
     url: 'https://rt-technologie.fr',
     siteName: 'SYMPHONI.A',
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+        alt: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SYMPHONI.A - L'IA qui orchestre vos flux transport',
+    title: "SYMPHONI.A - L'IA qui orchestre vos flux transport",
     description: 'Solution TMS cloud pour optimiser votre gestion du transport',
     images: ['/twitter-image.png'],
   },
@@ -65,7 +65,6 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   verification: {
     google: 'votre-code-verification-google',
-    // Ajoutez d'autres vérifications si nécessaire
   },
 };
 
@@ -96,11 +95,7 @@ const structuredData = {
     contactType: 'Customer Service',
     availableLanguage: ['French'],
   },
-  sameAs: [
-    // Ajoutez vos réseaux sociaux
-    // 'https://www.linkedin.com/company/rt-technologie',
-    // 'https://twitter.com/rt_technologie',
-  ],
+  sameAs: [],
 };
 
 export default function RootLayout({
@@ -117,7 +112,6 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        {/* Skip to main content pour accessibilité */}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-indigo-600 focus:text-white"
