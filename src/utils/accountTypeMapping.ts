@@ -417,3 +417,22 @@ export function parseBackendAccountType(value: string): BackendAccountType | nul
 
   return null;
 }
+
+// ==========================================
+// Formatage des Prix
+// ==========================================
+
+/**
+ * Formater un prix en euros
+ */
+export function formatPrice(amount: number, options?: { currency?: string; locale?: string }): string {
+  const currency = options?.currency || 'EUR';
+  const locale = options?.locale || 'fr-FR';
+
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
