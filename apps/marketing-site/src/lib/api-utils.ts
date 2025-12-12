@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Fonctions utilitaires pour l'intégration Frontend
  * RT Backend Services - Version 2.2.0
