@@ -68,13 +68,18 @@ export default function OrderDetailPage() {
     setError(null);
 
     try {
-      const [orderData, eventsData] = await Promise.all([
-        OrdersService.getOrderById(orderId),
-        OrdersService.getOrderEvents(orderId),
-      ]);
-
+      // Load order data (required)
+      const orderData = await OrdersService.getOrderById(orderId);
       setOrder(orderData);
-      setEvents(eventsData);
+
+      // Load events (optional - endpoint may not exist)
+      try {
+        const eventsData = await OrdersService.getOrderEvents(orderId);
+        setEvents(eventsData || []);
+      } catch (eventsErr) {
+        console.log('Events not available for this order');
+        setEvents([]);
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement de la commande');
       console.error('Error loading order:', err);
