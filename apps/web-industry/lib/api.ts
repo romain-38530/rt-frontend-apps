@@ -477,21 +477,21 @@ export const chatbotApi = {
 export const ordersApi = {
   list: async (filters?: { status?: string; date?: string; clientId?: string }) => {
     const params = new URLSearchParams(filters as any);
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders?${params}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   get: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   create: async (data: any) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -500,7 +500,7 @@ export const ordersApi = {
   },
 
   update: async (id: string, data: any) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -509,7 +509,7 @@ export const ordersApi = {
   },
 
   delete: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
@@ -525,7 +525,7 @@ export const ordersApi = {
 
   // ===== Order Events =====
   getEvents: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
       headers: getAuthHeaders()
     });
     return res.json();
