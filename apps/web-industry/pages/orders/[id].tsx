@@ -344,6 +344,39 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+        {/* Échelle d'étapes - Progress Stepper */}
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '20px 40px' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '20px', left: '5%', right: '5%', height: '3px', backgroundColor: '#e5e7eb', zIndex: 0 }} />
+              {[
+                { key: 'created', label: 'Créée', icon: '✅' },
+                { key: 'sent_to_carrier', label: 'Envoyée', icon: '📨' },
+                { key: 'carrier_accepted', label: 'Acceptée', icon: '👍' },
+                { key: 'in_transit', label: 'Transit', icon: '🚛' },
+                { key: 'arrived_delivery', label: 'Arrivé', icon: '🎯' },
+                { key: 'delivered', label: 'Livrée', icon: '✨' },
+                { key: 'closed', label: 'Clôturée', icon: '🔒' },
+              ].map((step, index) => {
+                const steps = ['created', 'sent_to_carrier', 'carrier_accepted', 'in_transit', 'arrived_delivery', 'delivered', 'closed'];
+                const currentIndex = steps.indexOf(order.status);
+                const isCompleted = currentIndex >= index;
+                const isCurrent = order.status === step.key;
+                return (
+                  <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: isCompleted ? '#667eea' : '#e5e7eb', color: isCompleted ? 'white' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: isCurrent ? '3px solid #4f46e5' : 'none' }}>
+                      {step.icon}
+                    </div>
+                    <div style={{ marginTop: '8px', fontSize: '10px', fontWeight: isCurrent ? '700' : '500', color: isCompleted ? '#111827' : '#9ca3af', textAlign: 'center' }}>
+                      {step.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Contenu */}
         <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
