@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useToast } from '@rt/ui-components';
+import { useToast } from '../../../../components/ui/toast';
 
 // Types
 interface Document {

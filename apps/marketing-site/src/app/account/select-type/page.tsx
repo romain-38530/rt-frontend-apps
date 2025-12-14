@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountTypes } from '@/hooks/useAccountTypes';
 import { getCreatableAccountTypes } from '@/types/account';
 import type { AccountType } from '@/types/account';
-import { useToast } from '@rt/ui-components';
+import { useToast } from '../../../components/ui/toast';
 
 function SelectTypeContent() {
   const router = useRouter();

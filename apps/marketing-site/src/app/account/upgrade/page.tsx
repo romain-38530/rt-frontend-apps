@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccountUpgrade } from '@/hooks/useAccountUpgrade';
 import { getAccountTypeInfo } from '@/types/account';
 import type { AccountType } from '@/types/account';
-import { useToast } from '@rt/ui-components';
+import { useToast } from '../../../components/ui/toast';
 
 function UpgradeContent() {
   const router = useRouter();

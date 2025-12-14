@@ -20,7 +20,7 @@ import React, { useState, useEffect } from 'react';
 import { usePricing, BackendAccountType, formatPrice } from '../../../../../src/hooks/usePricing';
 import { getAllCreatableTypesInfo, AccountTypeInfo } from '../../../../../src/utils/accountTypeMapping';
 import { PricingCard } from '../../../../../packages/ui-components/src/components/PricingCard';
-import { useToast } from '@rt/ui-components';
+import { useToast } from '../../components/ui/toast';
 
 // ==========================================
 // Page Principale
