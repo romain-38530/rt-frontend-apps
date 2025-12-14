@@ -20,7 +20,7 @@ export interface OrdersListProps {
   isLoading?: boolean;
 }
 
-const STATUS_LABELS: Record<OrderStatus, { label: string; color: string }> = {
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: 'Brouillon', color: '#9ca3af' },
   created: { label: 'Créée', color: '#3b82f6' },
   sent_to_carrier: { label: 'Envoyée', color: '#8b5cf6' },
@@ -34,6 +34,11 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string }> = {
   closed: { label: 'Clôturée', color: '#64748b' },
   cancelled: { label: 'Annulée', color: '#dc2626' },
   escalated: { label: 'Escaladée', color: '#f97316' },
+};
+
+// Safe getter for status info with fallback
+const getStatusInfo = (status: string) => {
+  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280' };
 };
 
 export const OrdersList: React.FC<OrdersListProps> = ({
@@ -244,11 +249,11 @@ export const OrdersList: React.FC<OrdersListProps> = ({
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        backgroundColor: `${STATUS_LABELS[order.status].color}15`,
-                        color: STATUS_LABELS[order.status].color,
+                        backgroundColor: `${getStatusInfo(order.status).color}15`,
+                        color: getStatusInfo(order.status).color,
                       }}
                     >
-                      {STATUS_LABELS[order.status].label}
+                      {getStatusInfo(order.status).label}
                     </span>
                   </div>
 
