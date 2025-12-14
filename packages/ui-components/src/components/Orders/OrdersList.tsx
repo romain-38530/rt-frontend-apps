@@ -261,30 +261,30 @@ export const OrdersList: React.FC<OrdersListProps> = ({
                     <div>
                       <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Collecte</div>
                       <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.pickupAddress.city}
+                        {order.pickupAddress?.city || '-'}
                       </div>
                       <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {formatDate(order.dates.pickupDate)}
+                        {order.dates?.pickupDate ? formatDate(order.dates.pickupDate) : '-'}
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Livraison</div>
                       <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.deliveryAddress.city}
+                        {order.deliveryAddress?.city || '-'}
                       </div>
                       <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {formatDate(order.dates.deliveryDate)}
+                        {order.dates?.deliveryDate ? formatDate(order.dates.deliveryDate) : '-'}
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Marchandise</div>
                       <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.goods.weight} kg
+                        {order.goods?.weight || 0} kg
                       </div>
                       <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {order.goods.description.substring(0, 30)}...
+                        {order.goods?.description ? order.goods.description.substring(0, 30) + '...' : '-'}
                       </div>
                     </div>
                   </div>
