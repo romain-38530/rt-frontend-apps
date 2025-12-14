@@ -104,7 +104,7 @@ router.get('/salons', async (req: Request, res: Response) => {
       LeadSalon.countDocuments(filter)
     ]);
 
-    res.json({ data: salons, total, page: Number(page), limit: Number(limit) });
+    res.json({ success: true, salons, data: salons, total, page: Number(page), limit: Number(limit) });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -190,37 +190,46 @@ router.post('/salons/:id/scrape', async (req: Request, res: Response) => {
       let duplicates = 0;
 
       for (const company of result.companies) {
-        // Verifier si l'entreprise existe deja (par nom ou site web)
-        const existingCompany = await LeadCompany.findOne({
-          $or: [
-            { raisonSociale: { $regex: `^${company.raisonSociale}$`, $options: 'i' } },
-            ...(company.siteWeb ? [{ siteWeb: { $regex: company.siteWeb, $options: 'i' } }] : [])
-          ]
-        });
+        try {
+          // Escape special regex characters in company name
+          const escapedName = company.raisonSociale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        if (existingCompany) {
-          duplicates++;
-          continue;
+          // Verifier si l'entreprise existe deja (par nom ou site web)
+          const existingCompany = await LeadCompany.findOne({
+            $or: [
+              { raisonSociale: { $regex: `^${escapedName}$`, $options: 'i' } },
+              ...(company.siteWeb ? [{ siteWeb: { $regex: company.siteWeb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }] : [])
+            ]
+          });
+
+          if (existingCompany) {
+            duplicates++;
+            continue;
+          }
+
+          // Creer la nouvelle entreprise
+          const paysValue = company.pays || ScrapingService.guessCountry(company.raisonSociale + ' ' + (company.ville || '')) || 'France';
+          await LeadCompany.create({
+            raisonSociale: company.raisonSociale,
+            siteWeb: company.siteWeb,
+            adresse: {
+              ville: company.ville,
+              pays: paysValue
+            },
+            telephone: company.telephone,
+            emailGenerique: company.email,
+            secteurActivite: company.secteurActivite || 'Agroalimentaire',
+            descriptionActivite: company.descriptionActivite,
+            salonSourceId: salon._id,
+            urlPageExposant: company.urlPageExposant,
+            numeroStand: company.numeroStand,
+            statutProspection: 'NEW'
+          });
+          created++;
+        } catch (companyError: any) {
+          console.error(`[CRM] Error creating company ${company.raisonSociale}:`, companyError.message);
+          // Continue with next company instead of failing entire scraping
         }
-
-        // Creer la nouvelle entreprise
-        await LeadCompany.create({
-          raisonSociale: company.raisonSociale,
-          siteWeb: company.siteWeb,
-          adresse: {
-            ville: company.ville,
-            pays: company.pays || ScrapingService.guessCountry(company.raisonSociale + ' ' + (company.ville || ''))
-          },
-          telephone: company.telephone,
-          emailGenerique: company.email,
-          secteurActivite: company.secteurActivite || 'Transport & Logistique',
-          descriptionActivite: company.descriptionActivite,
-          salonSourceId: salon._id,
-          urlPageExposant: company.urlPageExposant,
-          numeroStand: company.numeroStand,
-          statutProspection: 'NEW'
-        });
-        created++;
       }
 
       // Mettre a jour le salon
