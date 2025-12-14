@@ -20,5 +20,6 @@ export const logout = () => {
 
 export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
+  // Check both possible token keys for backward compatibility
+  return localStorage.getItem('admin_jwt') || localStorage.getItem('authToken');
 };
