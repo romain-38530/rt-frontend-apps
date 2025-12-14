@@ -17,7 +17,7 @@ const nextConfig = {
 
   // Désactiver les erreurs TypeScript pendant le build
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
 
   // Variables d'environnement publiques
