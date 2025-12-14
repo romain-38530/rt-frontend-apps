@@ -29,7 +29,7 @@ const LeadSalonSchema = new Schema({
   dateFin: Date,
   lieu: String,
   ville: String,
-  pays: { type: String, required: true, maxlength: 2 },
+  pays: { type: String, required: true, maxlength: 50 },
   urlSalon: String,
   urlListeExposants: String,
   categorie: String,

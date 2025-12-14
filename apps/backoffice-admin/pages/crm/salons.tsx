@@ -504,8 +504,9 @@ function AddSalonModal({ adapters, onClose, onSuccess }: { adapters: ScrapingAda
       } else {
         alert('Erreur: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating salon:', error);
+      alert('Erreur: ' + (error?.message || 'Erreur de connexion'));
     } finally {
       setSaving(false);
     }

@@ -112,11 +112,29 @@ router.get('/salons', async (req: Request, res: Response) => {
 
 router.post('/salons', async (req: Request, res: Response) => {
   try {
-    const salon = new LeadSalon(req.body);
+    console.log('[CRM] Creating salon:', JSON.stringify(req.body));
+    // Map frontend field names to model field names
+    const salonData = {
+      nom: req.body.nom,
+      edition: req.body.edition,
+      pays: req.body.pays,
+      lieu: req.body.lieu,
+      ville: req.body.ville,
+      urlSalon: req.body.url || req.body.urlSalon,
+      urlListeExposants: req.body.urlListeExposants,
+      dateDebut: req.body.dateDebut || undefined,
+      dateFin: req.body.dateFin || undefined,
+      adaptateurConfig: req.body.adaptateur ? { type: req.body.adaptateur } : req.body.adaptateurConfig,
+      categorie: req.body.categorie,
+      sourceDecouverte: req.body.sourceDecouverte
+    };
+    const salon = new LeadSalon(salonData);
     await salon.save();
-    res.status(201).json(salon);
+    res.status(201).json({ success: true, salon });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    console.error('[CRM] Salon creation error:', error);
+    const errorMessage = error.message || (error.errors ? Object.values(error.errors).map((e: any) => e.message).join(', ') : 'Erreur inconnue');
+    res.status(400).json({ success: false, error: errorMessage });
   }
 });
 

@@ -75,7 +75,7 @@ const LeadCompanySchema = new Schema({
     ligne2: String,
     codePostal: String,
     ville: String,
-    pays: { type: String, required: true, maxlength: 2 }
+    pays: { type: String, required: true, maxlength: 50 }
   },
   telephone: String,
   emailGenerique: String,
