@@ -198,7 +198,7 @@ export default function OrderDetailPage() {
   return (
     <>
       <Head>
-        <title>Commande {order.reference} - Industry | SYMPHONI.A</title>
+        <title>Commande {order?.reference || 'Détail'} - Industry | SYMPHONI.A</title>
       </Head>
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'system-ui, sans-serif' }}>
@@ -598,4 +598,20 @@ export default function OrderDetailPage() {
       </div>
     </>
   );
+}
+
+// Required for static export with dynamic routes
+export async function getStaticPaths() {
+  // For static export, we generate one placeholder path
+  // Amplify rewrites will serve this page for all /orders/:id routes
+  return {
+    paths: [{ params: { id: 'detail' } }],
+    fallback: false,
+  };
+}
+
+export async function getStaticProps() {
+  return {
+    props: {},
+  };
 }
