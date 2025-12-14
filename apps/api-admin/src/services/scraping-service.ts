@@ -64,6 +64,7 @@ class ScrapingService {
     // Enregistrer les adaptateurs par defaut
     this.registerAdapter(SITLAdapter);
     this.registerAdapter(TransportLogisticAdapter);
+    this.registerAdapter(SIALComexposiumAdapter);
     this.registerAdapter(GenericExhibitorAdapter);
   }
 
@@ -77,7 +78,7 @@ class ScrapingService {
 
   async initBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await (await loadPuppeteer()).launch({
+      const launchOptions: any = {
         headless: true,
         args: [
           '--no-sandbox',
@@ -87,7 +88,20 @@ class ScrapingService {
           '--disable-gpu',
           '--window-size=1920x1080'
         ]
-      });
+      };
+
+      // Use system Chrome for EB deployment
+      const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable';
+      // Check if running on Linux (EB) - use system Chrome
+      if (process.platform === 'linux') {
+        launchOptions.executablePath = chromePath;
+        console.log(`[Scraping] Using Chrome at: ${chromePath}`);
+      } else if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        console.log(`[Scraping] Using Chrome at: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+      }
+
+      this.browser = await (await loadPuppeteer()).launch(launchOptions);
     }
     return this.browser;
   }
@@ -342,6 +356,131 @@ const TransportLogisticAdapter: SalonAdapter = {
 };
 
 /**
+ * Adaptateur SIAL / Comexposium
+ * Sites avec catalogue d'exposants dynamique (React)
+ */
+const SIALComexposiumAdapter: SalonAdapter = {
+  name: 'SIAL',
+  baseUrl: 'https://www.sialparis.com',
+
+  async scrape(browser: Browser, config: AdapterConfig): Promise<ScrapedCompany[]> {
+    const companies: ScrapedCompany[] = [];
+    const page = await browser.newPage();
+
+    try {
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      console.log('[SIAL] Loading page:', config.url);
+      await page.goto(config.url, { waitUntil: 'networkidle0', timeout: 60000 });
+
+      // Attendre que le catalogue charge (jusqu'a 20 secondes)
+      console.log('[SIAL] Waiting for exhibitor cards...');
+      await page.waitForSelector('[class*="ExhibitorCard"], [class*="exhibitor-card"], [class*="CardExhibitor"], a[href*="/Exposant/"]', { timeout: 20000 }).catch(() => {
+        console.log('[SIAL] No exhibitor cards found, trying alternative selectors');
+      });
+
+      // Attendre encore un peu pour le chargement complet
+      await new Promise(r => setTimeout(r, 5000));
+
+      let currentPage = 1;
+      const maxPages = config.maxPages || 10;
+
+      while (currentPage <= maxPages) {
+        console.log(`[SIAL] Scraping page ${currentPage}...`);
+
+        // Extraire les exposants
+        const pageCompanies = await page.evaluate(() => {
+          const items: any[] = [];
+
+          // Selecteurs specifiques Comexposium
+          const selectors = [
+            '[class*="ExhibitorCard"]',
+            '[class*="exhibitor-card"]',
+            '[class*="CardExhibitor"]',
+            'a[href*="/Exposant/"]',
+            '[data-testid*="exhibitor"]',
+            '.exhibitor-item',
+            '[class*="catalog"] [class*="card"]'
+          ];
+
+          let elements: Element[] = [];
+          for (const selector of selectors) {
+            elements = Array.from(document.querySelectorAll(selector));
+            console.log(`[SIAL] Selector ${selector}: ${elements.length} elements`);
+            if (elements.length > 0) break;
+          }
+
+          elements.forEach(el => {
+            // Chercher le nom
+            const nameEl = el.querySelector('h3, h4, h5, [class*="title"], [class*="name"], span[class*="Title"]') ||
+                          (el.tagName === 'A' ? el : null);
+            const name = nameEl?.textContent?.trim();
+
+            // Chercher le lien
+            const linkEl = el.tagName === 'A' ? el as HTMLAnchorElement :
+                          el.querySelector('a[href*="Exposant"], a[href*="exposant"]') as HTMLAnchorElement;
+            const href = linkEl?.href;
+
+            // Chercher le stand
+            const standEl = el.querySelector('[class*="stand"], [class*="booth"], [class*="Stand"]');
+            const stand = standEl?.textContent?.trim();
+
+            // Chercher le pays
+            const countryEl = el.querySelector('[class*="country"], [class*="Country"], [class*="location"]');
+            const country = countryEl?.textContent?.trim();
+
+            if (name && name.length > 2 && name.length < 200 && !name.toLowerCase().includes('exposant')) {
+              items.push({
+                raisonSociale: name.replace(/\s+/g, ' ').trim(),
+                urlPageExposant: href || undefined,
+                numeroStand: stand || undefined,
+                pays: country || 'FR'
+              });
+            }
+          });
+
+          return items;
+        });
+
+        console.log(`[SIAL] Found ${pageCompanies.length} companies on page ${currentPage}`);
+        companies.push(...pageCompanies);
+
+        // Pagination - charger plus de resultats
+        const hasMore = await page.evaluate(() => {
+          const loadMoreBtn = document.querySelector('[class*="loadMore"], button[class*="more"], [class*="pagination"] button:not([disabled])');
+          if (loadMoreBtn) {
+            (loadMoreBtn as HTMLElement).click();
+            return true;
+          }
+          // Scroll infini
+          const scrollHeight = document.documentElement.scrollHeight;
+          window.scrollTo(0, scrollHeight);
+          return document.documentElement.scrollHeight > scrollHeight;
+        });
+
+        if (!hasMore || pageCompanies.length === 0) break;
+
+        currentPage++;
+        await new Promise(r => setTimeout(r, 3000));
+      }
+
+    } catch (error: any) {
+      console.error('[SIAL Adapter] Error:', error.message);
+    } finally {
+      await page.close();
+    }
+
+    // Dedupliquer
+    const seen = new Set<string>();
+    return companies.filter(c => {
+      const key = c.raisonSociale.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+};
+
+/**
  * Adaptateur Generique - Pour les sites avec structure standard
  */
 const GenericExhibitorAdapter: SalonAdapter = {
@@ -353,11 +492,12 @@ const GenericExhibitorAdapter: SalonAdapter = {
     const page = await browser.newPage();
 
     try {
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-      await page.goto(config.url, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      console.log('[Generic] Loading page:', config.url);
+      await page.goto(config.url, { waitUntil: 'networkidle0', timeout: 60000 });
 
-      // Attendre un peu pour le chargement JS
-      await new Promise(r => setTimeout(r, 3000));
+      // Attendre plus longtemps pour les SPA
+      await new Promise(r => setTimeout(r, 8000));
 
       // Recuperer tout le HTML et parser avec Cheerio
       const html = await page.content();

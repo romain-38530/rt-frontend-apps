@@ -314,8 +314,8 @@ router.post('/scraping/test', async (req: Request, res: Response) => {
 
     res.json({
       success: result.success,
-      preview: result.companies.slice(0, 10), // Apercu des 10 premiers
-      totalFound: result.totalScraped,
+      companies: result.companies.slice(0, 10), // Apercu des 10 premiers
+      totalScraped: result.totalScraped,
       errors: result.errors,
       duration: result.duration
     });

@@ -24,9 +24,9 @@ interface ApiOrdersResponse {
 
 // Transform API order to frontend Order format
 function transformOrder(apiOrder: any): Order {
-  // Map orderId or _id to id field expected by frontend
+  // Use _id as the primary id (required for API calls)
   const order = { ...apiOrder };
-  order.id = apiOrder.orderId || apiOrder._id;
+  order.id = apiOrder._id; // Use MongoDB _id for navigation/API calls
   return order as Order;
 }
 
@@ -59,7 +59,8 @@ export class OrdersService {
    * Récupérer une commande par ID
    */
   static async getOrderById(orderId: string): Promise<Order> {
-    return await ordersApi.get<Order>(`/orders/${orderId}`);
+    const response = await ordersApi.get<{ success: boolean; data: any }>(`/orders/${orderId}`);
+    return transformOrder(response.data);
   }
 
   /**

@@ -12,7 +12,7 @@ import { OrdersService } from '@rt/utils';
 import { ordersApi } from '../../lib/api';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
-const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
+const STATUS_LABELS: Record<string, { label: string; color: string; icon: string }> = {
   draft: { label: 'Brouillon', color: '#9ca3af', icon: '📝' },
   created: { label: 'Créée', color: '#3b82f6', icon: '✅' },
   sent_to_carrier: { label: 'Envoyée', color: '#8b5cf6', icon: '📨' },
@@ -26,6 +26,11 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: s
   closed: { label: 'Clôturée', color: '#64748b', icon: '🔒' },
   cancelled: { label: 'Annulée', color: '#dc2626', icon: '❌' },
   escalated: { label: 'Escaladée', color: '#f97316', icon: '⚠️' },
+};
+
+// Safe getter for status info
+const getStatusInfo = (status: string) => {
+  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280', icon: '❓' };
 };
 
 export default function OrderDetailPage() {
@@ -188,7 +193,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const statusInfo = STATUS_LABELS[order.status];
+  const statusInfo = getStatusInfo(order.status);
 
   return (
     <>

@@ -18,6 +18,7 @@ import auditRoutes from './routes/audit';
 import announcementsRoutes from './routes/announcements';
 import dashboardRoutes from './routes/dashboard';
 import crmRoutes from './routes/crm';
+import authRoutes from './routes/auth';
 
 // Middleware
 import { authenticateAdmin } from './middleware/auth';
@@ -187,6 +188,9 @@ app.get('/health', (req, res) => {
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
+
+// Auth routes (public)
+app.use('/auth', authRoutes);
 
 // Protected admin routes
 app.use('/api/v1/admin/users', authenticateAdmin, usersRoutes);
