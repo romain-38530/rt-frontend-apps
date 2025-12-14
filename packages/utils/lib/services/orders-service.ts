@@ -16,10 +16,24 @@ import type {
 } from '@rt/contracts';
 
 // Type for raw API response
+interface ApiOrder {
+  _id: string;
+  orderId: string;
+  [key: string]: any;
+}
+
 interface ApiOrdersResponse {
   success: boolean;
   count: number;
-  data: Order[];
+  data: ApiOrder[];
+}
+
+// Transform API order to frontend Order format
+function transformOrder(apiOrder: ApiOrder): Order {
+  return {
+    ...apiOrder,
+    id: apiOrder.orderId || apiOrder._id, // Map orderId or _id to id
+  } as Order;
 }
 
 export class OrdersService {
@@ -35,8 +49,11 @@ export class OrdersService {
     const total = response.count || response.data?.length || 0;
     const totalPages = Math.ceil(total / limit);
 
+    // Transform each order to have 'id' field
+    const orders = (response.data || []).map(transformOrder);
+
     return {
-      data: response.data || [],
+      data: orders,
       total,
       page,
       limit,
