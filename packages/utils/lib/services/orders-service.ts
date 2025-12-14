@@ -16,24 +16,18 @@ import type {
 } from '@rt/contracts';
 
 // Type for raw API response
-interface ApiOrder {
-  _id: string;
-  orderId: string;
-  [key: string]: any;
-}
-
 interface ApiOrdersResponse {
   success: boolean;
   count: number;
-  data: ApiOrder[];
+  data: any[];
 }
 
 // Transform API order to frontend Order format
-function transformOrder(apiOrder: ApiOrder): Order {
-  return {
-    ...apiOrder,
-    id: apiOrder.orderId || apiOrder._id, // Map orderId or _id to id
-  } as Order;
+function transformOrder(apiOrder: any): Order {
+  // Map orderId or _id to id field expected by frontend
+  const order = { ...apiOrder };
+  order.id = apiOrder.orderId || apiOrder._id;
+  return order as Order;
 }
 
 export class OrdersService {
