@@ -15,12 +15,33 @@ import type {
   ImportResult,
 } from '@rt/contracts';
 
+// Type for raw API response
+interface ApiOrdersResponse {
+  success: boolean;
+  count: number;
+  data: Order[];
+}
+
 export class OrdersService {
   /**
    * Récupérer toutes les commandes avec filtres et pagination
    */
   static async getOrders(filters?: OrderFilters): Promise<PaginatedOrders> {
-    return await ordersApi.get<PaginatedOrders>('/orders', filters);
+    const response = await ordersApi.get<ApiOrdersResponse>('/orders', filters);
+
+    // Transform API response to PaginatedOrders format
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const total = response.count || response.data?.length || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: response.data || [],
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   /**
