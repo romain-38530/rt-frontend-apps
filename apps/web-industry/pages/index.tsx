@@ -15,7 +15,16 @@ export default function HomePage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+
+    // Load user data
+    const userData = getUser();
+    setUser(userData);
+
+    // Load subscription data (mock for now, would come from API)
+    setSubscription({ tier: 'pro' });
+
+    // Done loading
+    setLoading(false);
   }, [mounted]);
 
   if (loading) {
