@@ -36,7 +36,21 @@ const getStatusInfo = (status: string) => {
 export default function OrderDetailPage() {
   const router = useSafeRouter();
   const [mounted, setMounted] = useState(false);
-  const { id } = router.query;
+  const [orderId, setOrderId] = useState<string | null>(null);
+
+  // Extract order ID from URL path (router.query doesn't work with static export + Amplify rewrites)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      // URL is /orders/{id}/ - get the second part
+      if (pathParts.length >= 2 && pathParts[0] === 'orders') {
+        const extractedId = pathParts[1];
+        if (extractedId && extractedId !== 'detail') {
+          setOrderId(extractedId);
+        }
+      }
+    }
+  }, []);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [events, setEvents] = useState<OrderEvent[]>([]);
@@ -48,15 +62,15 @@ export default function OrderDetailPage() {
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
-    if (!id || typeof id !== 'string') return;
+    if (!orderId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
       const [orderData, eventsData] = await Promise.all([
-        OrdersService.getOrderById(id),
-        OrdersService.getOrderEvents(id),
+        OrdersService.getOrderById(orderId),
+        OrdersService.getOrderEvents(orderId),
       ]);
 
       setOrder(orderData);
@@ -71,9 +85,9 @@ export default function OrderDetailPage() {
 
   // Verifier l'eligibilite a la cloture
   const checkClosureEligibility = async () => {
-    if (!id || typeof id !== 'string') return;
+    if (!orderId) return;
     try {
-      const result = await ordersApi.checkClosureEligibility(id);
+      const result = await ordersApi.checkClosureEligibility(orderId);
       setClosureEligibility(result);
     } catch (err) {
       console.error('Error checking closure eligibility:', err);
@@ -82,13 +96,13 @@ export default function OrderDetailPage() {
 
   // Cloturer la commande
   const handleCloseOrder = async () => {
-    if (!id || typeof id !== 'string') return;
+    if (!orderId) return;
 
     setIsClosing(true);
     setClosureMessage(null);
 
     try {
-      const result = await ordersApi.closeOrder(id);
+      const result = await ordersApi.closeOrder(orderId);
       if (result.success) {
         setClosureMessage({ type: 'success', text: 'Commande cloturee avec succes' });
         loadOrder(); // Recharger pour mettre a jour le statut
@@ -109,7 +123,7 @@ export default function OrderDetailPage() {
     }
 
     loadOrder();
-  }, [id]);
+  }, [orderId]);
 
   // Charger l'eligibilite quand la commande est livree
   useEffect(() => {
