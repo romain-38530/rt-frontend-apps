@@ -432,6 +432,64 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
+              {/* Transporteur assigné */}
+              {order.carrierId && (
+                <div style={cardStyle}>
+                  <h2 style={sectionTitleStyle}>🚛 Transporteur assigné</h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div style={{ padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                      <div style={{ ...labelStyle, color: '#0369a1', marginBottom: '8px' }}>Transporteur</div>
+                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.carrierName || order.carrierId}</div>
+                      {order.carrierNotes && <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '8px' }}>Note: {order.carrierNotes}</div>}
+                    </div>
+                    <div style={{ padding: '16px', backgroundColor: '#fefce8', borderRadius: '8px', border: '1px solid #fef08a' }}>
+                      <div style={{ ...labelStyle, color: '#a16207', marginBottom: '8px' }}>Prix accepté</div>
+                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '20px', color: '#15803d' }}>{formatPrice(order.finalPrice || order.estimatedPrice, order.currency)}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Tracking: {order.trackingLevel === 'premium' ? '🌟 Premium' : order.trackingLevel === 'gps' ? '📍 GPS' : '📋 Basic'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gestion des Palettes Europe */}
+              {order.palletTracking?.enabled && (
+                <div style={cardStyle}>
+                  <h2 style={sectionTitleStyle}>🔄 Gestion des Palettes Europe (EPAL)</h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Attendues</div>
+                      <div style={{ fontSize: '24px', fontWeight: '700' }}>{order.palletTracking.expectedQuantity}</div>
+                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{order.palletTracking.palletType}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: order.palletTracking.balance === 0 ? '#d1fae5' : '#fef3c7', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Solde</div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: order.palletTracking.balance === 0 ? '#059669' : '#d97706' }}>{order.palletTracking.balance >= 0 ? '+' : ''}{order.palletTracking.balance}</div>
+                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{order.palletTracking.settled ? '✅ Soldé' : '⏳ En attente'}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#ede9fe', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Statut</div>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#7c3aed' }}>{order.palletTracking.settled ? 'Terminé' : 'En cours'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    {order.palletTracking.pickup && (
+                      <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        <div style={{ fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>📤 Collecte</div>
+                        <div style={{ fontSize: '13px' }}>Données: <strong>{order.palletTracking.pickup.givenBySender}</strong> | Prises: <strong>{order.palletTracking.pickup.takenByCarrier}</strong></div>
+                        {order.palletTracking.pickup.confirmedBy && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>✓ {order.palletTracking.pickup.confirmedBy}</div>}
+                      </div>
+                    )}
+                    {order.palletTracking.delivery && (
+                      <div style={{ padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                        <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '8px' }}>📥 Livraison</div>
+                        <div style={{ fontSize: '13px' }}>Données: <strong>{order.palletTracking.delivery.givenByCarrier}</strong> | Reçues: <strong>{order.palletTracking.delivery.receivedByRecipient}</strong></div>
+                        {order.palletTracking.delivery.confirmedBy && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>✓ {order.palletTracking.delivery.confirmedBy}</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Marchandise */}
               <div style={cardStyle}>
                 <h2 style={sectionTitleStyle}>📦 Marchandise</h2>
