@@ -1,5 +1,7 @@
-/**
- * Export des composants Appointments
- */
+export { Calendar } from "./Calendar";
 
-export { Calendar } from './Calendar';
+export { AppointmentRequestForm } from "./AppointmentRequestForm";
+export type { AppointmentRequestFormProps, AppointmentRequestData } from "./AppointmentRequestForm";
+
+export { AppointmentResponsePanel } from "./AppointmentResponsePanel";
+export type { AppointmentResponsePanelProps, AppointmentRequest } from "./AppointmentResponsePanel";
