@@ -357,7 +357,8 @@ const TransportLogisticAdapter: SalonAdapter = {
 
 /**
  * Adaptateur SIAL / Comexposium
- * Sites avec catalogue d'exposants dynamique (React) - Pagination agressive
+ * Sites avec catalogue d'exposants dynamique (React)
+ * Utilise l'interception reseau pour capturer les donnees API
  */
 const SIALComexposiumAdapter: SalonAdapter = {
   name: 'SIAL',
@@ -365,144 +366,120 @@ const SIALComexposiumAdapter: SalonAdapter = {
 
   async scrape(browser: Browser, config: AdapterConfig): Promise<ScrapedCompany[]> {
     const companies: ScrapedCompany[] = [];
+    const seen = new Set<string>();
     const page = await browser.newPage();
 
     try {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      console.log('[SIAL] Loading page:', config.url);
-      await page.goto(config.url, { waitUntil: 'networkidle0', timeout: 60000 });
 
-      // Attendre que le catalogue charge
-      console.log('[SIAL] Waiting for exhibitor elements...');
-      await page.waitForSelector('a[href*="/Exposant/"], a[href*="/exposant/"], [class*="exhibitor"], [class*="Exhibitor"]', { timeout: 30000 }).catch(() => {
-        console.log('[SIAL] No exhibitor elements found with primary selectors');
+      // Intercepter les requetes pour capturer les donnees API
+      const apiData: any[] = [];
+      await page.setRequestInterception(true);
+
+      page.on('request', (request: any) => {
+        request.continue();
       });
 
-      // Attendre le chargement initial
+      page.on('response', async (response: any) => {
+        const url = response.url();
+        // Capturer les reponses API qui pourraient contenir les exposants
+        if (url.includes('exhibitor') || url.includes('exposant') ||
+            url.includes('catalog') || url.includes('search') ||
+            url.includes('graphql') || url.includes('/api/')) {
+          try {
+            const contentType = response.headers()['content-type'] || '';
+            if (contentType.includes('json')) {
+              const data = await response.json();
+              apiData.push({ url, data });
+              console.log(`[SIAL] Captured API response from: ${url.substring(0, 100)}`);
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      });
+
+      console.log('[SIAL] Loading page:', config.url);
+      await page.goto(config.url, { waitUntil: 'networkidle2', timeout: 60000 });
       await new Promise(r => setTimeout(r, 5000));
 
-      // Detecter et cliquer sur "Afficher tous" ou "Load All" s'il existe
-      const showAllClicked = await page.evaluate(() => {
-        const showAllBtn = document.querySelector('button[class*="showAll"], button[class*="loadAll"], [class*="show-all"], a[class*="viewAll"]');
-        if (showAllBtn) {
-          (showAllBtn as HTMLElement).click();
-          return true;
-        }
-        return false;
-      });
+      // Methode 1: Essayer de trouver un champ de recherche et chercher par lettre
+      console.log('[SIAL] Trying alphabetical search...');
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-      if (showAllClicked) {
-        console.log('[SIAL] Clicked "Show All" button');
-        await new Promise(r => setTimeout(r, 10000));
+      for (const letter of alphabet.slice(0, 10)) { // Limiter pour le test
+        try {
+          // Chercher un input de recherche
+          const searchInput = await page.$('input[type="search"], input[type="text"][class*="search"], input[placeholder*="recherch"], input[placeholder*="search"]');
+
+          if (searchInput) {
+            console.log(`[SIAL] Searching for letter: ${letter}`);
+            await searchInput.click({ clickCount: 3 }); // Select all
+            await searchInput.type(letter, { delay: 50 });
+            await page.keyboard.press('Enter');
+            await new Promise(r => setTimeout(r, 3000));
+
+            // Extraire les resultats
+            const results = await extractExhibitors(page, seen);
+            companies.push(...results);
+            console.log(`[SIAL] Letter ${letter}: found ${results.length} new exhibitors`);
+          } else {
+            break; // Pas de champ de recherche
+          }
+        } catch (e) {
+          console.log(`[SIAL] Search error for ${letter}:`, (e as Error).message);
+        }
       }
 
-      // Pagination agressive: scroll et click "Load More" jusqu'a plus de nouveaux resultats
-      const maxScrollAttempts = config.maxPages || 100; // Augmente significativement
+      // Methode 2: Scroll infini agressif
+      console.log('[SIAL] Aggressive infinite scroll...');
       let previousCount = 0;
       let noNewResultsCount = 0;
 
-      for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
-        // Compter les elements actuels
-        const currentCount = await page.evaluate(() => {
-          return document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"]').length;
+      for (let i = 0; i < 200; i++) {
+        await page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          // Cliquer sur tous les boutons possibles
+          document.querySelectorAll('button, [role="button"]').forEach(btn => {
+            const text = btn.textContent?.toLowerCase() || '';
+            if (text.includes('plus') || text.includes('more') || text.includes('load') || text.includes('affich')) {
+              (btn as HTMLElement).click();
+            }
+          });
         });
 
-        console.log(`[SIAL] Scroll attempt ${attempt + 1}: ${currentCount} exhibitors found`);
+        await new Promise(r => setTimeout(r, 1000));
 
-        // Si pas de nouveaux resultats apres 3 tentatives, arreter
+        const currentCount = await page.evaluate(() =>
+          document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"], [class*="exhibitor"]').length
+        );
+
         if (currentCount === previousCount) {
           noNewResultsCount++;
-          if (noNewResultsCount >= 3) {
-            console.log('[SIAL] No new results after 3 attempts, stopping');
-            break;
-          }
+          if (noNewResultsCount >= 5) break;
         } else {
           noNewResultsCount = 0;
           previousCount = currentCount;
         }
 
-        // Essayer de charger plus
-        await page.evaluate(() => {
-          // Cliquer sur tous les boutons "Load More" / "Voir plus"
-          const loadMoreButtons = document.querySelectorAll(
-            'button[class*="load"], button[class*="more"], button[class*="Load"], ' +
-            '[class*="pagination"] button, [class*="load-more"], [class*="voir-plus"], ' +
-            'button:not([disabled])[class*="next"], a[class*="next"]:not(.disabled)'
-          );
-          loadMoreButtons.forEach(btn => {
-            if ((btn as HTMLElement).offsetParent !== null) { // Visible
-              (btn as HTMLElement).click();
-            }
-          });
-
-          // Scroll au bas de la page
-          window.scrollTo(0, document.documentElement.scrollHeight);
-        });
-
-        await new Promise(r => setTimeout(r, 2000)); // Attendre le chargement
+        if (i % 20 === 0) {
+          const results = await extractExhibitors(page, seen);
+          companies.push(...results);
+          console.log(`[SIAL] Scroll ${i}: ${companies.length} total exhibitors`);
+        }
       }
 
-      // Extraire tous les exposants
-      console.log('[SIAL] Extracting all exhibitors...');
-      const pageCompanies = await page.evaluate(() => {
-        const items: any[] = [];
-        const seen = new Set<string>();
+      // Extraction finale
+      const finalResults = await extractExhibitors(page, seen);
+      companies.push(...finalResults);
 
-        // Chercher tous les liens vers les exposants
-        const exhibitorLinks = document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"]');
-        console.log(`[SIAL] Found ${exhibitorLinks.length} exhibitor links`);
+      // Methode 3: Extraire les donnees des reponses API capturees
+      console.log('[SIAL] Processing captured API data...');
+      for (const { data } of apiData) {
+        extractFromApiData(data, companies, seen);
+      }
 
-        exhibitorLinks.forEach(el => {
-          const link = el as HTMLAnchorElement;
-          const name = link.textContent?.trim() || '';
-
-          // Aussi chercher le nom dans les elements enfants
-          const nameEl = link.querySelector('h3, h4, h5, span[class*="name"], span[class*="title"], div[class*="name"]');
-          const extractedName = nameEl?.textContent?.trim() || name;
-
-          // Chercher le pays et stand dans le parent
-          const parent = link.closest('[class*="card"], [class*="Card"], [class*="item"], [class*="Item"], li, article');
-          const countryEl = parent?.querySelector('[class*="country"], [class*="Country"], [class*="flag"], [class*="location"]');
-          const standEl = parent?.querySelector('[class*="stand"], [class*="Stand"], [class*="booth"]');
-
-          const cleanName = extractedName.replace(/\s+/g, ' ').trim();
-
-          if (cleanName && cleanName.length > 2 && cleanName.length < 200 &&
-              !cleanName.toLowerCase().includes('voir') &&
-              !cleanName.toLowerCase().includes('exposant') &&
-              !seen.has(cleanName.toLowerCase())) {
-            seen.add(cleanName.toLowerCase());
-            items.push({
-              raisonSociale: cleanName,
-              urlPageExposant: link.href || undefined,
-              numeroStand: standEl?.textContent?.trim() || undefined,
-              pays: countryEl?.textContent?.trim() || 'FR'
-            });
-          }
-        });
-
-        // Aussi essayer les cartes/items generiques
-        const cards = document.querySelectorAll('[class*="ExhibitorCard"], [class*="exhibitor-card"], [class*="CardExhibitor"]');
-        cards.forEach(card => {
-          const nameEl = card.querySelector('h3, h4, h5, [class*="title"], [class*="name"]');
-          const linkEl = card.querySelector('a') as HTMLAnchorElement;
-          const name = nameEl?.textContent?.trim();
-
-          if (name && !seen.has(name.toLowerCase())) {
-            seen.add(name.toLowerCase());
-            items.push({
-              raisonSociale: name.replace(/\s+/g, ' ').trim(),
-              urlPageExposant: linkEl?.href || undefined,
-              pays: 'FR'
-            });
-          }
-        });
-
-        return items;
-      });
-
-      console.log(`[SIAL] Extracted ${pageCompanies.length} unique companies`);
-      companies.push(...pageCompanies);
+      console.log(`[SIAL] Total: ${companies.length} unique companies`);
 
     } catch (error: any) {
       console.error('[SIAL Adapter] Error:', error.message);
@@ -510,10 +487,105 @@ const SIALComexposiumAdapter: SalonAdapter = {
       await page.close();
     }
 
-    console.log(`[SIAL] Total: ${companies.length} companies scraped`);
     return companies;
   }
 };
+
+// Helper function pour extraire les exposants de la page
+async function extractExhibitors(page: Page, seen: Set<string>): Promise<ScrapedCompany[]> {
+  const items: ScrapedCompany[] = [];
+
+  const pageCompanies = await page.evaluate(() => {
+    const results: any[] = [];
+
+    // Methode 1: Liens vers exposants
+    document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"]').forEach(el => {
+      const link = el as HTMLAnchorElement;
+      let name = link.textContent?.trim() || '';
+
+      // Chercher le nom dans les enfants
+      const nameEl = link.querySelector('h3, h4, h5, span, div');
+      if (nameEl) name = nameEl.textContent?.trim() || name;
+
+      // Extraire le nom du href si vide
+      if (!name && link.href) {
+        const match = link.href.match(/\/Exposant\/([^\/\?]+)/i);
+        if (match) name = decodeURIComponent(match[1]).replace(/-/g, ' ');
+      }
+
+      const parent = link.closest('[class*="card"], [class*="item"], li, article, div');
+      const country = parent?.querySelector('[class*="country"], [class*="flag"]')?.textContent?.trim();
+
+      if (name && name.length > 2 && name.length < 200) {
+        results.push({
+          raisonSociale: name.replace(/\s+/g, ' ').trim(),
+          urlPageExposant: link.href,
+          pays: country || 'France'
+        });
+      }
+    });
+
+    // Methode 2: Elements avec data attributes
+    document.querySelectorAll('[data-exhibitor], [data-company], [data-vendor]').forEach(el => {
+      const name = el.getAttribute('data-exhibitor') || el.getAttribute('data-company') || el.textContent?.trim();
+      if (name && name.length > 2) {
+        results.push({
+          raisonSociale: name.replace(/\s+/g, ' ').trim(),
+          pays: 'France'
+        });
+      }
+    });
+
+    return results;
+  });
+
+  for (const company of pageCompanies) {
+    const key = company.raisonSociale.toLowerCase();
+    if (!seen.has(key) && !key.includes('voir') && !key.includes('exposant')) {
+      seen.add(key);
+      items.push(company);
+    }
+  }
+
+  return items;
+}
+
+// Helper function pour extraire les donnees des reponses API
+function extractFromApiData(data: any, companies: ScrapedCompany[], seen: Set<string>): void {
+  if (!data) return;
+
+  // Parcourir recursivement pour trouver les donnees d'exposants
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      extractFromApiData(item, companies, seen);
+    }
+  } else if (typeof data === 'object') {
+    // Chercher les champs typiques d'exposants
+    const name = data.name || data.nom || data.raisonSociale || data.companyName ||
+                 data.exhibitorName || data.title || data.label;
+
+    if (name && typeof name === 'string' && name.length > 2 && name.length < 200) {
+      const key = name.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        companies.push({
+          raisonSociale: name.replace(/\s+/g, ' ').trim(),
+          siteWeb: data.website || data.url || data.siteWeb,
+          pays: data.country || data.pays || 'France',
+          ville: data.city || data.ville,
+          descriptionActivite: data.description || data.activity
+        });
+      }
+    }
+
+    // Continuer la recursion
+    for (const key of Object.keys(data)) {
+      if (data[key] && typeof data[key] === 'object') {
+        extractFromApiData(data[key], companies, seen);
+      }
+    }
+  }
+}
 
 /**
  * Adaptateur Generique - Pour les sites avec structure standard

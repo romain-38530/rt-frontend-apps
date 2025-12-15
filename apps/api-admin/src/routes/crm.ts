@@ -87,6 +87,20 @@ router.get('/dashboard', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== MIGRATION - Temporaire pour ajouter tous les leads au pool ====================
+router.post('/migrate-to-pool', async (_req: Request, res: Response) => {
+  try {
+    // Mettre tous les leads qui ne sont pas dans le pool
+    const result = await LeadCompany.updateMany(
+      { inPool: { $ne: true }, commercialAssigneId: { $exists: false } },
+      { $set: { inPool: true, dateAddedToPool: new Date(), prioritePool: 3 } }
+    );
+    res.json({ success: true, modified: result.modifiedCount, matched: result.matchedCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== SALONS ====================
 
 router.get('/salons', async (req: Request, res: Response) => {
