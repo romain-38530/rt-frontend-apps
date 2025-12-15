@@ -41,7 +41,8 @@ export { NotificationBell, NotificationPanel } from './Notifications';
 export type { Notification } from './Notifications';
 
 // Tracking Components
-export { MapView, TrackingPanel } from './components/Tracking';
+export { MapView, TrackingPanel, TrackingFeed } from './components/Tracking';
+export type { TrackingFeedProps, TrackingEvent, AIInsight } from './components/Tracking';
 
 // Appointments Components
 export { Calendar } from './components/Appointments';
@@ -118,3 +119,15 @@ export type {
   ERPSystem,
   ExportResult
 } from './components/Billing';
+
+// Order Detail Components - Composants partagés pour les pages commandes
+export { OrderProgressStepper, CarrierInfoCard } from './components/Order';
+export type { OrderProgressStepperProps, CarrierInfoCardProps } from './components/Order';
+
+// Appointments Components - Gestion des RDV transporteur <-> industriel
+export { AppointmentRequestForm, AppointmentResponsePanel } from './components/Appointments';
+export type { AppointmentRequestFormProps, AppointmentRequestData, AppointmentResponsePanelProps, AppointmentRequest } from './components/Appointments';
+
+// Auto Planning Components - Planification automatique avec escalade Affret.IA
+export { AutoPlanningModal } from './components/AutoPlanning';
+export type { AutoPlanningModalProps, CarrierMatch } from './components/AutoPlanning';

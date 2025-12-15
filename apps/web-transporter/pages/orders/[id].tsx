@@ -9,10 +9,12 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
-import { ordersApi } from '../../lib/api';
+import { ordersApi, API_CONFIG } from '../../lib/api';
 import { DeliveryConfirmation, DocumentUpload } from '../../components';
 import PaletteExchange from '../../components/PaletteExchange';
 import { palettesOrderApi, PalletTracking } from '../../lib/palettes-api';
+import { OrderProgressStepper, CarrierInfoCard, AppointmentRequestForm, TrackingFeed } from '@rt/ui-components';
+import type { AppointmentRequestData } from '@rt/ui-components';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
@@ -43,6 +45,9 @@ export default function OrderDetailPage() {
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [palletTracking, setPalletTracking] = useState<PalletTracking | null>(null);
+  const [showLoadingRdv, setShowLoadingRdv] = useState(false);
+  const [showDeliveryRdv, setShowDeliveryRdv] = useState(false);
+  const [rdvSuccess, setRdvSuccess] = useState<string | null>(null);
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
@@ -104,6 +109,31 @@ export default function OrderDetailPage() {
   const handleDocumentUploadSuccess = (documentId: string) => {
     console.log('Document uploaded:', documentId);
     loadDocuments();
+  };
+
+  // Soumettre demande de RDV
+  const handleAppointmentRequest = async (data: AppointmentRequestData) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'envoi de la demande');
+      }
+
+      setShowLoadingRdv(false);
+      setShowDeliveryRdv(false);
+      setRdvSuccess(data.type === 'loading' ? 'Demande de RDV chargement envoyée !' : 'Demande de RDV livraison envoyée !');
+      setTimeout(() => setRdvSuccess(null), 5000);
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'envoi de la demande');
+    }
   };
 
   useEffect(() => {
@@ -286,11 +316,22 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+        {/* Echelle de statut */}
+        <OrderProgressStepper status={order.status} />
+
         {/* Contenu */}
         <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
             {/* Colonne principale */}
             <div>
+              {/* Transporteur assigne */}
+              <CarrierInfoCard
+                carrierName={(order as any).carrierName || (order as any).assignedCarrier?.carrierName}
+                driverName={(order as any).driverName}
+                vehiclePlate={(order as any).vehiclePlate}
+                driverPhone={(order as any).driverPhone}
+              />
+
               {/* Itinéraire */}
               <div style={cardStyle}>
                 <h2 style={sectionTitleStyle}>🗺️ Itinéraire</h2>
@@ -314,6 +355,29 @@ export default function OrderDetailPage() {
                         <div style={{ ...labelStyle, color: '#15803d' }}>Date prévue</div>
                         <div style={{ ...valueStyle, fontSize: '13px' }}>{formatDate(order.dates.pickupDate)}</div>
                       </div>
+                      {['carrier_accepted', 'sent_to_carrier'].includes(order.status) && (
+                        <button
+                          onClick={() => setShowLoadingRdv(true)}
+                          style={{
+                            marginTop: '12px',
+                            width: '100%',
+                            padding: '10px 16px',
+                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          📅 Demander RDV chargement
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -336,6 +400,29 @@ export default function OrderDetailPage() {
                         <div style={{ ...labelStyle, color: '#1e40af' }}>Date prévue</div>
                         <div style={{ ...valueStyle, fontSize: '13px' }}>{formatDate(order.dates.deliveryDate)}</div>
                       </div>
+                      {['carrier_accepted', 'sent_to_carrier', 'in_transit', 'loaded'].includes(order.status) && (
+                        <button
+                          onClick={() => setShowDeliveryRdv(true)}
+                          style={{
+                            marginTop: '12px',
+                            width: '100%',
+                            padding: '10px 16px',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          📅 Demander RDV livraison
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -512,68 +599,17 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {/* Colonne secondaire - Timeline */}
+            {/* Colonne secondaire - Timeline avec TrackingFeed temps réel */}
             <div>
               <div style={cardStyle}>
-                <h2 style={sectionTitleStyle}>📋 Timeline des événements</h2>
-                {events.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                    Aucun événement pour le moment
-                  </div>
-                ) : (
-                  <div style={{ position: 'relative', paddingLeft: '24px' }}>
-                    {/* Ligne verticale */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '8px',
-                        top: '8px',
-                        bottom: '8px',
-                        width: '2px',
-                        backgroundColor: '#e5e7eb',
-                      }}
-                    />
-
-                    {events.map((event, index) => (
-                      <div
-                        key={event.id}
-                        style={{
-                          position: 'relative',
-                          paddingBottom: index < events.length - 1 ? '20px' : '0',
-                        }}
-                      >
-                        {/* Dot */}
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: '-20px',
-                            top: '4px',
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            backgroundColor: '#667eea',
-                            border: '2px solid white',
-                            boxShadow: '0 0 0 2px #e5e7eb',
-                          }}
-                        />
-
-                        <div style={{ marginBottom: '4px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
-                            {event.description}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                            {formatDate(event.timestamp)}
-                          </div>
-                          {event.userName && (
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
-                              Par {event.userName}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <TrackingFeed
+                  orderId={order.id}
+                  compact={true}
+                  autoRefresh={true}
+                  refreshInterval={30000}
+                  apiUrl={API_CONFIG.ORDERS_API}
+                  onRefresh={() => console.log('Refreshing tracking data...')}
+                />
               </div>
 
               {/* Suivi des palettes Europe */}
@@ -612,6 +648,7 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>
@@ -625,6 +662,97 @@ export default function OrderDetailPage() {
           onSuccess={handleDeliverySuccess}
           onCancel={() => setShowDeliveryConfirmation(false)}
         />
+      )}
+
+      {/* Modal de demande de RDV chargement */}
+      {showLoadingRdv && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div style={{ maxWidth: '600px', width: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+            <AppointmentRequestForm
+              orderId={order.id}
+              orderReference={order.reference}
+              type="loading"
+              targetOrganizationId={(order as any).shipperId || 'unknown'}
+              targetOrganizationName={order.pickupAddress.contactName}
+              requesterId={(order as any).carrierId || 'carrier'}
+              requesterName={(order as any).carrierName || 'Transporteur'}
+              carrierName={(order as any).carrierName}
+              driverName={(order as any).driverName}
+              driverPhone={(order as any).driverPhone}
+              vehiclePlate={(order as any).vehiclePlate}
+              suggestedDate={order.dates.pickupDate?.split('T')[0]}
+              onSubmit={handleAppointmentRequest}
+              onCancel={() => setShowLoadingRdv(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de demande de RDV livraison */}
+      {showDeliveryRdv && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div style={{ maxWidth: '600px', width: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+            <AppointmentRequestForm
+              orderId={order.id}
+              orderReference={order.reference}
+              type="unloading"
+              targetOrganizationId={(order as any).recipientId || 'unknown'}
+              targetOrganizationName={order.deliveryAddress.contactName}
+              requesterId={(order as any).carrierId || 'carrier'}
+              requesterName={(order as any).carrierName || 'Transporteur'}
+              carrierName={(order as any).carrierName}
+              driverName={(order as any).driverName}
+              driverPhone={(order as any).driverPhone}
+              vehiclePlate={(order as any).vehiclePlate}
+              suggestedDate={order.dates.deliveryDate?.split('T')[0]}
+              onSubmit={handleAppointmentRequest}
+              onCancel={() => setShowDeliveryRdv(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Notification de succès RDV */}
+      {rdvSuccess && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          padding: '16px 24px',
+          backgroundColor: '#10b981',
+          color: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          fontWeight: '600',
+          zIndex: 200,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          ✅ {rdvSuccess}
+        </div>
       )}
     </>
   );

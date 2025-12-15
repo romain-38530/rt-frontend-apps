@@ -9,8 +9,11 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
-import { ordersApi } from '../../lib/api';
+import { ordersApi, API_CONFIG } from '../../lib/api';
+import { AppointmentResponsePanel, AutoPlanningModal, TrackingFeed } from '@rt/ui-components';
+import type { AppointmentRequest } from '@rt/ui-components';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
+import { useToast } from '@rt/ui-components';
 
 // Dynamic import for Leaflet map (client-side only)
 const OrderMap = dynamic(() => import('../../components/OrderMap'), {
@@ -50,7 +53,11 @@ export default function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [activeTab, setActiveTab] = useState<'evenements' | 'documents' | 'charte'>('evenements');
+  const [activeTab, setActiveTab] = useState<'evenements' | 'documents' | 'charte' | 'rdv'>('evenements');
+  const [appointmentRequests, setAppointmentRequests] = useState<AppointmentRequest[]>([]);
+  const [loadingRdv, setLoadingRdv] = useState(false);
+  const [showPlanningModal, setShowPlanningModal] = useState(false);
+  const { toast } = useToast();
 
   // Extract order ID from URL path
   useEffect(() => {
@@ -87,12 +94,110 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Charger les demandes de RDV pour cette commande
+  const loadAppointmentRequests = async () => {
+    if (!orderId) return;
+    setLoadingRdv(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments/order/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAppointmentRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error('Error loading appointment requests:', err);
+    } finally {
+      setLoadingRdv(false);
+    }
+  };
+
+  // Proposer un créneau
+  const handleProposeSlot = async (requestId: string, slotData: any) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments/${requestId}/propose`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(slotData),
+      });
+      if (response.ok) {
+        loadAppointmentRequests();
+      }
+    } catch (err) {
+      console.error('Error proposing slot:', err);
+    }
+  };
+
+  // Accepter une date préférée
+  const handleAcceptPreferred = async (requestId: string, dateIndex: number) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments/${requestId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ acceptedDateIndex: dateIndex }),
+      });
+      if (response.ok) {
+        loadAppointmentRequests();
+      }
+    } catch (err) {
+      console.error('Error accepting date:', err);
+    }
+  };
+
+  // Rejeter une demande
+  const handleReject = async (requestId: string, reason: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments/${requestId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+      if (response.ok) {
+        loadAppointmentRequests();
+      }
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+    }
+  };
+
+  // Envoyer un message
+  const handleSendMessage = async (requestId: string, message: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002'}/api/v1/appointments/${requestId}/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ content: message }),
+      });
+      if (response.ok) {
+        loadAppointmentRequests();
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
     loadOrder();
+    loadAppointmentRequests();
   }, [orderId]);
 
   const formatDate = (dateString: string) => {
@@ -201,11 +306,33 @@ export default function OrderDetailPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Bouton Planification Auto - visible si pas encore de transporteur assigné */}
+                {!order.carrierId && ['created', 'draft'].includes(order.status) && (
+                  <button
+                    onClick={() => setShowPlanningModal(true)}
+                    style={{
+                      padding: '10px 16px',
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                    }}
+                  >
+                    🤖 Planification Auto
+                  </button>
+                )}
                 {/* Bouton Modifier - visible si commande pas encore en transit */}
                 {!['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered', 'closed', 'cancelled'].includes(order.status) && (
                   <button
                     onClick={() => router.push(`/orders/${order.id}/edit`)}
-                    style={{ padding: '10px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                    style={{ padding: '10px 16px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                   >
                     ✏️ Modifier
                   </button>
@@ -249,6 +376,91 @@ export default function OrderDetailPage() {
                   <div style={{ fontWeight: '600', color: '#111827' }}>{formatDateTime(order.createdAt)}</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Échelle de statut - Progress Stepper */}
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '20px 24px' }}>
+          <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+              {/* Ligne de progression */}
+              <div style={{ position: 'absolute', top: '20px', left: '60px', right: '60px', height: '3px', backgroundColor: '#e5e7eb', zIndex: 0 }} />
+              <div style={{
+                position: 'absolute',
+                top: '20px',
+                left: '60px',
+                height: '3px',
+                backgroundColor: '#667eea',
+                zIndex: 1,
+                width: (() => {
+                  const steps = ['created', 'sent_to_carrier', 'carrier_accepted', 'in_transit', 'arrived_delivery', 'delivered', 'closed'];
+                  const status = order.status as string;
+                  const currentIndex = steps.findIndex(s => s === status ||
+                    (status === 'draft' && s === 'created') ||
+                    (status === 'pending' && s === 'created') ||
+                    (status === 'arrived_pickup' && s === 'in_transit') ||
+                    (status === 'loaded' && s === 'in_transit')
+                  );
+                  if (currentIndex <= 0) return '0%';
+                  return `${(currentIndex / (steps.length - 1)) * 100}%`;
+                })(),
+                transition: 'width 0.5s ease',
+              }} />
+
+              {/* Étapes */}
+              {[
+                { key: 'created', label: 'Créée', icon: '✅' },
+                { key: 'sent_to_carrier', label: 'Envoyée', icon: '📨' },
+                { key: 'carrier_accepted', label: 'Acceptée', icon: '👍' },
+                { key: 'in_transit', label: 'Transit', icon: '🚛' },
+                { key: 'arrived_delivery', label: 'Arrivé', icon: '🎯' },
+                { key: 'delivered', label: 'Livrée', icon: '✨' },
+                { key: 'closed', label: 'Clôturée', icon: '🔒' },
+              ].map((step, index) => {
+                const steps = ['created', 'sent_to_carrier', 'carrier_accepted', 'in_transit', 'arrived_delivery', 'delivered', 'closed'];
+                const status = order.status as string;
+                const currentIndex = steps.findIndex(s => s === status ||
+                  (status === 'draft' && s === 'created') ||
+                  (status === 'pending' && s === 'created') ||
+                  (status === 'arrived_pickup' && s === 'in_transit') ||
+                  (status === 'loaded' && s === 'in_transit')
+                );
+                const isCompleted = index < currentIndex;
+                const isCurrent = index === currentIndex;
+                const isUpcoming = index > currentIndex;
+
+                return (
+                  <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isCompleted ? '#22c55e' : isCurrent ? '#667eea' : '#e5e7eb',
+                      color: isCompleted || isCurrent ? 'white' : '#9ca3af',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      border: isCurrent ? '3px solid #c7d2fe' : 'none',
+                      boxShadow: isCurrent ? '0 0 0 4px rgba(102, 126, 234, 0.2)' : 'none',
+                      transition: 'all 0.3s ease',
+                    }}>
+                      {isCompleted ? '✓' : step.icon}
+                    </div>
+                    <div style={{
+                      marginTop: '8px',
+                      fontSize: '12px',
+                      fontWeight: isCurrent ? '700' : '500',
+                      color: isCompleted ? '#22c55e' : isCurrent ? '#667eea' : '#9ca3af',
+                      textAlign: 'center',
+                    }}>
+                      {step.label}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -549,6 +761,7 @@ export default function OrderDetailPage() {
               <div style={{ display: 'flex', backgroundColor: 'white', borderRadius: '8px 8px 0 0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 {[
                   { key: 'evenements', label: 'Événements' },
+                  { key: 'rdv', label: `RDV${appointmentRequests.filter(r => r.status === 'pending').length > 0 ? ` (${appointmentRequests.filter(r => r.status === 'pending').length})` : ''}` },
                   { key: 'documents', label: 'Documents' },
                   { key: 'charte', label: 'Charte' },
                 ].map((tab) => (
@@ -575,7 +788,7 @@ export default function OrderDetailPage() {
               {/* Contenu des tabs */}
               <div style={{ backgroundColor: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', flex: 1, minHeight: '500px' }}>
 
-                {/* Tab Événements */}
+                {/* Tab Événements - avec TrackingFeed temps réel */}
                 {activeTab === 'evenements' && (
                   <div style={{ padding: '20px' }}>
                     {/* Zone commentaire */}
@@ -613,39 +826,59 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
 
-                    {/* Timeline */}
-                    <div style={{ position: 'relative' }}>
-                      {events.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
-                          <div>Aucun événement pour le moment</div>
+                    {/* TrackingFeed temps réel - visible dès qu'un transporteur est assigné */}
+                    {order.carrierId ? (
+                      <TrackingFeed
+                        orderId={order.id}
+                        compact={true}
+                        autoRefresh={true}
+                        refreshInterval={30000}
+                        apiUrl={API_CONFIG.ORDERS_API}
+                        onRefresh={() => console.log('Refreshing tracking data...')}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
+                        <div>Aucun événement pour le moment</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px', color: '#6b7280' }}>
+                          Le suivi temps réel sera disponible une fois un transporteur assigné
                         </div>
-                      ) : (
-                        <div style={{ position: 'relative', paddingLeft: '24px' }}>
-                          <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '2px', backgroundColor: '#e5e7eb' }} />
-                          {events.map((event, idx) => (
-                            <div key={event.id || idx} style={{ position: 'relative', paddingBottom: idx < events.length - 1 ? '20px' : '0' }}>
-                              <div style={{
-                                position: 'absolute',
-                                left: '-20px',
-                                top: '4px',
-                                width: '12px',
-                                height: '12px',
-                                borderRadius: '50%',
-                                backgroundColor: '#667eea',
-                                border: '2px solid white',
-                                boxShadow: '0 0 0 2px #e5e7eb',
-                              }} />
-                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{event.description}</div>
-                              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
-                                {formatDateTime(event.timestamp)}
-                                {event.userName && ` • ${event.userName}`}
-                              </div>
-                            </div>
-                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab RDV */}
+                {activeTab === 'rdv' && (
+                  <div style={{ padding: '20px' }}>
+                    {loadingRdv ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                        Chargement des demandes de RDV...
+                      </div>
+                    ) : appointmentRequests.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>📅</div>
+                        <div>Aucune demande de RDV pour cette commande</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px', color: '#6b7280' }}>
+                          Les transporteurs peuvent demander des créneaux de chargement/livraison
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {appointmentRequests.map((request) => (
+                          <AppointmentResponsePanel
+                            key={request.requestId}
+                            request={request}
+                            responderId="industry-user"
+                            responderName="Industriel"
+                            onAccept={(requestId, slotId) => handleAcceptPreferred(requestId, slotId ? parseInt(slotId) : 0)}
+                            onPropose={(requestId, slotData, message) => handleProposeSlot(requestId, slotData)}
+                            onReject={(requestId, reason) => handleReject(requestId, reason)}
+                            onMessage={(requestId, content) => handleSendMessage(requestId, content)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -736,10 +969,34 @@ export default function OrderDetailPage() {
                   <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{order.notes}</div>
                 </div>
               )}
+
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de planification automatique */}
+      {showPlanningModal && order && (
+        <AutoPlanningModal
+          orders={[order]}
+          onClose={() => {
+            setShowPlanningModal(false);
+            loadOrder();
+          }}
+          onValidate={async (orderId, carrierId) => {
+            try {
+              await OrdersService.updateOrder(orderId, { carrierId, status: 'sent_to_carrier' as any });
+              toast.success('Transporteur assigné avec succès');
+            } catch (err: any) {
+              toast.error(`Erreur: ${err.message}`);
+            }
+          }}
+          onEscalateToAffretIA={(orderIds) => {
+            sessionStorage.setItem('affretia_orders', JSON.stringify([order]));
+            router.push('/affret-ia?mode=escalated');
+          }}
+        />
+      )}
     </>
   );
 }
