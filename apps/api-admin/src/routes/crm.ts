@@ -223,7 +223,11 @@ router.post('/salons/:id/scrape', async (req: Request, res: Response) => {
             salonSourceId: salon._id,
             urlPageExposant: company.urlPageExposant,
             numeroStand: company.numeroStand,
-            statutProspection: 'NEW'
+            statutProspection: 'NEW',
+            // Automatiquement ajouter au pool de leads
+            inPool: true,
+            dateAddedToPool: new Date(),
+            prioritePool: 3  // Priorite moyenne par defaut
           });
           created++;
         } catch (companyError: any) {

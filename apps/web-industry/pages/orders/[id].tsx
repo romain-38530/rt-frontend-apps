@@ -6,10 +6,21 @@
 import { useEffect, useState } from 'react';
 import { useSafeRouter } from '../../lib/useSafeRouter';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
 import { ordersApi } from '../../lib/api';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
+
+// Dynamic import for Leaflet map (client-side only)
+const OrderMap = dynamic(() => import('../../components/OrderMap'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ height: '250px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: '#9ca3af' }}>Chargement de la carte...</div>
+    </div>
+  ),
+});
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
   draft: { label: 'Brouillon', color: '#6b7280', bgColor: '#f3f4f6' },
@@ -190,6 +201,15 @@ export default function OrderDetailPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Bouton Modifier - visible si commande pas encore en transit */}
+                {!['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered', 'closed', 'cancelled'].includes(order.status) && (
+                  <button
+                    onClick={() => router.push(`/orders/${order.id}/edit`)}
+                    style={{ padding: '10px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                  >
+                    ✏️ Modifier
+                  </button>
+                )}
                 {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
                   <button
                     onClick={() => router.push(`/orders/${order.id}/tracking`)}
@@ -281,38 +301,27 @@ export default function OrderDetailPage() {
 
               {/* Carte et infos distance */}
               <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-                {/* Carte OpenStreetMap */}
+                {/* Carte Leaflet avec 2 marqueurs */}
                 <div style={{ height: '250px', position: 'relative' }}>
-                  {(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude) ? (
-                    <iframe
-                      width="100%"
-                      height="250"
-                      style={{ border: 0 }}
-                      loading="lazy"
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${
-                        Math.min(orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude, orderAny.deliveryAddress?.longitude || orderAny.delivery?.coordinates?.longitude) - 0.5
-                      },${
-                        Math.min(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude, orderAny.deliveryAddress?.latitude || orderAny.delivery?.coordinates?.latitude) - 0.3
-                      },${
-                        Math.max(orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude, orderAny.deliveryAddress?.longitude || orderAny.delivery?.coordinates?.longitude) + 0.5
-                      },${
-                        Math.max(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude, orderAny.deliveryAddress?.latitude || orderAny.delivery?.coordinates?.latitude) + 0.3
-                      }&layer=mapnik&marker=${orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude},${orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude}`}
-                    />
-                  ) : (
-                    <div style={{ height: '250px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🗺️</div>
-                        <div>Carte du trajet</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                          {order.pickupAddress?.city} → {order.deliveryAddress?.city}
-                        </div>
-                        <div style={{ fontSize: '11px', marginTop: '8px', color: '#9ca3af' }}>
-                          Coordonnées GPS non disponibles
-                        </div>
-                      </div>
+                  <OrderMap
+                    pickupLat={orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude}
+                    pickupLon={orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude}
+                    pickupCity={order.pickupAddress?.city}
+                    deliveryLat={orderAny.deliveryAddress?.latitude || orderAny.delivery?.coordinates?.latitude}
+                    deliveryLon={orderAny.deliveryAddress?.longitude || orderAny.delivery?.coordinates?.longitude}
+                    deliveryCity={order.deliveryAddress?.city}
+                  />
+                  {/* Légende des marqueurs */}
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'white', padding: '8px 12px', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 1000, fontSize: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <span style={{ width: '12px', height: '12px', backgroundColor: '#22c55e', borderRadius: '50%' }}></span>
+                      <span>Enlèvement</span>
                     </div>
-                  )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '12px', height: '12px', backgroundColor: '#3b82f6', borderRadius: '50%' }}></span>
+                      <span>Livraison</span>
+                    </div>
+                  </div>
                   {/* Bouton tracking sur la carte */}
                   {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
                     <button
