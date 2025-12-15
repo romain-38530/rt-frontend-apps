@@ -205,20 +205,29 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Infos donneur d'ordre et transporteur */}
-            <div style={{ display: 'flex', gap: '32px', fontSize: '14px', color: '#6b7280' }}>
-              <div>
-                <span style={{ fontWeight: '600', color: '#374151' }}>Donneur d'ordre:</span>{' '}
-                {orderAny.industrialName || orderAny.industrialId || 'Non défini'}
+            <div style={{ display: 'flex', gap: '32px', fontSize: '14px', color: '#6b7280', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>🏭</span>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>Donneur d'ordre</div>
+                  <div style={{ fontWeight: '600', color: '#111827' }}>{orderAny.industrialName || orderAny.organizationName || orderAny.companyName || 'Non défini'}</div>
+                </div>
               </div>
               {order.carrierId && (
-                <div>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Transporteur:</span>{' '}
-                  {orderAny.carrierName || order.carrierId}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>🚛</span>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>Transporteur</div>
+                    <div style={{ fontWeight: '600', color: '#111827' }}>{orderAny.carrierName || orderAny.assignedCarrier?.carrierName || order.carrierId}</div>
+                  </div>
                 </div>
               )}
-              <div>
-                <span style={{ fontWeight: '600', color: '#374151' }}>Créé le:</span>{' '}
-                {formatDateTime(order.createdAt)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>📅</span>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>Créé le</div>
+                  <div style={{ fontWeight: '600', color: '#111827' }}>{formatDateTime(order.createdAt)}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -230,22 +239,85 @@ export default function OrderDetailPage() {
             {/* Colonne gauche */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-              {/* Carte et infos distance */}
-              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-                {/* Placeholder carte */}
-                <div style={{ height: '250px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>🗺️</div>
-                    <div>Carte du trajet</div>
-                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                      {order.pickupAddress.city} → {order.deliveryAddress.city}
+              {/* Transporteur assigné */}
+              {order.carrierId && (
+                <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden', border: '2px solid #3b82f6' }}>
+                  <div style={{ padding: '16px 20px', backgroundColor: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🚛</div>
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e40af' }}>Transporteur assigné</div>
+                        <div style={{ fontSize: '13px', color: '#6b7280' }}>Commande acceptée</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>{formatPrice(order.finalPrice || order.estimatedPrice, order.currency)}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Prix accepté</div>
                     </div>
                   </div>
+                  <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Entreprise</div>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#111827' }}>{orderAny.carrierName || orderAny.assignedCarrier?.carrierName || order.carrierId}</div>
+                    </div>
+                    {orderAny.assignedCarrier?.driverName && (
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Chauffeur</div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{orderAny.assignedCarrier.driverName}</div>
+                        {orderAny.assignedCarrier.driverPhone && (
+                          <div style={{ fontSize: '13px', color: '#3b82f6', marginTop: '2px' }}>📞 {orderAny.assignedCarrier.driverPhone}</div>
+                        )}
+                      </div>
+                    )}
+                    {orderAny.assignedCarrier?.vehiclePlate && (
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Véhicule</div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', fontFamily: 'monospace', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '4px', display: 'inline-block' }}>{orderAny.assignedCarrier.vehiclePlate}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Carte et infos distance */}
+              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                {/* Carte OpenStreetMap */}
+                <div style={{ height: '250px', position: 'relative' }}>
+                  {(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude) ? (
+                    <iframe
+                      width="100%"
+                      height="250"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                        Math.min(orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude, orderAny.deliveryAddress?.longitude || orderAny.delivery?.coordinates?.longitude) - 0.5
+                      },${
+                        Math.min(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude, orderAny.deliveryAddress?.latitude || orderAny.delivery?.coordinates?.latitude) - 0.3
+                      },${
+                        Math.max(orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude, orderAny.deliveryAddress?.longitude || orderAny.delivery?.coordinates?.longitude) + 0.5
+                      },${
+                        Math.max(orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude, orderAny.deliveryAddress?.latitude || orderAny.delivery?.coordinates?.latitude) + 0.3
+                      }&layer=mapnik&marker=${orderAny.pickupAddress?.latitude || orderAny.pickup?.coordinates?.latitude},${orderAny.pickupAddress?.longitude || orderAny.pickup?.coordinates?.longitude}`}
+                    />
+                  ) : (
+                    <div style={{ height: '250px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🗺️</div>
+                        <div>Carte du trajet</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                          {order.pickupAddress?.city} → {order.deliveryAddress?.city}
+                        </div>
+                        <div style={{ fontSize: '11px', marginTop: '8px', color: '#9ca3af' }}>
+                          Coordonnées GPS non disponibles
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {/* Bouton tracking sur la carte */}
                   {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
                     <button
                       onClick={() => router.push(`/orders/${order.id}/tracking`)}
-                      style={{ position: 'absolute', bottom: '16px', right: '16px', padding: '8px 16px', background: '#667eea', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}
+                      style={{ position: 'absolute', bottom: '16px', right: '16px', padding: '8px 16px', background: '#667eea', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: '600', zIndex: 1000 }}
                     >
                       Voir le tracking en direct
                     </button>
