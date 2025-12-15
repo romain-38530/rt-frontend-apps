@@ -666,6 +666,8 @@ export const crmApi = {
     page?: number;
     limit?: number;
     pays?: string;
+    ville?: string;
+    departement?: string;
     secteur?: string;
     minScore?: number;
     priorite?: number;
@@ -676,6 +678,8 @@ export const crmApi = {
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.limit) params.append('limit', String(filters.limit));
     if (filters?.pays) params.append('pays', filters.pays);
+    if (filters?.ville) params.append('ville', filters.ville);
+    if (filters?.departement) params.append('departement', filters.departement);
     if (filters?.secteur) params.append('secteur', filters.secteur);
     if (filters?.minScore) params.append('minScore', String(filters.minScore));
     if (filters?.priorite) params.append('priorite', String(filters.priorite));
