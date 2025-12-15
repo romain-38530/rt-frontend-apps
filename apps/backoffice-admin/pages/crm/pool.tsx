@@ -10,13 +10,21 @@ interface PoolLead {
   _id: string;
   raisonSociale: string;
   siteWeb?: string;
-  adresse: { pays: string; ville?: string };
+  telephone?: string;
+  emailGenerique?: string;
+  adresse: {
+    pays: string;
+    ville?: string;
+    ligne1?: string;
+    codePostal?: string;
+  };
   secteurActivite?: string;
   scoreLead?: number;
   prioritePool?: number;
   nbContactsEnrichis?: number;
   dateAddedToPool?: string;
   salonSourceId?: { _id: string; nom: string };
+  produits?: string[];
   contacts?: Array<{
     prenom: string;
     nom: string;
@@ -43,7 +51,8 @@ const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
 const COUNTRIES = ['France', 'Allemagne', 'Espagne', 'Italie', 'Royaume-Uni', 'Pays-Bas', 'Belgique', 'Suisse'];
 
 // Simulated commercial ID (in real app, get from auth context)
-const CURRENT_COMMERCIAL_ID = 'commercial-demo-123';
+// Using a valid MongoDB ObjectId format for demo
+const CURRENT_COMMERCIAL_ID = '507f1f77bcf86cd799439011';
 const CURRENT_COMMERCIAL_NAME = 'Commercial Demo';
 
 export default function LeadPoolPage() {
@@ -55,6 +64,8 @@ export default function LeadPoolPage() {
   const [poolStats, setPoolStats] = useState<any>(null);
   const [filters, setFilters] = useState({
     pays: '',
+    ville: '',
+    departement: '',
     minScore: 0,
     hasContacts: false,
     search: ''
@@ -81,6 +92,8 @@ export default function LeadPoolPage() {
         page,
         limit: 20,
         pays: filters.pays || undefined,
+        ville: filters.ville || undefined,
+        departement: filters.departement || undefined,
         minScore: filters.minScore || undefined,
         hasContacts: filters.hasContacts || undefined,
         search: filters.search || undefined
@@ -259,7 +272,7 @@ export default function LeadPoolPage() {
       {/* Filter Panel */}
       {showFilters && activeTab === 'pool' && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Pays</label>
               <select
@@ -270,6 +283,26 @@ export default function LeadPoolPage() {
                 <option value="">Tous les pays</option>
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Departement</label>
+              <input
+                type="text"
+                placeholder="Ex: 75, 69, 33..."
+                value={filters.departement}
+                onChange={(e) => setFilters(prev => ({ ...prev, departement: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+              <input
+                type="text"
+                placeholder="Ex: Paris, Lyon..."
+                value={filters.ville}
+                onChange={(e) => setFilters(prev => ({ ...prev, ville: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Score minimum</label>
@@ -298,7 +331,7 @@ export default function LeadPoolPage() {
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => { setFilters({ pays: '', minScore: 0, hasContacts: false, search: '' }); setPage(1); }}
+                onClick={() => { setFilters({ pays: '', ville: '', departement: '', minScore: 0, hasContacts: false, search: '' }); setPage(1); }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Reinitialiser
@@ -416,11 +449,13 @@ function LeadCard({
                     {priorityConfig.label}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Globe size={14} />
+                    {lead.adresse?.ligne1 && `${lead.adresse.ligne1}, `}
+                    {lead.adresse?.codePostal && `${lead.adresse.codePostal} `}
+                    {lead.adresse?.ville || ''}{lead.adresse?.ville && lead.adresse?.pays ? ', ' : ''}
                     {lead.adresse?.pays || 'N/A'}
-                    {lead.adresse?.ville && `, ${lead.adresse.ville}`}
                   </span>
                   {lead.secteurActivite && (
                     <span className="flex items-center gap-1">
