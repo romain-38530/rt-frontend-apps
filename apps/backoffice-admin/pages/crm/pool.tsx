@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import {
   Users, Building2, Search, Filter, Globe, Star, UserPlus, RefreshCw,
   ChevronRight, ExternalLink, Mail, Phone, Linkedin, Award, TrendingUp,
@@ -56,6 +57,7 @@ const CURRENT_COMMERCIAL_ID = '507f1f77bcf86cd799439011';
 const CURRENT_COMMERCIAL_NAME = 'Commercial Demo';
 
 export default function LeadPoolPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<PoolLead[]>([]);
   const [myLeads, setMyLeads] = useState<PoolLead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,7 +430,7 @@ function LeadCard({
 
   return (
     <>
-      <div className="p-4 hover:bg-gray-50 transition-colors">
+      <div className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/crm/leads/${lead._id}`)}>
         <div className="flex items-start gap-4">
           {/* Company Info */}
           <div className="flex-1">
@@ -438,7 +440,7 @@ function LeadCard({
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-gray-900">{lead.raisonSociale}</h3>
+                  <h3 className="font-semibold text-gray-900 hover:text-purple-600">{lead.raisonSociale}</h3>
                   {lead.scoreLead && (
                     <span className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">
                       <Star size={12} />
