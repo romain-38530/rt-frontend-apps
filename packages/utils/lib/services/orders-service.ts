@@ -95,7 +95,8 @@ export class OrdersService {
    * Obtenir les événements d'une commande
    */
   static async getOrderEvents(orderId: string): Promise<OrderEvent[]> {
-    return await ordersApi.get<OrderEvent[]>(`/orders/${orderId}/events`);
+    const response = await ordersApi.get<{ success: boolean; data: OrderEvent[] }>(`/orders/${orderId}/events`);
+    return response.data || [];
   }
 
   /**
