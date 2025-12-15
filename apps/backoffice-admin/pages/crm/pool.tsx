@@ -423,6 +423,7 @@ function LeadCard({
   claiming: boolean;
   releasing: boolean;
 }) {
+  const router = useRouter();
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   const [releaseReason, setReleaseReason] = useState('');
 
