@@ -237,19 +237,8 @@ router.post('/salons/:id/scrape', async (req: Request, res: Response) => {
       salon.nbExposantsCollectes = (salon.nbExposantsCollectes || 0) + created;
       await salon.save();
 
-      // Log interaction
-      await LeadInteraction.create({
-        typeInteraction: 'SCRAPING',
-        description: `Scraping ${salon.nom}: ${created} nouvelles entreprises, ${duplicates} doublons`,
-        metadata: {
-          salonId: salon._id,
-          totalScraped: result.totalScraped,
-          created,
-          duplicates,
-          duration: result.duration
-        },
-        createdBy: 'system'
-      });
+      // Log scraping result (logged in salon model, no need for separate interaction)
+      console.log(`[CRM] Scraping ${salon.nom}: ${created} nouvelles entreprises, ${duplicates} doublons, duree: ${result.duration}ms`);
 
       // AUTO-ENRICHISSEMENT: Lancer l'enrichissement en arriere-plan
       let enrichmentStatus = { enrichmentStarted: false, message: '' };

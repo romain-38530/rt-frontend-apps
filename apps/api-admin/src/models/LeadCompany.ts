@@ -4,6 +4,7 @@ export type ProspectionStatus = 'NEW' | 'ENRICHED' | 'CONTACTED' | 'IN_PROGRESS'
 
 export interface ILeadCompany extends Document {
   // Identification
+  numeroLead: string; // Numero unique auto-genere
   raisonSociale: string;
   formeJuridique?: string;
   siren?: string;
@@ -63,6 +64,7 @@ export interface ILeadCompany extends Document {
 
 const LeadCompanySchema = new Schema({
   // Identification
+  numeroLead: { type: String, unique: true, sparse: true },
   raisonSociale: { type: String, required: true },
   formeJuridique: String,
   siren: { type: String, maxlength: 9 },
@@ -134,5 +136,26 @@ LeadCompanySchema.index({ secteurActivite: 1 });
 LeadCompanySchema.index({ scoreLead: -1 });
 LeadCompanySchema.index({ inPool: 1, prioritePool: -1, scoreLead: -1 });
 LeadCompanySchema.index({ inPool: 1, 'adresse.pays': 1 });
+LeadCompanySchema.index({ numeroLead: 1 });
+
+// Auto-generate numeroLead before save
+LeadCompanySchema.pre('save', async function(next) {
+  if (!this.numeroLead) {
+    const LeadCompanyModel = mongoose.model('LeadCompany');
+    const lastCompany = await LeadCompanyModel.findOne({ numeroLead: { $exists: true } })
+      .sort({ numeroLead: -1 })
+      .select('numeroLead');
+
+    let nextNumber = 1;
+    if (lastCompany && lastCompany.numeroLead) {
+      const match = lastCompany.numeroLead.match(/LEAD-(\d+)/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+    this.numeroLead = `LEAD-${String(nextNumber).padStart(5, '0')}`;
+  }
+  next();
+});
 
 export default mongoose.model<ILeadCompany>('LeadCompany', LeadCompanySchema);

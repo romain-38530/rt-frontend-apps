@@ -1,7 +1,6 @@
 /**
  * Page de détail d'une commande - Portail Industry
- * Affiche les informations complètes et la timeline d'événements
- * Permet la clôture des commandes livrées
+ * Design basé sur la référence SYMPHONI.A Transport
  */
 
 import { useEffect, useState } from 'react';
@@ -12,37 +11,40 @@ import { OrdersService } from '@rt/utils';
 import { ordersApi } from '../../lib/api';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
-const STATUS_LABELS: Record<string, { label: string; color: string; icon: string }> = {
-  draft: { label: 'Brouillon', color: '#9ca3af', icon: '📝' },
-  created: { label: 'Créée', color: '#3b82f6', icon: '✅' },
-  sent_to_carrier: { label: 'Envoyée', color: '#8b5cf6', icon: '📨' },
-  carrier_accepted: { label: 'Acceptée', color: '#10b981', icon: '👍' },
-  carrier_refused: { label: 'Refusée', color: '#ef4444', icon: '👎' },
-  in_transit: { label: 'En transit', color: '#f59e0b', icon: '🚛' },
-  arrived_pickup: { label: 'Arrivé collecte', color: '#14b8a6', icon: '📍' },
-  loaded: { label: 'Chargé', color: '#06b6d4', icon: '📦' },
-  arrived_delivery: { label: 'Arrivé livraison', color: '#0ea5e9', icon: '🎯' },
-  delivered: { label: 'Livrée', color: '#22c55e', icon: '✨' },
-  closed: { label: 'Clôturée', color: '#64748b', icon: '🔒' },
-  cancelled: { label: 'Annulée', color: '#dc2626', icon: '❌' },
-  escalated: { label: 'Escaladée', color: '#f97316', icon: '⚠️' },
+const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
+  draft: { label: 'Brouillon', color: '#6b7280', bgColor: '#f3f4f6' },
+  created: { label: 'Créé', color: '#3b82f6', bgColor: '#dbeafe' },
+  sent_to_carrier: { label: 'Envoyé', color: '#8b5cf6', bgColor: '#ede9fe' },
+  carrier_accepted: { label: 'Accepté', color: '#10b981', bgColor: '#d1fae5' },
+  carrier_refused: { label: 'Refusé', color: '#ef4444', bgColor: '#fee2e2' },
+  in_transit: { label: 'En transit', color: '#f59e0b', bgColor: '#fef3c7' },
+  arrived_pickup: { label: 'Arrivé collecte', color: '#14b8a6', bgColor: '#ccfbf1' },
+  loaded: { label: 'Chargé', color: '#06b6d4', bgColor: '#cffafe' },
+  arrived_delivery: { label: 'Arrivé livraison', color: '#0ea5e9', bgColor: '#e0f2fe' },
+  delivered: { label: 'Livré', color: '#22c55e', bgColor: '#dcfce7' },
+  closed: { label: 'Clôturé', color: '#64748b', bgColor: '#f1f5f9' },
+  cancelled: { label: 'Annulé', color: '#dc2626', bgColor: '#fee2e2' },
+  escalated: { label: 'Escaladé', color: '#f97316', bgColor: '#ffedd5' },
 };
 
-// Safe getter for status info
 const getStatusInfo = (status: string) => {
-  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280', icon: '❓' };
+  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280', bgColor: '#f3f4f6' };
 };
 
 export default function OrderDetailPage() {
   const router = useSafeRouter();
-  const [mounted, setMounted] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [events, setEvents] = useState<OrderEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [activeTab, setActiveTab] = useState<'evenements' | 'documents' | 'charte'>('evenements');
 
-  // Extract order ID from URL path (router.query doesn't work with static export + Amplify rewrites)
+  // Extract order ID from URL path
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const pathParts = window.location.pathname.split('/').filter(Boolean);
-      // URL is /orders/{id}/ - get the second part
       if (pathParts.length >= 2 && pathParts[0] === 'orders') {
         const extractedId = pathParts[1];
         if (extractedId && extractedId !== 'detail') {
@@ -52,72 +54,25 @@ export default function OrderDetailPage() {
     }
   }, []);
 
-  const [order, setOrder] = useState<Order | null>(null);
-  const [events, setEvents] = useState<OrderEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [closureEligibility, setClosureEligibility] = useState<any>(null);
-  const [isClosing, setIsClosing] = useState(false);
-  const [closureMessage, setClosureMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Charger la commande et ses événements
   const loadOrder = async () => {
     if (!orderId) return;
-
     setIsLoading(true);
     setError(null);
 
     try {
-      // Load order data (required)
       const orderData = await OrdersService.getOrderById(orderId);
       setOrder(orderData);
 
-      // Load events (optional - endpoint may not exist)
       try {
         const eventsData = await OrdersService.getOrderEvents(orderId);
         setEvents(eventsData || []);
-      } catch (eventsErr) {
-        console.log('Events not available for this order');
+      } catch {
         setEvents([]);
       }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement de la commande');
-      console.error('Error loading order:', err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Verifier l'eligibilite a la cloture
-  const checkClosureEligibility = async () => {
-    if (!orderId) return;
-    try {
-      const result = await ordersApi.checkClosureEligibility(orderId);
-      setClosureEligibility(result);
-    } catch (err) {
-      console.error('Error checking closure eligibility:', err);
-    }
-  };
-
-  // Cloturer la commande
-  const handleCloseOrder = async () => {
-    if (!orderId) return;
-
-    setIsClosing(true);
-    setClosureMessage(null);
-
-    try {
-      const result = await ordersApi.closeOrder(orderId);
-      if (result.success) {
-        setClosureMessage({ type: 'success', text: 'Commande cloturee avec succes' });
-        loadOrder(); // Recharger pour mettre a jour le statut
-      } else {
-        setClosureMessage({ type: 'error', text: result.error || 'Erreur lors de la cloture' });
-      }
-    } catch (err: any) {
-      setClosureMessage({ type: 'error', text: err.message || 'Erreur lors de la cloture' });
-    } finally {
-      setIsClosing(false);
     }
   };
 
@@ -126,22 +81,34 @@ export default function OrderDetailPage() {
       router.push('/login');
       return;
     }
-
     loadOrder();
   }, [orderId]);
 
-  // Charger l'eligibilite quand la commande est livree
-  useEffect(() => {
-    if (order?.status === 'delivered') {
-      checkClosureEligibility();
-    }
-  }, [order?.status]);
-
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
-      month: 'long',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -153,58 +120,26 @@ export default function OrderDetailPage() {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(price);
   };
 
-  const cardStyle: React.CSSProperties = {
-    padding: '24px',
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
-  };
-
-  const sectionTitleStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: '700',
-    marginBottom: '16px',
-    color: '#111827',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: '4px',
-  };
-
-  const valueStyle: React.CSSProperties = {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#111827',
-  };
-
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <div style={{ fontSize: '18px', color: '#6b7280' }}>Chargement...</div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '48px', border: '4px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+          <div style={{ marginTop: '16px', color: '#6b7280' }}>Chargement...</div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   if (error || !order) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px', backgroundColor: '#f8fafc' }}>
         <div style={{ fontSize: '48px' }}>❌</div>
         <div style={{ fontSize: '18px', color: '#ef4444', fontWeight: '600' }}>{error || 'Commande introuvable'}</div>
         <button
           onClick={() => router.push('/orders')}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#667eea',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '600',
-          }}
+          style={{ padding: '12px 24px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
         >
           Retour aux commandes
         </button>
@@ -213,415 +148,313 @@ export default function OrderDetailPage() {
   }
 
   const statusInfo = getStatusInfo(order.status);
+  const orderAny = order as any;
 
   return (
     <>
       <Head>
-        <title>Commande {order?.reference || 'Détail'} - Industry | SYMPHONI.A</title>
+        <title>Transport n°{order.reference} - Industry | SYMPHONI.A</title>
       </Head>
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'system-ui, sans-serif' }}>
-        {/* Header */}
-        <div
-          style={{
-            padding: '20px 40px',
-            backgroundColor: 'white',
-            borderBottom: '1px solid #e5e7eb',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1400px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <button
-                onClick={() => router.push('/orders')}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #e5e7eb',
-                  backgroundColor: 'white',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                }}
-              >
-                ← Retour
-              </button>
-              <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
-                  Commande {order.reference}
-                </h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '20px' }}>{statusInfo.icon}</span>
-                  <span
-                    style={{
+      <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        {/* Header principal */}
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' }}>
+          <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+            {/* Ligne supérieure: Navigation et titre */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  onClick={() => router.push('/orders')}
+                  style={{ padding: '8px 12px', border: '1px solid #e5e7eb', backgroundColor: 'white', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  ← Retour
+                </button>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>
+                      Transport n°{order.reference}
+                    </h1>
+                    <span style={{
                       padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
+                      borderRadius: '4px',
+                      fontSize: '13px',
                       fontWeight: '600',
-                      backgroundColor: `${statusInfo.color}15`,
+                      backgroundColor: statusInfo.bgColor,
                       color: statusInfo.color,
-                    }}
+                    }}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
+                  <button
+                    onClick={() => router.push(`/orders/${order.id}/tracking`)}
+                    style={{ padding: '10px 16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                   >
-                    {statusInfo.label}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                  {formatPrice(order.estimatedPrice || order.finalPrice, order.currency)}
-                </div>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                  Créée le {formatDate(order.createdAt)}
-                </div>
-              </div>
-
-              {/* Bouton Documents */}
-              <button
-                onClick={() => router.push(`/orders/${order.id}/documents`)}
-                style={{
-                  padding: '10px 16px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}>
-                📁 Documents
-              </button>
-
-              {/* Bouton Tracking */}
-              {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
-                <button
-                  onClick={() => router.push(`/orders/${order.id}/tracking`)}
-                  style={{
-                    padding: '12px 20px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}>
-                  🗺️ Voir le tracking
+                    📍 Suivi GPS
+                  </button>
+                )}
+                <button style={{ padding: '10px 16px', border: '1px solid #e5e7eb', backgroundColor: 'white', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                  📄 Imprimer
                 </button>
-              )}
-
-              {/* Bouton Cloturer - visible si delivered */}
-              {order.status === 'delivered' && (
-                <button
-                  onClick={handleCloseOrder}
-                  disabled={isClosing || (closureEligibility && !closureEligibility.eligible)}
-                  style={{
-                    padding: '12px 20px',
-                    background: closureEligibility?.eligible ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#9ca3af',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    cursor: closureEligibility?.eligible ? 'pointer' : 'not-allowed',
-                    boxShadow: closureEligibility?.eligible ? '0 4px 12px rgba(16, 185, 129, 0.4)' : 'none',
-                    transition: 'all 0.2s ease',
-                    opacity: isClosing ? 0.7 : 1,
-                  }}>
-                  {isClosing ? 'Cloture en cours...' : 'Cloturer la commande'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Échelle d'étapes - Progress Stepper */}
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '20px 40px' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '20px', left: '5%', right: '5%', height: '3px', backgroundColor: '#e5e7eb', zIndex: 0 }} />
-              {[
-                { key: 'created', label: 'Créée', icon: '✅' },
-                { key: 'sent_to_carrier', label: 'Envoyée', icon: '📨' },
-                { key: 'carrier_accepted', label: 'Acceptée', icon: '👍' },
-                { key: 'in_transit', label: 'Transit', icon: '🚛' },
-                { key: 'arrived_delivery', label: 'Arrivé', icon: '🎯' },
-                { key: 'delivered', label: 'Livrée', icon: '✨' },
-                { key: 'closed', label: 'Clôturée', icon: '🔒' },
-              ].map((step, index) => {
-                const steps = ['created', 'sent_to_carrier', 'carrier_accepted', 'in_transit', 'arrived_delivery', 'delivered', 'closed'];
-                const currentIndex = steps.indexOf(order.status);
-                const isCompleted = currentIndex >= index;
-                const isCurrent = order.status === step.key;
-                return (
-                  <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: isCompleted ? '#667eea' : '#e5e7eb', color: isCompleted ? 'white' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: isCurrent ? '3px solid #4f46e5' : 'none' }}>
-                      {step.icon}
-                    </div>
-                    <div style={{ marginTop: '8px', fontSize: '10px', fontWeight: isCurrent ? '700' : '500', color: isCompleted ? '#111827' : '#9ca3af', textAlign: 'center' }}>
-                      {step.label}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Contenu */}
-        <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-            {/* Colonne principale */}
-            <div>
-              {/* Itinéraire */}
-              <div style={cardStyle}>
-                <h2 style={sectionTitleStyle}>🗺️ Itinéraire</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                  <div>
-                    <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                      <div style={{ ...labelStyle, color: '#15803d', marginBottom: '8px' }}>📍 Point de collecte</div>
-                      <div style={{ ...valueStyle, marginBottom: '4px', fontWeight: '700' }}>{order.pickupAddress.city}</div>
-                      <div style={{ ...valueStyle, fontSize: '13px', color: '#6b7280' }}>
-                        {order.pickupAddress.street}<br />
-                        {order.pickupAddress.postalCode} {order.pickupAddress.city}
-                      </div>
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #bbf7d0' }}>
-                        <div style={{ ...labelStyle, color: '#15803d' }}>Contact</div>
-                        <div style={{ ...valueStyle, fontSize: '13px' }}>{order.pickupAddress.contactName}</div>
-                        {order.pickupAddress.contactPhone && (
-                          <div style={{ ...valueStyle, fontSize: '13px', color: '#6b7280' }}>{order.pickupAddress.contactPhone}</div>
-                        )}
-                      </div>
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #bbf7d0' }}>
-                        <div style={{ ...labelStyle, color: '#15803d' }}>Date prévue</div>
-                        <div style={{ ...valueStyle, fontSize: '13px' }}>{formatDate(order.dates.pickupDate)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                      <div style={{ ...labelStyle, color: '#1e40af', marginBottom: '8px' }}>🎯 Point de livraison</div>
-                      <div style={{ ...valueStyle, marginBottom: '4px', fontWeight: '700' }}>{order.deliveryAddress.city}</div>
-                      <div style={{ ...valueStyle, fontSize: '13px', color: '#6b7280' }}>
-                        {order.deliveryAddress.street}<br />
-                        {order.deliveryAddress.postalCode} {order.deliveryAddress.city}
-                      </div>
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #bfdbfe' }}>
-                        <div style={{ ...labelStyle, color: '#1e40af' }}>Contact</div>
-                        <div style={{ ...valueStyle, fontSize: '13px' }}>{order.deliveryAddress.contactName}</div>
-                        {order.deliveryAddress.contactPhone && (
-                          <div style={{ ...valueStyle, fontSize: '13px', color: '#6b7280' }}>{order.deliveryAddress.contactPhone}</div>
-                        )}
-                      </div>
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #bfdbfe' }}>
-                        <div style={{ ...labelStyle, color: '#1e40af' }}>Date prévue</div>
-                        <div style={{ ...valueStyle, fontSize: '13px' }}>{formatDate(order.dates.deliveryDate)}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
+            </div>
 
-              {/* Transporteur assigné */}
+            {/* Infos donneur d'ordre et transporteur */}
+            <div style={{ display: 'flex', gap: '32px', fontSize: '14px', color: '#6b7280' }}>
+              <div>
+                <span style={{ fontWeight: '600', color: '#374151' }}>Donneur d'ordre:</span>{' '}
+                {orderAny.industrialName || orderAny.industrialId || 'Non défini'}
+              </div>
               {order.carrierId && (
-                <div style={cardStyle}>
-                  <h2 style={sectionTitleStyle}>🚛 Transporteur assigné</h2>
+                <div>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Transporteur:</span>{' '}
+                  {orderAny.carrierName || order.carrierId}
+                </div>
+              )}
+              <div>
+                <span style={{ fontWeight: '600', color: '#374151' }}>Créé le:</span>{' '}
+                {formatDateTime(order.createdAt)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu principal */}
+        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '24px' }}>
+            {/* Colonne gauche */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              {/* Carte et infos distance */}
+              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                {/* Placeholder carte */}
+                <div style={{ height: '250px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>🗺️</div>
+                    <div>Carte du trajet</div>
+                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                      {order.pickupAddress.city} → {order.deliveryAddress.city}
+                    </div>
+                  </div>
+                  {/* Bouton tracking sur la carte */}
+                  {['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery'].includes(order.status) && (
+                    <button
+                      onClick={() => router.push(`/orders/${order.id}/tracking`)}
+                      style={{ position: 'absolute', bottom: '16px', right: '16px', padding: '8px 16px', background: '#667eea', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}
+                    >
+                      Voir le tracking en direct
+                    </button>
+                  )}
+                </div>
+
+                {/* Infos distance */}
+                <div style={{ padding: '16px', display: 'flex', gap: '24px', borderTop: '1px solid #e5e7eb' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Distance</div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
+                      {orderAny.distanceKm ? `${orderAny.distanceKm} km` : '- km'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Durée estimée</div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
+                      {orderAny.durationMinutes ? `${Math.floor(orderAny.durationMinutes / 60)}h${orderAny.durationMinutes % 60}` : '- h'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Prix</div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669' }}>
+                      {formatPrice(order.finalPrice || order.estimatedPrice, order.currency)}
+                    </div>
+                  </div>
+                  {order.trackingLevel && (
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Tracking</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: order.trackingLevel === 'premium' ? '#7c3aed' : order.trackingLevel === 'gps' ? '#0ea5e9' : '#6b7280' }}>
+                        {order.trackingLevel === 'premium' ? '⭐ Premium' : order.trackingLevel === 'gps' ? '📍 GPS' : '📋 Basic'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Section Enlèvement */}
+              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', backgroundColor: '#f0fdf4', borderBottom: '2px solid #22c55e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#22c55e', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>1</div>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#15803d' }}>Enlèvement</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                    {formatDate(order.dates.pickupDate)}
+                    {order.dates.pickupTimeSlotStart && ` • ${order.dates.pickupTimeSlotStart}`}
+                    {order.dates.pickupTimeSlotEnd && ` - ${order.dates.pickupTimeSlotEnd}`}
+                  </div>
+                </div>
+                <div style={{ padding: '20px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div style={{ padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                      <div style={{ ...labelStyle, color: '#0369a1', marginBottom: '8px' }}>Transporteur</div>
-                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{(order as any).carrierName || order.carrierId}</div>
-                      {(order as any).carrierNotes && <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '8px' }}>Note: {(order as any).carrierNotes}</div>}
+                    {/* Adresse */}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Adresse</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.pickupAddress.street}</div>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>{order.pickupAddress.postalCode} {order.pickupAddress.city}</div>
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{order.pickupAddress.country}</div>
+                      {order.pickupAddress.instructions && (
+                        <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '4px', fontSize: '13px', color: '#92400e' }}>
+                          💡 {order.pickupAddress.instructions}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ padding: '16px', backgroundColor: '#fefce8', borderRadius: '8px', border: '1px solid #fef08a' }}>
-                      <div style={{ ...labelStyle, color: '#a16207', marginBottom: '8px' }}>Prix accepté</div>
-                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '20px', color: '#15803d' }}>{formatPrice(order.finalPrice || order.estimatedPrice, order.currency)}</div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Tracking: {order.trackingLevel === 'premium' ? '🌟 Premium' : order.trackingLevel === 'gps' ? '📍 GPS' : '📋 Basic'}</div>
+                    {/* Contact */}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact expéditeur</div>
+                      {order.pickupAddress.contactName && (
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.pickupAddress.contactName}</div>
+                      )}
+                      {order.pickupAddress.contactPhone && (
+                        <div style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📞 {order.pickupAddress.contactPhone}
+                        </div>
+                      )}
+                      {order.pickupAddress.contactEmail && (
+                        <div style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          ✉️ {order.pickupAddress.contactEmail}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Gestion des Palettes Europe */}
-              {(order as any).palletTracking?.enabled && (
-                <div style={cardStyle}>
-                  <h2 style={sectionTitleStyle}>🔄 Gestion des Palettes Europe (EPAL)</h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Attendues</div>
-                      <div style={{ fontSize: '24px', fontWeight: '700' }}>{(order as any).palletTracking.expectedQuantity}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{(order as any).palletTracking.palletType}</div>
+                  {/* Marchandise */}
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase' }}>Marchandise</div>
+                    <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                      <div style={{ padding: '12px 16px', backgroundColor: '#f3f4f6', borderRadius: '6px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>{order.goods.weight}</div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>kg</div>
+                      </div>
+                      {order.goods.volume && (
+                        <div style={{ padding: '12px 16px', backgroundColor: '#f3f4f6', borderRadius: '6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>{order.goods.volume}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>m³</div>
+                        </div>
+                      )}
+                      <div style={{ padding: '12px 16px', backgroundColor: '#f3f4f6', borderRadius: '6px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>{order.goods.quantity}</div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>colis</div>
+                      </div>
+                      {order.goods.palettes && (
+                        <div style={{ padding: '12px 16px', backgroundColor: '#f3f4f6', borderRadius: '6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>{order.goods.palettes}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>palettes</div>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: (order as any).palletTracking.balance === 0 ? '#d1fae5' : '#fef3c7', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Solde</div>
-                      <div style={{ fontSize: '24px', fontWeight: '700', color: (order as any).palletTracking.balance === 0 ? '#059669' : '#d97706' }}>{(order as any).palletTracking.balance >= 0 ? '+' : ''}{(order as any).palletTracking.balance}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{(order as any).palletTracking.settled ? '✅ Soldé' : '⏳ En attente'}</div>
+                    <div style={{ marginTop: '12px', fontSize: '14px', color: '#374151' }}>
+                      <span style={{ fontWeight: '600' }}>Description:</span> {order.goods.description}
                     </div>
-                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#ede9fe', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Statut</div>
-                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#7c3aed' }}>{(order as any).palletTracking.settled ? 'Terminé' : 'En cours'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {(order as any).palletTracking.pickup && (
-                      <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <div style={{ fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>📤 Collecte</div>
-                        <div style={{ fontSize: '13px' }}>Données: <strong>{(order as any).palletTracking.pickup.givenBySender}</strong> | Prises: <strong>{(order as any).palletTracking.pickup.takenByCarrier}</strong></div>
-                        {(order as any).palletTracking.pickup.confirmedBy && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>✓ {(order as any).palletTracking.pickup.confirmedBy}</div>}
+                    {order.goods.packaging && (
+                      <div style={{ marginTop: '4px', fontSize: '14px', color: '#6b7280' }}>
+                        <span style={{ fontWeight: '600' }}>Emballage:</span> {order.goods.packaging}
                       </div>
                     )}
-                    {(order as any).palletTracking.delivery && (
-                      <div style={{ padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                        <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '8px' }}>📥 Livraison</div>
-                        <div style={{ fontSize: '13px' }}>Données: <strong>{(order as any).palletTracking.delivery.givenByCarrier}</strong> | Reçues: <strong>{(order as any).palletTracking.delivery.receivedByRecipient}</strong></div>
-                        {(order as any).palletTracking.delivery.confirmedBy && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>✓ {(order as any).palletTracking.delivery.confirmedBy}</div>}
+                    {order.goods.value && (
+                      <div style={{ marginTop: '4px', fontSize: '14px', color: '#6b7280' }}>
+                        <span style={{ fontWeight: '600' }}>Valeur:</span> {formatPrice(order.goods.value, order.currency)}
                       </div>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Marchandise */}
-              <div style={cardStyle}>
-                <h2 style={sectionTitleStyle}>📦 Marchandise</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-                  <div>
-                    <div style={labelStyle}>Poids</div>
-                    <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.weight} kg</div>
+              {/* Section Livraison */}
+              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', backgroundColor: '#eff6ff', borderBottom: '2px solid #3b82f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>2</div>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1e40af' }}>Livraison</span>
                   </div>
-                  {order.goods.volume && (
-                    <div>
-                      <div style={labelStyle}>Volume</div>
-                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.volume} m³</div>
-                    </div>
-                  )}
-                  <div>
-                    <div style={labelStyle}>Quantité</div>
-                    <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.quantity}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                    {formatDate(order.dates.deliveryDate)}
+                    {order.dates.deliveryTimeSlotStart && ` • ${order.dates.deliveryTimeSlotStart}`}
+                    {order.dates.deliveryTimeSlotEnd && ` - ${order.dates.deliveryTimeSlotEnd}`}
                   </div>
-                  {order.goods.palettes && (
-                    <div>
-                      <div style={labelStyle}>Palettes</div>
-                      <div style={{ ...valueStyle, fontWeight: '700', fontSize: '16px' }}>{order.goods.palettes}</div>
-                    </div>
-                  )}
                 </div>
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-                  <div style={labelStyle}>Description</div>
-                  <div style={valueStyle}>{order.goods.description}</div>
+                <div style={{ padding: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    {/* Adresse */}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Adresse</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.deliveryAddress.street}</div>
+                      <div style={{ fontSize: '14px', color: '#374151' }}>{order.deliveryAddress.postalCode} {order.deliveryAddress.city}</div>
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{order.deliveryAddress.country}</div>
+                      {order.deliveryAddress.instructions && (
+                        <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '4px', fontSize: '13px', color: '#92400e' }}>
+                          💡 {order.deliveryAddress.instructions}
+                        </div>
+                      )}
+                    </div>
+                    {/* Contact */}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact destinataire</div>
+                      {order.deliveryAddress.contactName && (
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.deliveryAddress.contactName}</div>
+                      )}
+                      {order.deliveryAddress.contactPhone && (
+                        <div style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📞 {order.deliveryAddress.contactPhone}
+                        </div>
+                      )}
+                      {order.deliveryAddress.contactEmail && (
+                        <div style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          ✉️ {order.deliveryAddress.contactEmail}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Contraintes */}
-              {order.constraints.length > 0 && (
-                <div style={cardStyle}>
-                  <h2 style={sectionTitleStyle}>⚙️ Contraintes de transport</h2>
+              {order.constraints && order.constraints.length > 0 && (
+                <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '20px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '12px' }}>Contraintes de transport</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {order.constraints.map((constraint, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#f3f4f6',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          color: '#374151',
-                        }}
-                      >
+                    {order.constraints.map((constraint, idx) => (
+                      <div key={idx} style={{ padding: '6px 12px', backgroundColor: '#fef3c7', borderRadius: '4px', fontSize: '13px', fontWeight: '600', color: '#92400e' }}>
                         {constraint.type}
+                        {constraint.value && `: ${constraint.value}`}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Section Cloture - visible si delivered */}
-              {order.status === 'delivered' && (
-                <div style={{
-                  ...cardStyle,
-                  border: closureEligibility?.eligible ? '2px solid #10b981' : '2px solid #f59e0b',
-                  background: closureEligibility?.eligible ? '#f0fdf4' : '#fffbeb',
-                }}>
-                  <h2 style={{ ...sectionTitleStyle, color: closureEligibility?.eligible ? '#059669' : '#92400e' }}>
-                    {closureEligibility?.eligible ? 'Prete pour cloture' : 'Cloture en attente'}
-                  </h2>
-
-                  {closureMessage && (
-                    <div style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      backgroundColor: closureMessage.type === 'success' ? '#d1fae5' : '#fee2e2',
-                      color: closureMessage.type === 'success' ? '#065f46' : '#991b1b',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                    }}>
-                      {closureMessage.text}
+              {/* Palettes Europe */}
+              {orderAny.palletTracking?.enabled && (
+                <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '20px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '16px' }}>🔄 Gestion Palettes Europe (EPAL)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Attendues</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700' }}>{orderAny.palletTracking.expectedQuantity}</div>
                     </div>
-                  )}
-
-                  {closureEligibility ? (
-                    <>
-                      {closureEligibility.eligible ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '32px' }}>✅</span>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669' }}>
-                              Tous les criteres sont remplis
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                              Vous pouvez cloturer cette commande
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '12px' }}>
-                            Criteres manquants :
-                          </div>
-                          <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                            {closureEligibility.blockers?.map((blocker: string, idx: number) => (
-                              <li key={idx} style={{ fontSize: '13px', color: '#78350f', marginBottom: '4px' }}>
-                                {blocker}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                      Verification de l'eligibilite...
+                    <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#d1fae5', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Données</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>{orderAny.palletTracking.pickup?.givenBySender || 0}</div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Commande cloturee */}
-              {order.status === 'closed' && (
-                <div style={{
-                  ...cardStyle,
-                  border: '2px solid #64748b',
-                  background: '#f8fafc',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '32px' }}>🔒</span>
-                    <div>
-                      <h2 style={{ ...sectionTitleStyle, marginBottom: '4px', color: '#475569' }}>
-                        Commande cloturee
-                      </h2>
-                      <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                        Cette commande est finalisee et archivee
+                    <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#dbeafe', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Reçues</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#2563eb' }}>{orderAny.palletTracking.delivery?.receivedByRecipient || 0}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '12px', backgroundColor: orderAny.palletTracking.balance === 0 ? '#d1fae5' : '#fef3c7', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Solde</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: orderAny.palletTracking.balance === 0 ? '#059669' : '#d97706' }}>
+                        {orderAny.palletTracking.balance >= 0 ? '+' : ''}{orderAny.palletTracking.balance}
                       </div>
                     </div>
                   </div>
@@ -629,77 +462,197 @@ export default function OrderDetailPage() {
               )}
             </div>
 
-            {/* Colonne secondaire - Timeline */}
-            <div>
-              <div style={cardStyle}>
-                <h2 style={sectionTitleStyle}>📋 Timeline des événements</h2>
-                {events.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                    Aucun événement pour le moment
-                  </div>
-                ) : (
-                  <div style={{ position: 'relative', paddingLeft: '24px' }}>
-                    {/* Ligne verticale */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '8px',
-                        top: '8px',
-                        bottom: '8px',
-                        width: '2px',
-                        backgroundColor: '#e5e7eb',
-                      }}
-                    />
+            {/* Colonne droite - Onglets */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {/* Tabs */}
+              <div style={{ display: 'flex', backgroundColor: 'white', borderRadius: '8px 8px 0 0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                {[
+                  { key: 'evenements', label: 'Événements' },
+                  { key: 'documents', label: 'Documents' },
+                  { key: 'charte', label: 'Charte' },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    style={{
+                      flex: 1,
+                      padding: '14px 16px',
+                      border: 'none',
+                      backgroundColor: activeTab === tab.key ? '#667eea' : 'white',
+                      color: activeTab === tab.key ? 'white' : '#6b7280',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-                    {events.map((event, index) => (
-                      <div
-                        key={event.id}
+              {/* Contenu des tabs */}
+              <div style={{ backgroundColor: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', flex: 1, minHeight: '500px' }}>
+
+                {/* Tab Événements */}
+                {activeTab === 'evenements' && (
+                  <div style={{ padding: '20px' }}>
+                    {/* Zone commentaire */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Ajouter un commentaire..."
                         style={{
-                          position: 'relative',
-                          paddingBottom: index < events.length - 1 ? '20px' : '0',
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          resize: 'vertical',
+                          minHeight: '80px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
                         }}
-                      >
-                        {/* Dot */}
-                        <div
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                        <button
                           style={{
-                            position: 'absolute',
-                            left: '-20px',
-                            top: '4px',
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
+                            padding: '8px 16px',
                             backgroundColor: '#667eea',
-                            border: '2px solid white',
-                            boxShadow: '0 0 0 2px #e5e7eb',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
                           }}
-                        />
-
-                        <div style={{ marginBottom: '4px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
-                            {event.description}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                            {formatDate(event.timestamp)}
-                          </div>
-                          {event.userName && (
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
-                              Par {event.userName}
-                            </div>
-                          )}
-                        </div>
+                        >
+                          Envoyer
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Timeline */}
+                    <div style={{ position: 'relative' }}>
+                      {events.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
+                          <div>Aucun événement pour le moment</div>
+                        </div>
+                      ) : (
+                        <div style={{ position: 'relative', paddingLeft: '24px' }}>
+                          <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '2px', backgroundColor: '#e5e7eb' }} />
+                          {events.map((event, idx) => (
+                            <div key={event.id || idx} style={{ position: 'relative', paddingBottom: idx < events.length - 1 ? '20px' : '0' }}>
+                              <div style={{
+                                position: 'absolute',
+                                left: '-20px',
+                                top: '4px',
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                backgroundColor: '#667eea',
+                                border: '2px solid white',
+                                boxShadow: '0 0 0 2px #e5e7eb',
+                              }} />
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{event.description}</div>
+                              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                                {formatDateTime(event.timestamp)}
+                                {event.userName && ` • ${event.userName}`}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Documents */}
+                {activeTab === 'documents' && (
+                  <div style={{ padding: '20px' }}>
+                    {/* Upload zone */}
+                    <div style={{
+                      border: '2px dashed #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '32px',
+                      textAlign: 'center',
+                      marginBottom: '20px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>📁</div>
+                      <div style={{ color: '#6b7280', fontSize: '14px' }}>Glissez vos fichiers ici ou cliquez pour sélectionner</div>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>PDF, JPG, PNG (max 10MB)</div>
+                    </div>
+
+                    {/* Liste documents */}
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '12px' }}>
+                      Documents ({order.documentIds?.length || 0})
+                    </div>
+                    {order.documentIds && order.documentIds.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {order.documentIds.map((docId, idx) => (
+                          <div key={docId} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '6px',
+                          }}>
+                            <div style={{ fontSize: '24px' }}>📄</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Document {idx + 1}</div>
+                              <div style={{ fontSize: '12px', color: '#6b7280' }}>ID: {docId.slice(0, 8)}...</div>
+                            </div>
+                            <button style={{
+                              padding: '6px 12px',
+                              border: '1px solid #e5e7eb',
+                              backgroundColor: 'white',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                            }}>
+                              Télécharger
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
+                        Aucun document attaché
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab Charte */}
+                {activeTab === 'charte' && (
+                  <div style={{ padding: '20px' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>📜</div>
+                      <div style={{ fontSize: '14px', marginBottom: '16px' }}>Charte de transport</div>
+                      <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6', textAlign: 'left', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                        <p><strong>Conditions générales de transport</strong></p>
+                        <p>• Respect des délais convenus</p>
+                        <p>• Marchandise en bon état</p>
+                        <p>• Documents de transport complets</p>
+                        <p>• Assurance responsabilité civile</p>
+                        {order.trackingLevel === 'premium' && (
+                          <p>• Suivi GPS temps réel inclus</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Notes */}
               {order.notes && (
-                <div style={cardStyle}>
-                  <h2 style={sectionTitleStyle}>📝 Notes</h2>
-                  <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
-                    {order.notes}
-                  </div>
+                <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '20px', marginTop: '20px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>📝 Notes</div>
+                  <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{order.notes}</div>
                 </div>
               )}
             </div>
@@ -712,8 +665,6 @@ export default function OrderDetailPage() {
 
 // Required for static export with dynamic routes
 export async function getStaticPaths() {
-  // For static export, we generate one placeholder path
-  // Amplify rewrites will serve this page for all /orders/:id routes
   return {
     paths: [{ params: { id: 'detail' } }],
     fallback: false,

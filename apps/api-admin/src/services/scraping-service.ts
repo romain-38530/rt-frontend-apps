@@ -357,7 +357,7 @@ const TransportLogisticAdapter: SalonAdapter = {
 
 /**
  * Adaptateur SIAL / Comexposium
- * Sites avec catalogue d'exposants dynamique (React)
+ * Sites avec catalogue d'exposants dynamique (React) - Pagination agressive
  */
 const SIALComexposiumAdapter: SalonAdapter = {
   name: 'SIAL',
@@ -372,96 +372,137 @@ const SIALComexposiumAdapter: SalonAdapter = {
       console.log('[SIAL] Loading page:', config.url);
       await page.goto(config.url, { waitUntil: 'networkidle0', timeout: 60000 });
 
-      // Attendre que le catalogue charge (jusqu'a 20 secondes)
-      console.log('[SIAL] Waiting for exhibitor cards...');
-      await page.waitForSelector('[class*="ExhibitorCard"], [class*="exhibitor-card"], [class*="CardExhibitor"], a[href*="/Exposant/"]', { timeout: 20000 }).catch(() => {
-        console.log('[SIAL] No exhibitor cards found, trying alternative selectors');
+      // Attendre que le catalogue charge
+      console.log('[SIAL] Waiting for exhibitor elements...');
+      await page.waitForSelector('a[href*="/Exposant/"], a[href*="/exposant/"], [class*="exhibitor"], [class*="Exhibitor"]', { timeout: 30000 }).catch(() => {
+        console.log('[SIAL] No exhibitor elements found with primary selectors');
       });
 
-      // Attendre encore un peu pour le chargement complet
+      // Attendre le chargement initial
       await new Promise(r => setTimeout(r, 5000));
 
-      let currentPage = 1;
-      const maxPages = config.maxPages || 10;
+      // Detecter et cliquer sur "Afficher tous" ou "Load All" s'il existe
+      const showAllClicked = await page.evaluate(() => {
+        const showAllBtn = document.querySelector('button[class*="showAll"], button[class*="loadAll"], [class*="show-all"], a[class*="viewAll"]');
+        if (showAllBtn) {
+          (showAllBtn as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
 
-      while (currentPage <= maxPages) {
-        console.log(`[SIAL] Scraping page ${currentPage}...`);
+      if (showAllClicked) {
+        console.log('[SIAL] Clicked "Show All" button');
+        await new Promise(r => setTimeout(r, 10000));
+      }
 
-        // Extraire les exposants
-        const pageCompanies = await page.evaluate(() => {
-          const items: any[] = [];
+      // Pagination agressive: scroll et click "Load More" jusqu'a plus de nouveaux resultats
+      const maxScrollAttempts = config.maxPages || 100; // Augmente significativement
+      let previousCount = 0;
+      let noNewResultsCount = 0;
 
-          // Selecteurs specifiques Comexposium
-          const selectors = [
-            '[class*="ExhibitorCard"]',
-            '[class*="exhibitor-card"]',
-            '[class*="CardExhibitor"]',
-            'a[href*="/Exposant/"]',
-            '[data-testid*="exhibitor"]',
-            '.exhibitor-item',
-            '[class*="catalog"] [class*="card"]'
-          ];
+      for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
+        // Compter les elements actuels
+        const currentCount = await page.evaluate(() => {
+          return document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"]').length;
+        });
 
-          let elements: Element[] = [];
-          for (const selector of selectors) {
-            elements = Array.from(document.querySelectorAll(selector));
-            console.log(`[SIAL] Selector ${selector}: ${elements.length} elements`);
-            if (elements.length > 0) break;
+        console.log(`[SIAL] Scroll attempt ${attempt + 1}: ${currentCount} exhibitors found`);
+
+        // Si pas de nouveaux resultats apres 3 tentatives, arreter
+        if (currentCount === previousCount) {
+          noNewResultsCount++;
+          if (noNewResultsCount >= 3) {
+            console.log('[SIAL] No new results after 3 attempts, stopping');
+            break;
           }
+        } else {
+          noNewResultsCount = 0;
+          previousCount = currentCount;
+        }
 
-          elements.forEach(el => {
-            // Chercher le nom
-            const nameEl = el.querySelector('h3, h4, h5, [class*="title"], [class*="name"], span[class*="Title"]') ||
-                          (el.tagName === 'A' ? el : null);
-            const name = nameEl?.textContent?.trim();
-
-            // Chercher le lien
-            const linkEl = el.tagName === 'A' ? el as HTMLAnchorElement :
-                          el.querySelector('a[href*="Exposant"], a[href*="exposant"]') as HTMLAnchorElement;
-            const href = linkEl?.href;
-
-            // Chercher le stand
-            const standEl = el.querySelector('[class*="stand"], [class*="booth"], [class*="Stand"]');
-            const stand = standEl?.textContent?.trim();
-
-            // Chercher le pays
-            const countryEl = el.querySelector('[class*="country"], [class*="Country"], [class*="location"]');
-            const country = countryEl?.textContent?.trim();
-
-            if (name && name.length > 2 && name.length < 200 && !name.toLowerCase().includes('exposant')) {
-              items.push({
-                raisonSociale: name.replace(/\s+/g, ' ').trim(),
-                urlPageExposant: href || undefined,
-                numeroStand: stand || undefined,
-                pays: country || 'FR'
-              });
+        // Essayer de charger plus
+        await page.evaluate(() => {
+          // Cliquer sur tous les boutons "Load More" / "Voir plus"
+          const loadMoreButtons = document.querySelectorAll(
+            'button[class*="load"], button[class*="more"], button[class*="Load"], ' +
+            '[class*="pagination"] button, [class*="load-more"], [class*="voir-plus"], ' +
+            'button:not([disabled])[class*="next"], a[class*="next"]:not(.disabled)'
+          );
+          loadMoreButtons.forEach(btn => {
+            if ((btn as HTMLElement).offsetParent !== null) { // Visible
+              (btn as HTMLElement).click();
             }
           });
 
-          return items;
+          // Scroll au bas de la page
+          window.scrollTo(0, document.documentElement.scrollHeight);
         });
 
-        console.log(`[SIAL] Found ${pageCompanies.length} companies on page ${currentPage}`);
-        companies.push(...pageCompanies);
-
-        // Pagination - charger plus de resultats
-        const hasMore = await page.evaluate(() => {
-          const loadMoreBtn = document.querySelector('[class*="loadMore"], button[class*="more"], [class*="pagination"] button:not([disabled])');
-          if (loadMoreBtn) {
-            (loadMoreBtn as HTMLElement).click();
-            return true;
-          }
-          // Scroll infini
-          const scrollHeight = document.documentElement.scrollHeight;
-          window.scrollTo(0, scrollHeight);
-          return document.documentElement.scrollHeight > scrollHeight;
-        });
-
-        if (!hasMore || pageCompanies.length === 0) break;
-
-        currentPage++;
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 2000)); // Attendre le chargement
       }
+
+      // Extraire tous les exposants
+      console.log('[SIAL] Extracting all exhibitors...');
+      const pageCompanies = await page.evaluate(() => {
+        const items: any[] = [];
+        const seen = new Set<string>();
+
+        // Chercher tous les liens vers les exposants
+        const exhibitorLinks = document.querySelectorAll('a[href*="/Exposant/"], a[href*="/exposant/"]');
+        console.log(`[SIAL] Found ${exhibitorLinks.length} exhibitor links`);
+
+        exhibitorLinks.forEach(el => {
+          const link = el as HTMLAnchorElement;
+          const name = link.textContent?.trim() || '';
+
+          // Aussi chercher le nom dans les elements enfants
+          const nameEl = link.querySelector('h3, h4, h5, span[class*="name"], span[class*="title"], div[class*="name"]');
+          const extractedName = nameEl?.textContent?.trim() || name;
+
+          // Chercher le pays et stand dans le parent
+          const parent = link.closest('[class*="card"], [class*="Card"], [class*="item"], [class*="Item"], li, article');
+          const countryEl = parent?.querySelector('[class*="country"], [class*="Country"], [class*="flag"], [class*="location"]');
+          const standEl = parent?.querySelector('[class*="stand"], [class*="Stand"], [class*="booth"]');
+
+          const cleanName = extractedName.replace(/\s+/g, ' ').trim();
+
+          if (cleanName && cleanName.length > 2 && cleanName.length < 200 &&
+              !cleanName.toLowerCase().includes('voir') &&
+              !cleanName.toLowerCase().includes('exposant') &&
+              !seen.has(cleanName.toLowerCase())) {
+            seen.add(cleanName.toLowerCase());
+            items.push({
+              raisonSociale: cleanName,
+              urlPageExposant: link.href || undefined,
+              numeroStand: standEl?.textContent?.trim() || undefined,
+              pays: countryEl?.textContent?.trim() || 'FR'
+            });
+          }
+        });
+
+        // Aussi essayer les cartes/items generiques
+        const cards = document.querySelectorAll('[class*="ExhibitorCard"], [class*="exhibitor-card"], [class*="CardExhibitor"]');
+        cards.forEach(card => {
+          const nameEl = card.querySelector('h3, h4, h5, [class*="title"], [class*="name"]');
+          const linkEl = card.querySelector('a') as HTMLAnchorElement;
+          const name = nameEl?.textContent?.trim();
+
+          if (name && !seen.has(name.toLowerCase())) {
+            seen.add(name.toLowerCase());
+            items.push({
+              raisonSociale: name.replace(/\s+/g, ' ').trim(),
+              urlPageExposant: linkEl?.href || undefined,
+              pays: 'FR'
+            });
+          }
+        });
+
+        return items;
+      });
+
+      console.log(`[SIAL] Extracted ${pageCompanies.length} unique companies`);
+      companies.push(...pageCompanies);
 
     } catch (error: any) {
       console.error('[SIAL Adapter] Error:', error.message);
@@ -469,14 +510,8 @@ const SIALComexposiumAdapter: SalonAdapter = {
       await page.close();
     }
 
-    // Dedupliquer
-    const seen = new Set<string>();
-    return companies.filter(c => {
-      const key = c.raisonSociale.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    console.log(`[SIAL] Total: ${companies.length} companies scraped`);
+    return companies;
   }
 };
 
