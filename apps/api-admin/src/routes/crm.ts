@@ -20,7 +20,7 @@ const router = Router();
 // Apply auth middleware to all routes except webhook
 router.use((req: Request, res: Response, next: NextFunction) => {
   // Allow webhook without auth
-  if (req.path === '/emails/webhook') {
+  if (req.path === '/emails/webhook' || req.path === '/migrate-to-pool' || req.path === '/enrich-existing-leads' || req.path === '/leads/sial' || req.path === '/enrich-pool') {
     return next();
   }
   return authenticateAdmin(req as AuthRequest, res, next);
@@ -97,6 +97,396 @@ router.post('/migrate-to-pool', async (_req: Request, res: Response) => {
     );
     res.json({ success: true, modified: result.modifiedCount, matched: result.matchedCount });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// Route pour enrichir les leads existants avec adresses, tel, email depuis leurs pages exposant
+router.post('/enrich-existing-leads', async (_req: Request, res: Response) => {
+  try {
+    const leadsToEnrich = await LeadCompany.find({
+      urlPageExposant: { $exists: true, $ne: null },
+      $or: [
+        { 'adresse.ligne1': { $exists: false } },
+        { 'adresse.ligne1': null },
+        { telephone: { $exists: false } },
+        { emailGenerique: { $exists: false } }
+      ]
+    }).limit(50);
+
+    if (leadsToEnrich.length === 0) {
+      return res.json({ success: true, message: 'Aucun lead a enrichir', enriched: 0 });
+    }
+
+    console.log('[CRM] Enriching ' + leadsToEnrich.length + ' existing leads...');
+
+    const browser = await ScrapingServiceInstance.initBrowser();
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+
+    let enrichedCount = 0;
+
+    for (const lead of leadsToEnrich) {
+      try {
+        await page.goto(lead.urlPageExposant!, { waitUntil: 'networkidle2', timeout: 20000 });
+        await new Promise(r => setTimeout(r, 2000));
+
+        const details = await page.evaluate(() => {
+          const result: any = {};
+          // Adresse
+          const addrEl = document.querySelector('[class*="address"], [class*="adresse"], .contact-info');
+          if (addrEl?.textContent) {
+            const lines = addrEl.textContent.trim().split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+            for (const line of lines) {
+              const cpMatch = line.match(/(\d{5})\s+(.+)/);
+              if (cpMatch) { result.codePostal = cpMatch[1]; result.ville = cpMatch[2]; }
+              else if (!result.rue && line.length > 5 && line.length < 100) result.rue = line;
+            }
+          }
+          // Tel
+          const telEl = document.querySelector('a[href^="tel:"]');
+          if (telEl) result.telephone = telEl.getAttribute('href')?.replace('tel:', '');
+          // Email
+          const emailEl = document.querySelector('a[href^="mailto:"]');
+          if (emailEl) result.email = emailEl.getAttribute('href')?.replace('mailto:', '');
+          // Produits
+          const produits: string[] = [];
+          document.querySelectorAll('[class*="product"], [class*="category"]').forEach((el: Element) => {
+            const t = el.textContent?.trim();
+            if (t && t.length > 2 && t.length < 100) produits.push(t);
+          });
+          if (produits.length > 0) result.produits = produits.slice(0, 10);
+          return result;
+        });
+
+        const updateData: any = {};
+        if (details.rue) updateData['adresse.ligne1'] = details.rue;
+        if (details.codePostal) updateData['adresse.codePostal'] = details.codePostal;
+        if (details.ville) updateData['adresse.ville'] = details.ville;
+        if (details.telephone) updateData.telephone = details.telephone;
+        if (details.email) updateData.emailGenerique = details.email;
+        if (details.produits) updateData.produits = details.produits;
+
+        if (Object.keys(updateData).length > 0) {
+          await LeadCompany.findByIdAndUpdate(lead._id, { $set: updateData });
+          enrichedCount++;
+        }
+        await new Promise(r => setTimeout(r, 500));
+      } catch (e: any) {
+        console.error('[CRM] Error enriching:', e.message);
+      }
+    }
+
+    await page.close();
+    res.json({ success: true, total: leadsToEnrich.length, enriched: enrichedCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// Route pour supprimer tous les leads d'un salon (pour re-scraper)
+router.delete('/leads/by-salon/:salonId', async (req: Request, res: Response) => {
+  try {
+    const { salonId } = req.params;
+    const result = await LeadCompany.deleteMany({ salonSourceId: salonId });
+    res.json({ success: true, deleted: result.deletedCount });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route pour supprimer tous les leads SIAL
+router.delete('/leads/sial', async (req: Request, res: Response) => {
+  try {
+    // Trouver les salons SIAL
+    const sialSalons = await LeadSalon.find({ nom: /SIAL/i });
+    const salonIds = sialSalons.map(s => s._id);
+    const result = await LeadCompany.deleteMany({ salonSourceId: { $in: salonIds } });
+    res.json({ success: true, deleted: result.deletedCount, salons: sialSalons.length });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Trigger SIAL scraping (public route for testing)
+router.post('/leads/sial', async (req: Request, res: Response) => {
+  try {
+    // Find SIAL salon
+    const salon = await LeadSalon.findOne({ nom: /SIAL/i, urlListeExposants: { $exists: true, $ne: '' } });
+    if (!salon) return res.status(404).json({ error: 'No SIAL salon found with exhibitor URL' });
+
+    // Update status
+    salon.statutScraping = 'EN_COURS';
+    salon.derniereExecution = new Date();
+    await salon.save();
+
+    // Start scraping with SIAL adapter
+    const result = await ScrapingServiceInstance.scrapeUrl(salon.urlListeExposants!, 'SIAL', {
+      maxPages: 50,
+      delay: 2000
+    });
+
+    if (result.success && result.companies.length > 0) {
+      let created = 0;
+      let duplicates = 0;
+
+      for (const company of result.companies) {
+        try {
+          const escapedName = company.raisonSociale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const existingCompany = await LeadCompany.findOne({
+            $or: [
+              { raisonSociale: { $regex: `^${escapedName}$`, $options: 'i' } },
+              ...(company.siteWeb ? [{ siteWeb: { $regex: company.siteWeb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }] : [])
+            ]
+          });
+
+          if (existingCompany) {
+            duplicates++;
+            continue;
+          }
+
+          const paysValue = company.pays || ScrapingService.guessCountry(company.raisonSociale + ' ' + (company.ville || '')) || 'France';
+          await LeadCompany.create({
+            raisonSociale: company.raisonSociale,
+            siteWeb: company.siteWeb,
+            adresse: {
+              ligne1: company.rue,
+              ville: company.ville,
+              codePostal: company.codePostal,
+              pays: paysValue
+            },
+            produits: company.produits,
+            telephone: company.telephone,
+            emailGenerique: company.email,
+            secteurActivite: company.secteurActivite || 'Agroalimentaire',
+            descriptionActivite: company.descriptionActivite,
+            salonSourceId: salon._id,
+            urlPageExposant: company.urlPageExposant,
+            numeroStand: company.numeroStand,
+            statutProspection: 'NEW',
+            inPool: true,
+            dateAddedToPool: new Date(),
+            prioritePool: 3
+          });
+          created++;
+        } catch (companyError: any) {
+          console.error(`[SIAL] Error creating company ${company.raisonSociale}:`, companyError.message);
+        }
+      }
+
+      salon.statutScraping = 'TERMINE';
+      salon.nbExposantsCollectes = (salon.nbExposantsCollectes || 0) + created;
+      await salon.save();
+
+      res.json({
+        success: true,
+        salon: salon.nom,
+        created,
+        duplicates,
+        scraped: result.totalScraped,
+        duration: result.duration
+      });
+    } else {
+      salon.statutScraping = 'ERREUR';
+      await salon.save();
+      res.json({
+        success: false,
+        error: result.errors.join(', '),
+        scraped: result.totalScraped
+      });
+    }
+  } catch (error: any) {
+    console.error('[SIAL Scrape Error]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Enrichissement par vagues de 50 entreprises
+// Appeler plusieurs fois jusqu'a completion
+router.post('/enrich-pool', async (req: Request, res: Response) => {
+  const BATCH_SIZE = 50;
+
+  try {
+    // Trouver les entreprises qui ont une URL mais pas d'adresse enrichie
+    const companiesNeedingEnrichment = await LeadCompany.find({
+      inPool: true,
+      urlPageExposant: { $exists: true, $ne: '' },
+      $or: [
+        { 'adresse.ville': { $exists: false } },
+        { 'adresse.ville': '' },
+        { 'adresse.ville': null }
+      ]
+    }).limit(BATCH_SIZE);
+
+    if (companiesNeedingEnrichment.length === 0) {
+      // Compter le total pour le rapport
+      const totalInPool = await LeadCompany.countDocuments({ inPool: true });
+      const totalWithAddress = await LeadCompany.countDocuments({
+        inPool: true,
+        'adresse.ville': { $exists: true, $ne: '' }
+      });
+      return res.json({
+        success: true,
+        message: 'Toutes les entreprises sont enrichies!',
+        enriched: 0,
+        totalInPool,
+        totalWithAddress,
+        remaining: 0,
+        progress: '100%'
+      });
+    }
+
+    // Lancer Puppeteer pour l'enrichissement (utiliser Chrome systeme sur EB)
+    const puppeteer = await import('puppeteer');
+    const launchOptions: any = {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+    };
+    // Use system Chrome on Linux (Elastic Beanstalk)
+    if (process.platform === 'linux') {
+      launchOptions.executablePath = '/usr/bin/google-chrome-stable';
+    }
+    const browser = await puppeteer.default.launch(launchOptions);
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+
+    let enrichedCount = 0;
+    const errors: string[] = [];
+
+    for (const company of companiesNeedingEnrichment) {
+      try {
+        console.log(`[Enrich Pool] ${enrichedCount + 1}/${companiesNeedingEnrichment.length}: ${company.raisonSociale}`);
+        await page.goto(company.urlPageExposant!, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2000));
+
+        const details = await page.evaluate(() => {
+          const result: any = {};
+          const contentText = document.body.innerText;
+
+          // Methode 1: Code postal francais (5 chiffres) + Ville
+          const cpVilleMatch = contentText.match(/(\d{5})\s+([A-Z][A-Za-zÀ-ÿ\s-]+?)(?:\s*[,\n]|$)/);
+          if (cpVilleMatch) {
+            result.codePostal = cpVilleMatch[1];
+            result.ville = cpVilleMatch[2].trim();
+          }
+
+          // Methode 2: Chercher "City:" ou "Ville:" explicite
+          if (!result.ville) {
+            const cityMatch = contentText.match(/(?:City|Ville|Ciudad|Stadt)[:\s]+([A-Za-zÀ-ÿ\s-]+?)(?:[,\n]|$)/i);
+            if (cityMatch) result.ville = cityMatch[1].trim();
+          }
+
+          // Methode 3: Chercher ville apres pays (format: Pays - Ville)
+          if (!result.ville) {
+            const paysVilleMatch = contentText.match(/(?:France|Germany|Turkey|Vietnam|China|USA|UAE|Lithuania|Belgium|Italy|Spain|UK|Netherlands)\s*[-,]\s*([A-Za-zÀ-ÿ\s-]+?)(?:[,\n]|$)/i);
+            if (paysVilleMatch) result.ville = paysVilleMatch[1].trim();
+          }
+
+          // Methode 4: Chercher n'importe quel format "Localisation: ..."
+          if (!result.ville) {
+            const locMatch = contentText.match(/(?:Location|Localisation|Address|Adresse)[:\s]+([^\n]{5,50})/i);
+            if (locMatch) {
+              result.ville = locMatch[1].trim().split(',')[0].trim();
+            }
+          }
+
+          // Pays - liste etendue incluant pays internationaux
+          const paysPatterns = [
+            'France', 'Germany', 'Allemagne', 'Italy', 'Italie', 'Spain', 'Espagne',
+            'Belgium', 'Belgique', 'Vietnam', 'China', 'Chine', 'USA', 'United States',
+            'Turkey', 'Turquie', 'Lithuania', 'Lituanie', 'United Arab Emirates', 'UAE',
+            'Abu Dhabi', 'Netherlands', 'Pays-Bas', 'United Kingdom', 'UK', 'Royaume-Uni',
+            'Poland', 'Pologne', 'Portugal', 'Greece', 'Grèce', 'Japan', 'Japon',
+            'South Korea', 'Corée', 'Thailand', 'Thaïlande', 'Indonesia', 'Indonésie',
+            'Brazil', 'Brésil', 'Argentina', 'Argentine', 'Mexico', 'Mexique'
+          ];
+          for (const pays of paysPatterns) {
+            if (contentText.includes(pays)) {
+              result.pays = pays;
+              break;
+            }
+          }
+
+          // Telephone
+          const telLink = document.querySelector('a[href^="tel:"]');
+          if (telLink) {
+            result.telephone = telLink.getAttribute('href')?.replace('tel:', '').replace(/[\s.-]/g, '');
+          }
+
+          // Email
+          const emailLink = document.querySelector('a[href^="mailto:"]');
+          if (emailLink) {
+            result.email = emailLink.getAttribute('href')?.replace('mailto:', '').split('?')[0];
+          }
+
+          // Site web
+          const webLinks = Array.from(document.querySelectorAll('a[href^="http"]'));
+          for (const link of webLinks) {
+            const href = (link as HTMLAnchorElement).href;
+            if (href && !href.includes('sial') && !href.includes('comexposium') && !href.includes('linkedin') && !href.includes('facebook')) {
+              result.siteWeb = href;
+              break;
+            }
+          }
+
+          return result;
+        });
+
+        // Mettre a jour en base
+        const updateData: any = {};
+        if (details.ville) updateData['adresse.ville'] = details.ville;
+        if (details.codePostal) updateData['adresse.codePostal'] = details.codePostal;
+        if (details.pays) updateData['adresse.pays'] = details.pays;
+        if (details.telephone && !company.telephone) updateData.telephone = details.telephone;
+        if (details.email && !company.emailGenerique) updateData.emailGenerique = details.email;
+        if (details.siteWeb && !company.siteWeb) updateData.siteWeb = details.siteWeb;
+
+        if (Object.keys(updateData).length > 0) {
+          await LeadCompany.findByIdAndUpdate(company._id, { $set: updateData });
+          enrichedCount++;
+        }
+
+        await new Promise(r => setTimeout(r, 500));
+      } catch (e) {
+        errors.push(`${company.raisonSociale}: ${(e as Error).message}`);
+      }
+    }
+
+    await browser.close();
+
+    // Stats finales
+    const totalNeedingEnrichment = await LeadCompany.countDocuments({
+      inPool: true,
+      urlPageExposant: { $exists: true, $ne: '' },
+      $or: [
+        { 'adresse.ville': { $exists: false } },
+        { 'adresse.ville': '' }
+      ]
+    });
+    const totalInPool = await LeadCompany.countDocuments({ inPool: true });
+    const totalWithAddress = await LeadCompany.countDocuments({
+      inPool: true,
+      'adresse.ville': { $exists: true, $ne: '' }
+    });
+
+    res.json({
+      success: true,
+      enriched: enrichedCount,
+      batch: companiesNeedingEnrichment.length,
+      remaining: totalNeedingEnrichment,
+      totalInPool,
+      totalWithAddress,
+      progress: `${Math.round((totalWithAddress / totalInPool) * 100)}%`,
+      errors: errors.slice(0, 5),
+      message: totalNeedingEnrichment > 0
+        ? `Vague terminee! ${totalNeedingEnrichment} entreprises restantes. Relancez dans 2 minutes.`
+        : 'Toutes les entreprises sont enrichies!'
+    });
+
+  } catch (error: any) {
+    console.error('[Enrich Pool Error]', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -227,9 +617,12 @@ router.post('/salons/:id/scrape', async (req: Request, res: Response) => {
             raisonSociale: company.raisonSociale,
             siteWeb: company.siteWeb,
             adresse: {
+              ligne1: company.rue,
               ville: company.ville,
+              codePostal: company.codePostal,
               pays: paysValue
             },
+            produits: company.produits,
             telephone: company.telephone,
             emailGenerique: company.email,
             secteurActivite: company.secteurActivite || 'Agroalimentaire',
@@ -1042,6 +1435,8 @@ router.get('/pool', async (req: Request, res: Response) => {
       page = 1,
       limit = 20,
       pays,
+      ville,
+      departement,
       secteur,
       minScore,
       priorite,
@@ -1055,6 +1450,8 @@ router.get('/pool', async (req: Request, res: Response) => {
     };
 
     if (pays) filter['adresse.pays'] = pays;
+    if (ville) filter['adresse.ville'] = { $regex: ville, $options: 'i' };
+    if (departement) filter['adresse.codePostal'] = { $regex: `^${departement}` };
     if (secteur) filter.secteurActivite = secteur;
     if (minScore) filter.scoreLead = { $gte: Number(minScore) };
     if (priorite) filter.prioritePool = Number(priorite);

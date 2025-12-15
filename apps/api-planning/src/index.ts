@@ -6,6 +6,7 @@ import slotsRoutes from './routes/slots';
 import docksRoutes from './routes/docks';
 import sitesRoutes from './routes/sites';
 import bookingsRoutes from './routes/bookings';
+import appointmentsRoutes from './routes/appointments';
 
 dotenv.config();
 
@@ -76,12 +77,14 @@ app.use('/api/v1/planning/sites', sitesRoutes);
 app.use('/api/v1/planning/docks', docksRoutes);
 app.use('/api/v1/planning/slots', slotsRoutes);
 app.use('/api/v1/planning/bookings', bookingsRoutes);
+app.use('/api/v1/planning/appointments', appointmentsRoutes);
 
 // Alias sans préfixe pour compatibilité
 app.use('/api/v1/sites', sitesRoutes);
 app.use('/api/v1/docks', docksRoutes);
 app.use('/api/v1/slots', slotsRoutes);
 app.use('/api/v1/bookings', bookingsRoutes);
+app.use('/api/v1/appointments', appointmentsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

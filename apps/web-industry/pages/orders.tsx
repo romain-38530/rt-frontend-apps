@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
 import { useSafeRouter } from '../lib/useSafeRouter';
-import { CreateOrderForm, OrdersList, useToast } from '@rt/ui-components';
+import { CreateOrderForm, OrdersList, useToast, AutoPlanningModal } from '@rt/ui-components';
 import { OrdersService } from '@rt/utils';
 import type {
   Order,
@@ -35,6 +35,9 @@ export default function OrdersPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [isAffretMode, setIsAffretMode] = useState(false);
+  const [showPlanningModal, setShowPlanningModal] = useState(false);
 
   // Charger les commandes
   const loadOrders = async (newFilters?: OrderFilters) => {
@@ -112,7 +115,71 @@ export default function OrdersPage() {
 
   // Voir le détail d'une commande
   const handleOrderClick = (orderId: string) => {
-    router.push(`/orders/${orderId}`);
+    if (isAffretMode) {
+      // Toggle selection in Affret mode
+      const newSelected = new Set(selectedOrders);
+      if (newSelected.has(orderId)) {
+        newSelected.delete(orderId);
+      } else {
+        newSelected.add(orderId);
+      }
+      setSelectedOrders(newSelected);
+    } else {
+      router.push(`/orders/${orderId}`);
+    }
+  };
+
+  // Toggle selection d'une commande
+  const handleToggleSelect = (orderId: string) => {
+    const newSelected = new Set(selectedOrders);
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId);
+    } else {
+      newSelected.add(orderId);
+    }
+    setSelectedOrders(newSelected);
+  };
+
+  // Sélectionner/Désélectionner toutes les commandes visibles
+  const handleSelectAll = () => {
+    if (selectedOrders.size === orders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(orders.map(o => o.id)));
+    }
+  };
+
+  // Lancer la planification automatique
+  const handleLaunchAffretIA = () => {
+    if (selectedOrders.size === 0) {
+      toast.error('Sélectionnez au moins une commande pour la planification automatique');
+      return;
+    }
+    setShowPlanningModal(true);
+  };
+
+  // Valider une commande avec un transporteur
+  const handleValidateCarrier = async (orderId: string, carrierId: string) => {
+    try {
+      // Update order with carrier assignment
+      await OrdersService.updateOrder(orderId, { carrierId, status: 'sent_to_carrier' as any });
+      toast.success('Transporteur assigné avec succès');
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  // Escalader vers Affret.IA (bourse de fret)
+  const handleEscalateToAffretIA = (orderIds: string[]) => {
+    const ordersToEscalate = orders.filter(o => orderIds.includes(o.id));
+    sessionStorage.setItem('affretia_orders', JSON.stringify(ordersToEscalate));
+    router.push('/affret-ia?mode=escalated');
+  };
+
+  // Quitter le mode Affret.IA
+  const handleExitAffretMode = () => {
+    setIsAffretMode(false);
+    setSelectedOrders(new Set());
   };
 
   // Changement de page
@@ -213,22 +280,107 @@ export default function OrdersPage() {
           </div>
 
           {view === 'list' && (
-            <button
-              onClick={() => setView('create')}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                color: 'white',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-                transition: 'all 0.2s ease',
-              }}>
-              + Nouvelle commande
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {isAffretMode ? (
+                <>
+                  <div style={{
+                    padding: '8px 16px',
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                  }}>
+                    {selectedOrders.size} commande{selectedOrders.size > 1 ? 's' : ''} sélectionnée{selectedOrders.size > 1 ? 's' : ''}
+                  </div>
+                  <button
+                    onClick={handleSelectAll}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: 'white',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                    }}>
+                    {selectedOrders.size === orders.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  </button>
+                  <button
+                    onClick={handleLaunchAffretIA}
+                    disabled={selectedOrders.size === 0}
+                    style={{
+                      background: selectedOrders.size > 0
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: selectedOrders.size > 0 ? 'pointer' : 'not-allowed',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxShadow: selectedOrders.size > 0 ? '0 4px 12px rgba(245, 158, 11, 0.4)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                    🤖 Lancer Affret.IA
+                  </button>
+                  <button
+                    onClick={handleExitAffretMode}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid #ef4444',
+                      color: '#fca5a5',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                    }}>
+                    ✕ Annuler
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsAffretMode(true)}
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                    🤖 Planification Auto
+                  </button>
+                  <button
+                    onClick={() => setView('create')}
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                    }}>
+                    + Nouvelle commande
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -270,19 +422,119 @@ export default function OrdersPage() {
                 backdropFilter: 'blur(10px)',
               }}
             >
-              <OrdersList
-                orders={orders}
-                total={pagination.total}
-                page={pagination.page}
-                limit={pagination.limit}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-                onFiltersChange={handleFiltersChange}
-                onOrderClick={handleOrderClick}
-                onDuplicateOrder={handleDuplicateOrder}
-                onCancelOrder={handleCancelOrder}
-                isLoading={isLoading}
-              />
+              {/* Bandeau mode Affret.IA */}
+              {isAffretMode && (
+                <div style={{
+                  marginBottom: '20px',
+                  padding: '16px 20px',
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                  borderRadius: '12px',
+                  border: '2px solid #f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}>
+                  <span style={{ fontSize: '24px' }}>🤖</span>
+                  <div>
+                    <div style={{ fontWeight: '700', color: '#92400e', fontSize: '16px' }}>
+                      Mode Planification Automatique Affret.IA
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#a16207' }}>
+                      Cliquez sur les commandes à planifier automatiquement, puis lancez Affret.IA
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste avec sélection */}
+              {isAffretMode ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {orders.map((order) => {
+                    const isSelected = selectedOrders.has(order.id);
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => handleToggleSelect(order.id)}
+                        style={{
+                          padding: '16px 20px',
+                          backgroundColor: isSelected ? '#fef3c7' : '#f9fafb',
+                          border: isSelected ? '2px solid #f59e0b' : '1px solid #e5e7eb',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          border: isSelected ? 'none' : '2px solid #d1d5db',
+                          backgroundColor: isSelected ? '#f59e0b' : 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: '14px',
+                        }}>
+                          {isSelected && '✓'}
+                        </div>
+
+                        {/* Infos commande */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '700', color: '#111827', fontSize: '15px' }}>
+                              {order.reference}
+                            </span>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: order.status === 'created' ? '#dbeafe' : order.status === 'sent_to_carrier' ? '#ede9fe' : '#f3f4f6',
+                              color: order.status === 'created' ? '#1e40af' : order.status === 'sent_to_carrier' ? '#6d28d9' : '#374151',
+                            }}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                            {order.pickupAddress?.city} → {order.deliveryAddress?.city}
+                            {order.goods?.weight && ` • ${order.goods.weight} kg`}
+                          </div>
+                        </div>
+
+                        {/* Prix */}
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: '700', color: '#059669', fontSize: '16px' }}>
+                            {order.estimatedPrice ? `${order.estimatedPrice} €` : '-'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            {order.dates?.pickupDate ? new Date(order.dates.pickupDate).toLocaleDateString('fr-FR') : '-'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <OrdersList
+                  orders={orders}
+                  total={pagination.total}
+                  page={pagination.page}
+                  limit={pagination.limit}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                  onFiltersChange={handleFiltersChange}
+                  onOrderClick={handleOrderClick}
+                  onDuplicateOrder={handleDuplicateOrder}
+                  onCancelOrder={handleCancelOrder}
+                  isLoading={isLoading}
+                />
+              )}
             </div>
           )}
 
@@ -306,6 +558,21 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de planification automatique */}
+      {showPlanningModal && (
+        <AutoPlanningModal
+          orders={orders.filter(o => selectedOrders.has(o.id))}
+          onClose={() => {
+            setShowPlanningModal(false);
+            setIsAffretMode(false);
+            setSelectedOrders(new Set());
+            loadOrders();
+          }}
+          onValidate={handleValidateCarrier}
+          onEscalateToAffretIA={handleEscalateToAffretIA}
+        />
+      )}
     </>
   );
 }

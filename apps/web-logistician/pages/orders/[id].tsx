@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../../lib/auth';
 import { OrdersService } from '@rt/utils';
+import { OrderProgressStepper, CarrierInfoCard } from '@rt/ui-components';
 import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
@@ -211,11 +212,22 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+        {/* Echelle de statut */}
+        <OrderProgressStepper status={order.status} />
+
         {/* Contenu */}
         <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
             {/* Colonne principale */}
             <div>
+              {/* Transporteur assigne */}
+              <CarrierInfoCard
+                carrierName={(order as any).carrierName || (order as any).assignedCarrier?.carrierName}
+                driverName={(order as any).driverName}
+                vehiclePlate={(order as any).vehiclePlate}
+                driverPhone={(order as any).driverPhone}
+              />
+
               {/* Itinéraire */}
               <div style={cardStyle}>
                 <h2 style={sectionTitleStyle}>🗺️ Itinéraire</h2>

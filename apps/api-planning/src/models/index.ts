@@ -8,3 +8,4 @@ export { default as TimeSlot, ITimeSlot } from './TimeSlot';
 export { default as Booking, IBooking } from './Booking';
 export { default as DriverCheckin, IDriverCheckin } from './DriverCheckin';
 export { default as ECMR, IECMR } from './ECMR';
+export { default as AppointmentRequest, IAppointmentRequest } from './AppointmentRequest';

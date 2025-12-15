@@ -22,6 +22,11 @@ import authRoutes from './routes/auth';
 
 // Middleware
 import { authenticateAdmin } from './middleware/auth';
+// Background scraping imports
+import ScrapingServiceInstance from './services/scraping-service';
+import LeadSalon from './models/LeadSalon';
+import LeadCompany from './models/LeadCompany';
+
 
 dotenv.config();
 
@@ -234,5 +239,116 @@ mongoose.connect(MONGODB_URI)
     console.error('MongoDB connection error:', error);
     process.exit(1);
   });
+
+
+// Tache de fond pour scraper les salons actifs
+async function startBackgroundScraping() {
+  console.log('[Background] Starting background scraping service...');
+  
+  // Attendre 30 secondes avant de demarrer (laisser le serveur demarrer)
+  await new Promise(r => setTimeout(r, 30000));
+  
+  // Fonction de scraping
+  const runScraping = async () => {
+    try {
+      // Trouver les salons avec statut A_SCRAPER ou TERMINE (pour refresh)
+      const salonsToScrape = await LeadSalon.find({
+        statutScraping: { $in: ['A_SCRAPER', 'TERMINE'] },
+        urlListeExposants: { $exists: true, $ne: null }
+      }).limit(1); // Un salon a la fois
+
+      for (const salon of salonsToScrape) {
+        console.log('[Background] Scraping salon:', salon.nom);
+        
+        try {
+          // Mettre a jour le statut
+          salon.statutScraping = 'EN_COURS';
+          salon.derniereExecution = new Date();
+          await salon.save();
+
+          // Determiner l'adaptateur
+          let adapterName = 'Generic';
+          const url = salon.urlListeExposants || '';
+          if (url.includes('sialparis') || url.includes('sial')) adapterName = 'SIAL';
+          else if (url.includes('sitl')) adapterName = 'SITL';
+          else if (url.includes('transportlogistic')) adapterName = 'TransportLogistic';
+
+          // Lancer le scraping
+          const result = await ScrapingServiceInstance.scrapeUrl(salon.urlListeExposants!, adapterName);
+
+          if (result.success && result.companies.length > 0) {
+            let created = 0;
+            let duplicates = 0;
+
+            for (const company of result.companies) {
+              try {
+                const existingCompany = await LeadCompany.findOne({
+                  $or: [
+                    { raisonSociale: company.raisonSociale, salonSourceId: salon._id },
+                    { siteWeb: company.siteWeb }
+                  ]
+                });
+
+                if (existingCompany) {
+                  duplicates++;
+                  continue;
+                }
+
+                const paysValue = company.pays || 'France';
+                await LeadCompany.create({
+                  raisonSociale: company.raisonSociale,
+                  siteWeb: company.siteWeb,
+                  adresse: {
+                    ligne1: company.rue,
+                    ville: company.ville,
+                    codePostal: company.codePostal,
+                    pays: paysValue
+                  },
+                  produits: company.produits,
+                  telephone: company.telephone,
+                  emailGenerique: company.email,
+                  secteurActivite: company.secteurActivite || 'Agroalimentaire',
+                  descriptionActivite: company.descriptionActivite,
+                  salonSourceId: salon._id,
+                  urlPageExposant: company.urlPageExposant,
+                  numeroStand: company.numeroStand,
+                  statutProspection: 'NEW',
+                  inPool: true,
+                  dateAddedToPool: new Date(),
+                  prioritePool: 3
+                });
+                created++;
+              } catch (e) {
+                // Ignorer les erreurs individuelles
+              }
+            }
+
+            // Mettre a jour le salon
+            salon.statutScraping = 'TERMINE';
+            salon.nbExposantsCollectes = (salon.nbExposantsCollectes || 0) + created;
+            await salon.save();
+
+            console.log('[Background] Scraping ' + salon.nom + ': ' + created + ' nouvelles, ' + duplicates + ' doublons');
+          } else {
+            salon.statutScraping = 'TERMINE';
+            await salon.save();
+          }
+        } catch (error: any) {
+          console.error('[Background] Scraping error for ' + salon.nom + ':', error.message);
+          salon.statutScraping = 'ERREUR';
+          await salon.save();
+        }
+      }
+    } catch (error: any) {
+      console.error('[Background] Background scraping error:', error.message);
+    }
+  };
+
+  // Executer toutes les 10 minutes
+  setInterval(runScraping, 10 * 60 * 1000);
+  
+  // Executer immediatement au demarrage
+  runScraping();
+}
 
 export default app;

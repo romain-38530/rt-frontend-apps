@@ -30,6 +30,7 @@ export interface ILeadCompany extends Document {
   effectifTranche?: string;
   chiffreAffairesTranche?: string;
   descriptionActivite?: string;
+  produits?: string[];  // Types de produits fabriques
 
   // Enrichissement Apollo (legacy)
   apolloOrgId?: string;
@@ -90,6 +91,7 @@ const LeadCompanySchema = new Schema({
   effectifTranche: String,
   chiffreAffairesTranche: String,
   descriptionActivite: String,
+  produits: [String],  // Types de produits fabriques
 
   // Enrichissement Apollo (legacy)
   apolloOrgId: String,

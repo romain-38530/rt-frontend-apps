@@ -33,6 +33,9 @@ export interface ScrapedCompany {
   telephone?: string;
   email?: string;
   urlPageExposant?: string;
+  rue?: string;
+  codePostal?: string;
+  produits?: string[];  // Types de produits fabriques
 }
 
 export interface SalonAdapter {
@@ -480,6 +483,187 @@ const SIALComexposiumAdapter: SalonAdapter = {
       }
 
       console.log(`[SIAL] Total: ${companies.length} unique companies`);
+
+      // Methode 4: Enrichir avec les pages de detail (adresse, tel, email, produits)
+      // LIMITE A 20 pour eviter timeout - utiliser /enrich-pool pour enrichir le reste
+      const MAX_ENRICH = 20;
+      const companiesWithUrl = companies.filter(c => c.urlPageExposant);
+      const toEnrich = companiesWithUrl.slice(0, MAX_ENRICH);
+
+      console.log(`[SIAL] Quick enriching ${toEnrich.length}/${companiesWithUrl.length} companies (use /enrich-pool for more)...`);
+      const detailPage = await browser.newPage();
+      await detailPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+      let enrichedCount = 0;
+
+      for (const company of toEnrich) {
+        try {
+          console.log(`[SIAL] Enriching ${enrichedCount + 1}/${toEnrich.length}: ${company.raisonSociale}`);
+          await detailPage.goto(company.urlPageExposant, { waitUntil: 'networkidle2', timeout: 20000 });
+          await new Promise(r => setTimeout(r, 2000));
+
+          const details = await detailPage.evaluate(() => {
+            const result: any = {};
+            const pageText = document.body.innerText;
+            const pageHtml = document.body.innerHTML;
+
+            // Methode 1: Chercher dans les elements specifiques SIAL/Comexposium
+            const cardSelectors = [
+              '[class*="exhibitor"]', '[class*="exposant"]', '[class*="company"]',
+              '[class*="contact"]', '[class*="detail"]', '[class*="profile"]',
+              '[class*="info"]', 'main', 'article', '.content'
+            ];
+
+            let contentText = pageText;
+            for (const sel of cardSelectors) {
+              const el = document.querySelector(sel);
+              if (el?.textContent && el.textContent.length > 100) {
+                contentText = el.textContent;
+                break;
+              }
+            }
+
+            // Extraire adresse francaise (format: rue, CP Ville)
+            // Pattern: code postal 5 chiffres suivi de la ville
+            const cpVilleMatch = contentText.match(/(\d{5})\s+([A-Z][A-Za-zÀ-ÿ\s-]+?)(?:\s*[,\n]|$)/);
+            if (cpVilleMatch) {
+              result.codePostal = cpVilleMatch[1];
+              result.ville = cpVilleMatch[2].trim();
+            }
+
+            // Chercher aussi format international
+            if (!result.ville) {
+              const cityMatch = contentText.match(/(?:City|Ville|Ciudad)[:\s]+([A-Za-zÀ-ÿ\s-]+)/i);
+              if (cityMatch) result.ville = cityMatch[1].trim();
+            }
+
+            // Extraire la rue (ligne avant le code postal ou apres "Adresse")
+            const adresseMatch = contentText.match(/(?:Adresse|Address|Rue|Street)[:\s]*([^\n]+)/i);
+            if (adresseMatch) {
+              result.rue = adresseMatch[1].trim().substring(0, 100);
+            }
+
+            // Extraire pays
+            const paysPatterns = ['France', 'Germany', 'Allemagne', 'Italy', 'Italie', 'Spain', 'Espagne', 'Belgium', 'Belgique', 'Netherlands', 'Pays-Bas', 'United Kingdom', 'Royaume-Uni', 'Switzerland', 'Suisse', 'Vietnam', 'China', 'Chine', 'USA', 'United States'];
+            for (const pays of paysPatterns) {
+              if (contentText.includes(pays)) {
+                result.pays = pays;
+                break;
+              }
+            }
+
+            // Extraire telephone - plusieurs formats
+            const telPatterns = [
+              /(?:Tel|Phone|Telephone|T)[.:\s]*(\+?[\d\s.-]{10,20})/i,
+              /(\+33[\s.-]?\d[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/,
+              /(\+84[\s.-]?\d{9,11})/,  // Vietnam
+              /(\+49[\s.-]?\d{10,12})/,  // Germany
+              /(\+39[\s.-]?\d{10,12})/,  // Italy
+              /(0[1-9][\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/
+            ];
+            for (const pattern of telPatterns) {
+              const match = contentText.match(pattern);
+              if (match) {
+                result.telephone = match[1].replace(/[\s.-]/g, '');
+                break;
+              }
+            }
+
+            // Chercher aussi dans les liens tel:
+            const telLink = document.querySelector('a[href^="tel:"]');
+            if (telLink) {
+              const href = telLink.getAttribute('href');
+              if (href) result.telephone = href.replace('tel:', '').replace(/[\s.-]/g, '');
+            }
+
+            // Extraire email
+            const emailLink = document.querySelector('a[href^="mailto:"]');
+            if (emailLink) {
+              const href = emailLink.getAttribute('href');
+              if (href) result.email = href.replace('mailto:', '').split('?')[0];
+            }
+            if (!result.email) {
+              const emailMatch = contentText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+              if (emailMatch) result.email = emailMatch[0];
+            }
+
+            // Extraire site web
+            const webLinks = Array.from(document.querySelectorAll('a[href^="http"]'));
+            for (const link of webLinks) {
+              const href = (link as HTMLAnchorElement).href;
+              if (href &&
+                  !href.includes('sial') &&
+                  !href.includes('comexposium') &&
+                  !href.includes('linkedin') &&
+                  !href.includes('facebook') &&
+                  !href.includes('twitter') &&
+                  !href.includes('instagram') &&
+                  !href.includes('youtube')) {
+                result.siteWeb = href;
+                break;
+              }
+            }
+
+            // Extraire les categories/activites
+            const produits: string[] = [];
+            const categorySelectors = [
+              '[class*="tag"]', '[class*="category"]', '[class*="sector"]',
+              '[class*="activity"]', '[class*="product"]', 'span[class*="label"]'
+            ];
+            for (const sel of categorySelectors) {
+              document.querySelectorAll(sel).forEach(el => {
+                const text = el.textContent?.trim();
+                if (text && text.length > 2 && text.length < 80 && !produits.includes(text)) {
+                  produits.push(text);
+                }
+              });
+              if (produits.length >= 5) break;
+            }
+            if (produits.length > 0) result.produits = produits.slice(0, 10);
+
+            // Extraire description
+            const descSelectors = [
+              '[class*="description"]', '[class*="about"]', '[class*="presentation"]',
+              '[class*="summary"]', '[class*="overview"]', 'p'
+            ];
+            for (const sel of descSelectors) {
+              const el = document.querySelector(sel);
+              if (el?.textContent && el.textContent.length > 80 && el.textContent.length < 2000) {
+                result.descriptionActivite = el.textContent.trim().substring(0, 500);
+                break;
+              }
+            }
+
+            // Debug: log what we found
+            console.log('[SIAL Detail] Found:', JSON.stringify(result));
+
+            return result;
+          });
+
+          // Merger les details
+          if (details.rue) company.rue = details.rue;
+          if (details.codePostal) company.codePostal = details.codePostal;
+          if (details.ville) company.ville = details.ville;
+          if (details.pays) company.pays = details.pays;
+          if (details.telephone) company.telephone = details.telephone;
+          if (details.email) company.email = details.email;
+          if (details.siteWeb) company.siteWeb = details.siteWeb;
+          if (details.produits) company.produits = details.produits;
+          if (details.descriptionActivite && !company.descriptionActivite) {
+            company.descriptionActivite = details.descriptionActivite;
+          }
+
+          enrichedCount++;
+          await new Promise(r => setTimeout(r, 500));
+
+        } catch (e) {
+          console.log(`[SIAL] Error enriching ${company.raisonSociale}:`, (e as Error).message);
+        }
+      }
+
+      await detailPage.close();
+      console.log(`[SIAL] Enriched ${enrichedCount} companies with details`);
+
 
     } catch (error: any) {
       console.error('[SIAL Adapter] Error:', error.message);

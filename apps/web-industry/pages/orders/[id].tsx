@@ -191,6 +191,37 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Ajouter un commentaire a la commande
+  const handleAddComment = async () => {
+    if (!orderId || !newComment.trim()) return;
+
+    try {
+      const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'comment',
+          description: newComment.trim(),
+          userName: 'Utilisateur Industry',
+        }),
+      });
+
+      if (response.ok) {
+        setNewComment('');
+        toast.success('Commentaire envoye avec succes');
+        // Recharger les evenements
+        loadOrder();
+      } else {
+        throw new Error('Erreur lors de l\'envoi');
+      }
+    } catch (err) {
+      console.error('Error adding comment:', err);
+      toast.error('Impossible d\'ajouter le commentaire');
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
@@ -331,7 +362,7 @@ export default function OrderDetailPage() {
                 {/* Bouton Modifier - visible si commande pas encore en transit */}
                 {!['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered', 'closed', 'cancelled'].includes(order.status) && (
                   <button
-                    onClick={() => router.push(`/orders/${order.id}/edit`)}
+                    onClick={() => router.push(`/orders/edit?id=${orderId}`)}
                     style={{ padding: '10px 16px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                   >
                     ✏️ Modifier
@@ -810,15 +841,17 @@ export default function OrderDetailPage() {
                       />
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                         <button
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim()}
                           style={{
                             padding: '8px 16px',
-                            backgroundColor: '#667eea',
+                            backgroundColor: newComment.trim() ? '#667eea' : '#9ca3af',
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '13px',
                             fontWeight: '600',
-                            cursor: 'pointer',
+                            cursor: newComment.trim() ? 'pointer' : 'not-allowed',
                           }}
                         >
                           Envoyer

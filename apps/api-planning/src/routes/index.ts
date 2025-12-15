@@ -7,3 +7,4 @@ export { default as bookingsRouter } from './bookings';
 export { default as driverRouter } from './driver';
 export { default as ecmrRouter } from './ecmr';
 export { default as aiRouter } from './ai';
+export { default as appointmentsRouter } from './appointments';
