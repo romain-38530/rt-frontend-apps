@@ -362,7 +362,7 @@ export default function OrderDetailPage() {
                 {/* Bouton Modifier - visible si commande pas encore en transit */}
                 {!['in_transit', 'arrived_pickup', 'loaded', 'arrived_delivery', 'delivered', 'closed', 'cancelled'].includes(order.status) && (
                   <button
-                    onClick={() => router.push(`/orders/edit?id=${orderId}`)}
+                    onClick={() => router.push(`/orders/edit/?id=${orderId}`)}
                     style={{ padding: '10px 16px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                   >
                     ✏️ Modifier
