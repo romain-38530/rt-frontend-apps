@@ -493,6 +493,20 @@ export const crmApi = {
     });
     return res.json();
   },
+  enrichCompanyFree: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}/enrich-free`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  enrichCompanyPaid: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}/enrich-paid`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
   assignCompany: async (id: string, commercialId: string) => {
     const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/companies/${id}/assign`, {
       method: 'POST',

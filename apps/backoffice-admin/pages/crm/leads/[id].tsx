@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Building2, Globe, Phone, Mail, MapPin,
   Calendar, User, ExternalLink, Tag, Package, Star,
-  Clock, CheckCircle, XCircle, AlertCircle
+  Clock, CheckCircle, XCircle, AlertCircle, Sparkles, RefreshCw
 } from 'lucide-react';
 import { crmApi } from '../../../lib/api';
 
@@ -77,6 +77,8 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<LeadCompany | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [enrichingFree, setEnrichingFree] = useState(false);
+  const [enrichingPaid, setEnrichingPaid] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === 'string') {
@@ -107,6 +109,36 @@ export default function LeadDetailPage() {
       setError(err.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const enrichFree = async () => {
+    if (!lead || enrichingFree) return;
+    setEnrichingFree(true);
+    try {
+      const result = await crmApi.enrichCompanyFree(lead._id);
+      if (result.success) {
+        await loadLead(lead._id);
+      }
+    } catch (err: any) {
+      console.error('Free enrichment error:', err);
+    } finally {
+      setEnrichingFree(false);
+    }
+  };
+
+  const enrichPaid = async () => {
+    if (!lead || enrichingPaid) return;
+    setEnrichingPaid(true);
+    try {
+      const result = await crmApi.enrichCompanyPaid(lead._id);
+      if (result.success) {
+        await loadLead(lead._id);
+      }
+    } catch (err: any) {
+      console.error('Paid enrichment error:', err);
+    } finally {
+      setEnrichingPaid(false);
     }
   };
 
@@ -185,17 +217,43 @@ export default function LeadDetailPage() {
                   </div>
                 </div>
               </div>
-              {lead.siteWeb && (
-                <a
-                  href={lead.siteWeb}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={enrichFree}
+                  disabled={enrichingFree || enrichingPaid}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-sm"
                 >
-                  <ExternalLink size={16} />
-                  Visiter le site
-                </a>
-              )}
+                  {enrichingFree ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
+                  {enrichingFree ? 'Enrichissement...' : 'Gratuit'}
+                </button>
+                <button
+                  onClick={enrichPaid}
+                  disabled={enrichingFree || enrichingPaid}
+                  className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50 text-sm"
+                >
+                  {enrichingPaid ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
+                  {enrichingPaid ? 'Enrichissement...' : 'Payant'}
+                </button>
+                {lead.siteWeb && (
+                  <a
+                    href={lead.siteWeb}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm"
+                  >
+                    <ExternalLink size={14} />
+                    Site
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -213,13 +271,13 @@ export default function LeadDetailPage() {
                 <div>
                   <label className="text-sm text-gray-500">Adresse</label>
                   <p className="font-medium text-gray-900">
-                    {lead.adresse.ligne1 || '-'}
-                    {lead.adresse.ligne2 && <><br />{lead.adresse.ligne2}</>}
+                    {lead.adresse?.ligne1 || '-'}
+                    {lead.adresse?.ligne2 && <><br />{lead.adresse.ligne2}</>}
                   </p>
                   <p className="text-gray-700">
-                    {lead.adresse.codePostal} {lead.adresse.ville}
+                    {lead.adresse?.codePostal} {lead.adresse?.ville}
                   </p>
-                  <p className="text-gray-700">{lead.adresse.pays}</p>
+                  <p className="text-gray-700">{lead.adresse?.pays || '-'}</p>
                 </div>
                 <div className="space-y-3">
                   {lead.telephone && (
