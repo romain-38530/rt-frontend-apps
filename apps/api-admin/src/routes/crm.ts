@@ -859,17 +859,443 @@ router.put('/companies/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Enrichir une entreprise via Lemlist
+// Enrichir une entreprise (methodes gratuites + Lemlist optionnel)
 router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
   try {
     const company = await LeadCompany.findById(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (!company.siteWeb) {
-      return res.status(400).json({ error: 'No website URL available for enrichment' });
+    const fieldsEnriched: string[] = [];
+    let source = 'none';
+
+    // 1. D'abord essayer SIRENE pour les entreprises francaises
+    if (!company.adresse?.pays || ['France', 'FR', 'Italia', 'IT', 'Italy'].includes(company.adresse?.pays || '')) {
+      try {
+        const searchQuery = encodeURIComponent(company.raisonSociale);
+        const sireneResponse = await fetch(
+          `https://recherche-entreprises.api.gouv.fr/search?q=${searchQuery}&per_page=1`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+
+        if (sireneResponse.ok) {
+          const data = await sireneResponse.json();
+          if (data.results && data.results.length > 0) {
+            const entreprise = data.results[0];
+            const siege = entreprise.siege;
+
+            if (siege?.siret && !company.siret) {
+              company.siret = siege.siret;
+              fieldsEnriched.push('siret');
+            }
+            if (siege?.adresse && !company.adresse?.ligne1) {
+              if (!company.adresse) company.adresse = { pays: 'France' };
+              company.adresse.ligne1 = siege.adresse;
+              fieldsEnriched.push('adresse');
+            }
+            if (siege?.code_postal && !company.adresse?.codePostal) {
+              if (!company.adresse) company.adresse = { pays: 'France' };
+              company.adresse.codePostal = siege.code_postal;
+              fieldsEnriched.push('codePostal');
+            }
+            if (siege?.libelle_commune && !company.adresse?.ville) {
+              if (!company.adresse) company.adresse = { pays: 'France' };
+              company.adresse.ville = siege.libelle_commune;
+              fieldsEnriched.push('ville');
+            }
+            if (entreprise.activite_principale && !company.secteurActivite) {
+              company.secteurActivite = entreprise.activite_principale;
+              fieldsEnriched.push('secteurActivite');
+            }
+
+            if (fieldsEnriched.length > 0) {
+              source = 'sirene';
+              await company.save();
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Enrich] SIRENE error:', e);
+      }
     }
 
-    // Extraire le domaine
+    // 2. Si site web disponible, scraper pour plus d'infos
+    if (company.siteWeb) {
+      try {
+        const puppeteer = await import('puppeteer');
+        const launchOptions: any = {
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        };
+        if (process.platform === 'linux') {
+          launchOptions.executablePath = '/usr/bin/google-chrome-stable';
+        }
+
+        const browser = await puppeteer.default.launch(launchOptions);
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+
+        const baseUrl = company.siteWeb.startsWith('http') ? company.siteWeb : `https://${company.siteWeb}`;
+        await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+        // Extraire infos de la page
+        const data = await page.evaluate(() => {
+          const result: any = {};
+          const text = document.body.innerText;
+          const html = document.body.innerHTML;
+
+          // Email
+          const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          if (emailMatch && !emailMatch[0].includes('example') && !emailMatch[0].includes('sentry')) {
+            result.email = emailMatch[0];
+          }
+
+          // Telephone
+          const telPatterns = [
+            /(?:Tel|Phone|Telephone|T)[.:\s]*(\+?[\d\s.-]{10,20})/i,
+            /(\+33[\s.-]?\d[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/,
+            /(\+39[\s.-]?\d{2,3}[\s.-]?\d{6,7})/,
+            /(0[1-9][\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/
+          ];
+          for (const pattern of telPatterns) {
+            const match = text.match(pattern);
+            if (match) {
+              result.telephone = match[1].replace(/[\s.-]/g, '');
+              break;
+            }
+          }
+
+          // Adresse
+          const adresseMatch = text.match(/(\d{1,3}[,\s]+(?:rue|avenue|boulevard|place|via|viale|piazza|corso)[^,\n]{5,50})/i);
+          if (adresseMatch) result.adresse = adresseMatch[1].trim();
+
+          const cpVilleMatch = text.match(/(\d{5})\s+([A-Z][A-Za-zÀ-ÿ\s-]+?)(?:\s*[,\n]|$)/);
+          if (cpVilleMatch) {
+            result.codePostal = cpVilleMatch[1];
+            result.ville = cpVilleMatch[2].trim();
+          }
+
+          // LinkedIn
+          const linkedinMatch = html.match(/href=["'](https?:\/\/(?:www\.)?linkedin\.com\/company\/[^"']+)["']/i);
+          if (linkedinMatch) result.linkedin = linkedinMatch[1];
+
+          return result;
+        });
+
+        await browser.close();
+
+        // Mettre a jour
+        if (data.email && !company.emailGenerique) {
+          company.emailGenerique = data.email;
+          fieldsEnriched.push('email');
+        }
+        if (data.telephone && !company.telephone) {
+          company.telephone = data.telephone;
+          fieldsEnriched.push('telephone');
+        }
+        if (data.adresse && !company.adresse?.ligne1) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.ligne1 = data.adresse;
+          fieldsEnriched.push('adresse');
+        }
+        if (data.ville && !company.adresse?.ville) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.ville = data.ville;
+          fieldsEnriched.push('ville');
+        }
+        if (data.codePostal && !company.adresse?.codePostal) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.codePostal = data.codePostal;
+          fieldsEnriched.push('codePostal');
+        }
+        if (data.linkedin && !company.linkedinCompanyUrl) {
+          company.linkedinCompanyUrl = data.linkedin;
+          fieldsEnriched.push('linkedin');
+        }
+
+        if (fieldsEnriched.length > 0) {
+          source = source === 'sirene' ? 'sirene+website' : 'website';
+          await company.save();
+        }
+      } catch (e) {
+        console.log('[Enrich] Website scraping error:', e);
+      }
+    }
+
+    // 3. Optionnel: Lemlist pour les contacts (si domaine disponible)
+    let contactsCreated = 0;
+    if (company.siteWeb) {
+      try {
+        let domain: string;
+        try {
+          domain = new URL(company.siteWeb.startsWith('http') ? company.siteWeb : `https://${company.siteWeb}`).hostname.replace('www.', '');
+        } catch {
+          domain = company.siteWeb.replace('www.', '').split('/')[0];
+        }
+
+        const { company: enrichedCompany, contacts } = await LemlistService.enrichCompany(domain);
+
+        if (enrichedCompany) {
+          company.lemlistData = enrichedCompany as any;
+          company.dateEnrichissement = new Date();
+          if (enrichedCompany.linkedinUrl && !company.linkedinCompanyUrl) {
+            company.linkedinCompanyUrl = enrichedCompany.linkedinUrl;
+            fieldsEnriched.push('linkedin');
+          }
+          await company.save();
+        }
+
+        for (const lemlistContact of contacts) {
+          if (!lemlistContact.email) continue;
+          const existingContact = await LeadContact.findOne({
+            entrepriseId: company._id,
+            email: lemlistContact.email.toLowerCase()
+          });
+          if (!existingContact) {
+            await LeadContact.create({
+              entrepriseId: company._id,
+              prenom: lemlistContact.firstName,
+              nom: lemlistContact.lastName,
+              poste: lemlistContact.position,
+              email: lemlistContact.email.toLowerCase(),
+              emailStatus: LemlistService.mapEmailStatus(lemlistContact.enrichmentStatus),
+              linkedinUrl: lemlistContact.linkedinUrl,
+              telephoneDirect: lemlistContact.phone,
+              seniority: LemlistService.mapSeniority(lemlistContact.position),
+              sourceEnrichissement: 'LEMLIST',
+              dateEnrichissement: new Date()
+            });
+            contactsCreated++;
+          }
+        }
+      } catch (e) {
+        console.log('[Enrich] Lemlist error:', e);
+      }
+    }
+
+    // Mettre a jour le statut
+    if (fieldsEnriched.length > 0) {
+      company.statutProspection = 'ENRICHED';
+      await company.save();
+    }
+
+    // Log interaction
+    await LeadInteraction.create({
+      entrepriseId: company._id,
+      typeInteraction: 'ENRICHISSEMENT',
+      description: `Enrichissement (${source}): ${fieldsEnriched.length} champs, ${contactsCreated} contacts`,
+      metadata: { source, fieldsEnriched, contactsCreated },
+      createdBy: 'system'
+    });
+
+    // Recharger avec populate
+    const updatedCompany = await LeadCompany.findById(company._id)
+      .populate('salonSourceId', 'nom')
+      .populate('commercialAssigneId', 'firstName lastName email');
+
+    res.json({
+      success: true,
+      company: updatedCompany,
+      fieldsEnriched,
+      contactsCreated,
+      source
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Enrichir une entreprise - GRATUIT (SIRENE + Website scraping)
+router.post('/companies/:id/enrich-free', async (req: Request, res: Response) => {
+  try {
+    const company = await LeadCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const fieldsEnriched: string[] = [];
+    let source = 'none';
+
+    // 1. SIRENE pour les entreprises (fonctionne meme pour certaines entreprises etrangeres)
+    try {
+      const searchQuery = encodeURIComponent(company.raisonSociale);
+      const sireneResponse = await fetch(
+        `https://recherche-entreprises.api.gouv.fr/search?q=${searchQuery}&per_page=1`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+
+      if (sireneResponse.ok) {
+        const data = await sireneResponse.json();
+        if (data.results && data.results.length > 0) {
+          const entreprise = data.results[0];
+          const siege = entreprise.siege;
+
+          if (siege?.siret && !company.siret) {
+            company.siret = siege.siret;
+            fieldsEnriched.push('siret');
+          }
+          if (siege?.adresse && !company.adresse?.ligne1) {
+            if (!company.adresse) company.adresse = { pays: 'France' };
+            company.adresse.ligne1 = siege.adresse;
+            fieldsEnriched.push('adresse');
+          }
+          if (siege?.code_postal && !company.adresse?.codePostal) {
+            if (!company.adresse) company.adresse = { pays: 'France' };
+            company.adresse.codePostal = siege.code_postal;
+            fieldsEnriched.push('codePostal');
+          }
+          if (siege?.libelle_commune && !company.adresse?.ville) {
+            if (!company.adresse) company.adresse = { pays: 'France' };
+            company.adresse.ville = siege.libelle_commune;
+            fieldsEnriched.push('ville');
+          }
+          if (entreprise.activite_principale && !company.secteurActivite) {
+            company.secteurActivite = entreprise.activite_principale;
+            fieldsEnriched.push('secteurActivite');
+          }
+
+          if (fieldsEnriched.length > 0) {
+            source = 'sirene';
+            await company.save();
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[Enrich-Free] SIRENE error:', e);
+    }
+
+    // 2. Si site web disponible, scraper pour plus d'infos
+    if (company.siteWeb) {
+      try {
+        const puppeteer = await import('puppeteer');
+        const launchOptions: any = {
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        };
+        if (process.platform === 'linux') {
+          launchOptions.executablePath = '/usr/bin/google-chrome-stable';
+        }
+
+        const browser = await puppeteer.default.launch(launchOptions);
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+
+        const baseUrl = company.siteWeb.startsWith('http') ? company.siteWeb : `https://${company.siteWeb}`;
+        await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+        const data = await page.evaluate(() => {
+          const result: any = {};
+          const text = document.body.innerText;
+          const html = document.body.innerHTML;
+
+          const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          if (emailMatch && !emailMatch[0].includes('example') && !emailMatch[0].includes('sentry')) {
+            result.email = emailMatch[0];
+          }
+
+          const telPatterns = [
+            /(?:Tel|Phone|Telephone|T)[.:\s]*(\+?[\d\s.-]{10,20})/i,
+            /(\+33[\s.-]?\d[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/,
+            /(\+39[\s.-]?\d{2,3}[\s.-]?\d{6,7})/,
+            /(0[1-9][\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})/
+          ];
+          for (const pattern of telPatterns) {
+            const match = text.match(pattern);
+            if (match) {
+              result.telephone = match[1].replace(/[\s.-]/g, '');
+              break;
+            }
+          }
+
+          const adresseMatch = text.match(/(\d{1,3}[,\s]+(?:rue|avenue|boulevard|place|via|viale|piazza|corso)[^,\n]{5,50})/i);
+          if (adresseMatch) result.adresse = adresseMatch[1].trim();
+
+          const cpVilleMatch = text.match(/(\d{5})\s+([A-Z][A-Za-zÀ-ÿ\s-]+?)(?:\s*[,\n]|$)/);
+          if (cpVilleMatch) {
+            result.codePostal = cpVilleMatch[1];
+            result.ville = cpVilleMatch[2].trim();
+          }
+
+          const linkedinMatch = html.match(/href=["'](https?:\/\/(?:www\.)?linkedin\.com\/company\/[^"']+)["']/i);
+          if (linkedinMatch) result.linkedin = linkedinMatch[1];
+
+          return result;
+        });
+
+        await browser.close();
+
+        if (data.email && !company.emailGenerique) {
+          company.emailGenerique = data.email;
+          fieldsEnriched.push('email');
+        }
+        if (data.telephone && !company.telephone) {
+          company.telephone = data.telephone;
+          fieldsEnriched.push('telephone');
+        }
+        if (data.adresse && !company.adresse?.ligne1) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.ligne1 = data.adresse;
+          fieldsEnriched.push('adresse');
+        }
+        if (data.ville && !company.adresse?.ville) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.ville = data.ville;
+          fieldsEnriched.push('ville');
+        }
+        if (data.codePostal && !company.adresse?.codePostal) {
+          if (!company.adresse) company.adresse = { pays: 'France' };
+          company.adresse.codePostal = data.codePostal;
+          fieldsEnriched.push('codePostal');
+        }
+        if (data.linkedin && !company.linkedinCompanyUrl) {
+          company.linkedinCompanyUrl = data.linkedin;
+          fieldsEnriched.push('linkedin');
+        }
+
+        if (fieldsEnriched.length > 0) {
+          source = source === 'sirene' ? 'sirene+website' : 'website';
+          await company.save();
+        }
+      } catch (e) {
+        console.log('[Enrich-Free] Website scraping error:', e);
+      }
+    }
+
+    if (fieldsEnriched.length > 0) {
+      company.statutProspection = 'ENRICHED';
+      await company.save();
+    }
+
+    await LeadInteraction.create({
+      entrepriseId: company._id,
+      typeInteraction: 'ENRICHISSEMENT',
+      description: `Enrichissement gratuit (${source}): ${fieldsEnriched.length} champs`,
+      metadata: { source, fieldsEnriched },
+      createdBy: 'system'
+    });
+
+    const updatedCompany = await LeadCompany.findById(company._id)
+      .populate('salonSourceId', 'nom')
+      .populate('commercialAssigneId', 'firstName lastName email');
+
+    res.json({
+      success: true,
+      company: updatedCompany,
+      fieldsEnriched,
+      source
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Enrichir une entreprise - PAYANT (Lemlist)
+router.post('/companies/:id/enrich-paid', async (req: Request, res: Response) => {
+  try {
+    const company = await LeadCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (!company.siteWeb) {
+      return res.status(400).json({ error: 'Site web requis pour enrichissement Lemlist' });
+    }
+
     let domain: string;
     try {
       domain = new URL(company.siteWeb.startsWith('http') ? company.siteWeb : `https://${company.siteWeb}`).hostname.replace('www.', '');
@@ -877,28 +1303,27 @@ router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
       domain = company.siteWeb.replace('www.', '').split('/')[0];
     }
 
-    // Appeler Lemlist pour enrichir l'entreprise et trouver des contacts
     const { company: enrichedCompany, contacts } = await LemlistService.enrichCompany(domain);
 
+    const fieldsEnriched: string[] = [];
     if (enrichedCompany) {
-      // Mettre a jour l'entreprise
       company.lemlistData = enrichedCompany as any;
       company.dateEnrichissement = new Date();
-      if (enrichedCompany.linkedinUrl) company.linkedinCompanyUrl = enrichedCompany.linkedinUrl;
+      if (enrichedCompany.linkedinUrl && !company.linkedinCompanyUrl) {
+        company.linkedinCompanyUrl = enrichedCompany.linkedinUrl;
+        fieldsEnriched.push('linkedin');
+      }
       company.statutProspection = 'ENRICHED';
       await company.save();
     }
 
-    // Creer les contacts
     const createdContacts = [];
     for (const lemlistContact of contacts) {
       if (!lemlistContact.email) continue;
-
       const existingContact = await LeadContact.findOne({
         entrepriseId: company._id,
         email: lemlistContact.email.toLowerCase()
       });
-
       if (!existingContact) {
         const contact = await LeadContact.create({
           entrepriseId: company._id,
@@ -917,7 +1342,6 @@ router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
       }
     }
 
-    // Marquer le premier contact comme principal si aucun n'existe
     if (createdContacts.length > 0) {
       const hasMainContact = await LeadContact.findOne({
         entrepriseId: company._id,
@@ -929,7 +1353,6 @@ router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
       }
     }
 
-    // Log interaction
     await LeadInteraction.create({
       entrepriseId: company._id,
       typeInteraction: 'ENRICHISSEMENT',
@@ -938,9 +1361,13 @@ router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
       createdBy: 'system'
     });
 
+    const updatedCompany = await LeadCompany.findById(company._id)
+      .populate('salonSourceId', 'nom')
+      .populate('commercialAssigneId', 'firstName lastName email');
+
     res.json({
       success: true,
-      company: enrichedCompany,
+      company: updatedCompany,
       contactsCreated: createdContacts.length,
       contacts: createdContacts
     });

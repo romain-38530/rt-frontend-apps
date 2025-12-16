@@ -7,6 +7,18 @@ import {
 } from 'lucide-react';
 import { crmApi } from '../../../lib/api';
 
+interface LeadContact {
+  _id: string;
+  prenom?: string;
+  nom?: string;
+  poste?: string;
+  email?: string;
+  telephoneDirect?: string;
+  linkedinUrl?: string;
+  estContactPrincipal?: boolean;
+  emailStatus?: string;
+}
+
 interface LeadCompany {
   _id: string;
   numeroLead?: string;
@@ -75,6 +87,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const [lead, setLead] = useState<LeadCompany | null>(null);
+  const [contacts, setContacts] = useState<LeadContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enrichingFree, setEnrichingFree] = useState(false);
