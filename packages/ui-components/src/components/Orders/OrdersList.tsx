@@ -1,5 +1,5 @@
 /**
- * Liste des commandes avec filtres et pagination
+ * Liste des commandes avec design tableau professionnel
  * Composant réutilisable pour tous les portails
  */
 
@@ -17,28 +17,29 @@ export interface OrdersListProps {
   onOrderClick: (orderId: string) => void;
   onDuplicateOrder?: (orderId: string) => void;
   onCancelOrder?: (orderId: string) => void;
+  onViewDocuments?: (orderId: string) => void;
   isLoading?: boolean;
+  showCreatedBy?: boolean;
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  draft: { label: 'Brouillon', color: '#9ca3af' },
-  created: { label: 'Créée', color: '#3b82f6' },
-  sent_to_carrier: { label: 'Envoyée', color: '#8b5cf6' },
-  carrier_accepted: { label: 'Acceptée', color: '#10b981' },
-  carrier_refused: { label: 'Refusée', color: '#ef4444' },
-  in_transit: { label: 'En transit', color: '#f59e0b' },
-  arrived_pickup: { label: 'Arrivé collecte', color: '#14b8a6' },
-  loaded: { label: 'Chargé', color: '#06b6d4' },
-  arrived_delivery: { label: 'Arrivé livraison', color: '#0ea5e9' },
-  delivered: { label: 'Livrée', color: '#22c55e' },
-  closed: { label: 'Clôturée', color: '#64748b' },
-  cancelled: { label: 'Annulée', color: '#dc2626' },
-  escalated: { label: 'Escaladée', color: '#f97316' },
+const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
+  draft: { label: 'Brouillon', color: '#6b7280', bgColor: '#f3f4f6' },
+  created: { label: 'Creee', color: '#3b82f6', bgColor: '#dbeafe' },
+  sent_to_carrier: { label: 'Envoyee', color: '#8b5cf6', bgColor: '#ede9fe' },
+  carrier_accepted: { label: 'Acceptee', color: '#10b981', bgColor: '#d1fae5' },
+  carrier_refused: { label: 'Refusee', color: '#ef4444', bgColor: '#fee2e2' },
+  in_transit: { label: 'En transit', color: '#f59e0b', bgColor: '#fef3c7' },
+  arrived_pickup: { label: 'Arrive collecte', color: '#14b8a6', bgColor: '#ccfbf1' },
+  loaded: { label: 'Charge', color: '#06b6d4', bgColor: '#cffafe' },
+  arrived_delivery: { label: 'Arrive livraison', color: '#0ea5e9', bgColor: '#e0f2fe' },
+  delivered: { label: 'Livree', color: '#22c55e', bgColor: '#dcfce7' },
+  closed: { label: 'Cloturee', color: '#64748b', bgColor: '#f1f5f9' },
+  cancelled: { label: 'Annulee', color: '#dc2626', bgColor: '#fee2e2' },
+  escalated: { label: 'Escaladee', color: '#f97316', bgColor: '#ffedd5' },
 };
 
-// Safe getter for status info with fallback
 const getStatusInfo = (status: string) => {
-  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280' };
+  return STATUS_LABELS[status] || { label: status || 'Inconnu', color: '#6b7280', bgColor: '#f3f4f6' };
 };
 
 export const OrdersList: React.FC<OrdersListProps> = ({
@@ -52,14 +53,16 @@ export const OrdersList: React.FC<OrdersListProps> = ({
   onOrderClick,
   onDuplicateOrder,
   onCancelOrder,
+  onViewDocuments,
   isLoading = false,
+  showCreatedBy = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
-  // Appliquer les filtres
   const applyFilters = () => {
     onFiltersChange({
       search: searchQuery || undefined,
@@ -71,7 +74,6 @@ export const OrdersList: React.FC<OrdersListProps> = ({
     });
   };
 
-  // Réinitialiser les filtres
   const resetFilters = () => {
     setSearchQuery('');
     setStatusFilter([]);
@@ -80,7 +82,6 @@ export const OrdersList: React.FC<OrdersListProps> = ({
     onFiltersChange({ page: 1, limit });
   };
 
-  // Toggle status filter
   const toggleStatusFilter = (status: OrderStatus) => {
     if (statusFilter.includes(status)) {
       setStatusFilter(statusFilter.filter((s) => s !== status));
@@ -89,20 +90,38 @@ export const OrdersList: React.FC<OrdersListProps> = ({
     }
   };
 
-  // Formater la date
+  const toggleSelectOrder = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedOrders.includes(orderId)) {
+      setSelectedOrders(selectedOrders.filter((id) => id !== orderId));
+    } else {
+      setSelectedOrders([...selectedOrders, orderId]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map((o) => o.id));
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
     });
   };
 
-  // Formater le prix
-  const formatPrice = (price?: number, currency: string = 'EUR') => {
-    if (!price) return '-';
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(price);
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const cardStyle: React.CSSProperties = {
@@ -130,18 +149,36 @@ export const OrdersList: React.FC<OrdersListProps> = ({
     transition: 'all 0.2s ease',
   };
 
+  const thStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    textAlign: 'left',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    borderBottom: '2px solid #e5e7eb',
+    backgroundColor: '#f9fafb',
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: '16px',
+    borderBottom: '1px solid #f3f4f6',
+    verticalAlign: 'top',
+  };
+
   return (
     <div>
       {/* Filtres */}
       <div style={cardStyle}>
         <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-          🔍 Recherche et filtres
+          Recherche et filtres
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
           <input
             type="text"
-            placeholder="Rechercher par référence, client..."
+            placeholder="Rechercher par reference, client..."
             aria-label="Rechercher une commande"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -150,8 +187,8 @@ export const OrdersList: React.FC<OrdersListProps> = ({
 
           <input
             type="date"
-            placeholder="Date début"
-            aria-label="Date de début"
+            placeholder="Date debut"
+            aria-label="Date de debut"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             style={inputStyle}
@@ -206,16 +243,21 @@ export const OrdersList: React.FC<OrdersListProps> = ({
           onClick={resetFilters}
           style={{ ...buttonStyle, backgroundColor: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }}
         >
-          Réinitialiser
+          Reinitialiser
         </button>
       </div>
 
-      {/* Résumé */}
-      <div style={{ marginBottom: '16px', fontSize: '14px', color: '#6b7280' }}>
-        {total} commande{total > 1 ? 's' : ''} trouvée{total > 1 ? 's' : ''}
+      {/* Resume */}
+      <div style={{ marginBottom: '16px', fontSize: '14px', color: '#6b7280', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{total} commande{total > 1 ? 's' : ''} trouvee{total > 1 ? 's' : ''}</span>
+        {selectedOrders.length > 0 && (
+          <span style={{ color: '#667eea', fontWeight: '600' }}>
+            {selectedOrders.length} selectionnee{selectedOrders.length > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
-      {/* Liste des commandes */}
+      {/* Tableau des commandes */}
       {isLoading ? (
         <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px' }}>
           <div style={{ fontSize: '14px', color: '#6b7280' }}>Chargement...</div>
@@ -223,129 +265,206 @@ export const OrdersList: React.FC<OrdersListProps> = ({
       ) : orders.length === 0 ? (
         <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
-          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Aucune commande trouvée</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Aucune commande trouvee</div>
           <div style={{ fontSize: '14px', color: '#6b7280' }}>Essayez de modifier vos filtres</div>
         </div>
       ) : (
-        <div>
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              style={{
-                ...cardStyle,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onClick={() => onOrderClick(order.id)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>
-                      {order.reference}
-                    </h4>
-                    <span
-                      style={{
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: `${getStatusInfo(order.status).color}15`,
-                        color: getStatusInfo(order.status).color,
-                      }}
-                    >
-                      {getStatusInfo(order.status).label}
-                    </span>
-                  </div>
+        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.length === orders.length && orders.length > 0}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                </th>
+                {showCreatedBy && <th style={thStyle}>Cree par</th>}
+                <th style={thStyle}>Statut</th>
+                <th style={thStyle}>Enlevement</th>
+                <th style={thStyle}>Date enl.</th>
+                <th style={thStyle}>Livraison</th>
+                <th style={thStyle}>Date liv.</th>
+                <th style={thStyle}>Marchandises</th>
+                <th style={{ ...thStyle, textAlign: 'center' }}>Documents</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => {
+                const statusInfo = getStatusInfo(order.status);
+                return (
+                  <tr
+                    key={order.id}
+                    onClick={() => onOrderClick(order.id)}
+                    style={{
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                      backgroundColor: selectedOrders.includes(order.id) ? '#f0f4ff' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selectedOrders.includes(order.id)) {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selectedOrders.includes(order.id)) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    <td style={{ ...tdStyle, textAlign: 'center', width: '40px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.includes(order.id)}
+                        onClick={(e) => toggleSelectOrder(order.id, e)}
+                        onChange={() => {}}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </td>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Collecte</div>
-                      <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.pickupAddress?.city || '-'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {order.dates?.pickupDate ? formatDate(order.dates.pickupDate) : '-'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Livraison</div>
-                      <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.deliveryAddress?.city || '-'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {order.dates?.deliveryDate ? formatDate(order.dates.deliveryDate) : '-'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Marchandise</div>
-                      <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                        {order.goods?.weight || 0} kg
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        {order.goods?.description ? order.goods.description.substring(0, 30) + '...' : '-'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right', marginLeft: '24px' }}>
-                  <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
-                    {formatPrice(order.estimatedPrice || order.finalPrice, order.currency)}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {onDuplicateOrder && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDuplicateOrder(order.id);
-                        }}
-                        style={{
-                          ...buttonStyle,
-                          padding: '6px 12px',
-                          backgroundColor: 'white',
-                          color: '#667eea',
-                          border: '1px solid #667eea',
-                          fontSize: '12px',
-                        }}
-                      >
-                        Dupliquer
-                      </button>
+                    {showCreatedBy && (
+                      <td style={tdStyle}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                          {order.carrierName || order.industrialName || order.supplierName || 'Non assigne'}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#667eea', fontWeight: '500' }}>
+                          {order.reference}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          {order.createdAt ? formatDate(order.createdAt) : '-'}
+                        </div>
+                      </td>
                     )}
 
-                    {onCancelOrder && order.status !== 'cancelled' && order.status !== 'closed' && (
+                    <td style={tdStyle}>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          backgroundColor: statusInfo.bgColor,
+                          color: statusInfo.color,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {statusInfo.label}
+                      </span>
+                    </td>
+
+                    <td style={tdStyle}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                        {order.pickupAddress?.city || '-'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {order.pickupAddress?.street || ''}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        {order.pickupAddress?.postalCode || ''}
+                      </div>
+                    </td>
+
+                    <td style={tdStyle}>
+                      {order.dates?.pickupDate ? (
+                        <>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                            {formatDate(order.dates.pickupDate)}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {formatTime(order.dates.pickupDate)}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>-</span>
+                      )}
+                    </td>
+
+                    <td style={tdStyle}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                        {order.deliveryAddress?.city || '-'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {order.deliveryAddress?.street || ''}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        {order.deliveryAddress?.postalCode || ''}
+                      </div>
+                    </td>
+
+                    <td style={tdStyle}>
+                      {order.dates?.deliveryDate ? (
+                        <>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                            {formatDate(order.dates.deliveryDate)}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {formatTime(order.dates.deliveryDate)}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>-</span>
+                      )}
+                    </td>
+
+                    <td style={tdStyle}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                        {order.goods?.palettes || 0} pal.
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        {order.goods?.weight || 0} kg
+                      </div>
+                      {order.goods?.volume && (
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          {order.goods.volume} m3
+                        </div>
+                      )}
+                    </td>
+
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm('Êtes-vous sûr de vouloir annuler cette commande ?')) {
-                            onCancelOrder(order.id);
+                          if (onViewDocuments) {
+                            onViewDocuments(order.id);
+                          } else {
+                            onOrderClick(order.id);
                           }
                         }}
                         style={{
-                          ...buttonStyle,
-                          padding: '6px 12px',
-                          backgroundColor: 'white',
-                          color: '#ef4444',
-                          border: '1px solid #ef4444',
-                          fontSize: '12px',
+                          padding: '6px 16px',
+                          backgroundColor: '#f3f4f6',
+                          color: '#374151',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
                         }}
                       >
-                        Annuler
+                        Voir
                       </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ ...cardStyle, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+        <div style={{ ...cardStyle, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
@@ -357,24 +476,37 @@ export const OrdersList: React.FC<OrdersListProps> = ({
               cursor: page === 1 ? 'not-allowed' : 'pointer',
             }}
           >
-            Précédent
+            Precedent
           </button>
 
           <div style={{ display: 'flex', gap: '4px' }}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <button
-                key={pageNum}
-                onClick={() => onPageChange(pageNum)}
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: pageNum === page ? '#667eea' : 'white',
-                  color: pageNum === page ? 'white' : '#374151',
-                  border: pageNum === page ? 'none' : '1px solid #e5e7eb',
-                }}
-              >
-                {pageNum}
-              </button>
-            ))}
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (page <= 4) {
+                pageNum = i + 1;
+              } else if (page >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = page - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => onPageChange(pageNum)}
+                  style={{
+                    ...buttonStyle,
+                    padding: '10px 14px',
+                    backgroundColor: pageNum === page ? '#667eea' : 'white',
+                    color: pageNum === page ? 'white' : '#374151',
+                    border: pageNum === page ? 'none' : '1px solid #e5e7eb',
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
           </div>
 
           <button

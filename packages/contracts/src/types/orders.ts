@@ -98,6 +98,12 @@ export interface Order {
   supplierId?: string;
   recipientId?: string;
 
+  // Noms denormalises (pour affichage)
+  industrialName?: string;
+  carrierName?: string;
+  supplierName?: string;
+  recipientName?: string;
+
   // Adresses
   pickupAddress: Address;
   deliveryAddress: Address;
