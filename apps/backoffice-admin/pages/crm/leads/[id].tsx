@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Building2, Globe, Phone, Mail, MapPin,
   Calendar, User, ExternalLink, Tag, Package, Star,
-  Clock, CheckCircle, XCircle, AlertCircle, Sparkles, RefreshCw
+  Clock, CheckCircle, XCircle, AlertCircle, Sparkles, RefreshCw,
+  UserCircle, Briefcase, Linkedin
 } from 'lucide-react';
 import { crmApi } from '../../../lib/api';
 
@@ -113,6 +114,7 @@ export default function LeadDetailPage() {
           commercialAssigne: result.company.commercialAssigneId
         };
         setLead(lead);
+        setContacts(result.contacts || []);
       } else if (result.error) {
         setError(result.error);
       } else {
@@ -373,6 +375,75 @@ export default function LeadDetailPage() {
                 <div className="mt-4 pt-4 border-t">
                   <label className="text-sm text-gray-500">Description</label>
                   <p className="text-gray-700 mt-1">{lead.descriptionActivite}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Contacts */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <UserCircle className="text-purple-600" size={20} />
+                Contacts ({contacts.length})
+              </h2>
+              {contacts.length === 0 ? (
+                <p className="text-gray-500 text-sm">Aucun contact. Utilisez le bouton "Payant" pour enrichir les contacts via Lemlist.</p>
+              ) : (
+                <div className="space-y-4">
+                  {contacts.map((contact) => (
+                    <div key={contact._id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
+                            {contact.prenom?.charAt(0) || ''}{contact.nom?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900">
+                                {contact.prenom} {contact.nom}
+                              </h3>
+                              {contact.estContactPrincipal && (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">Principal</span>
+                              )}
+                            </div>
+                            {contact.poste && (
+                              <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <Briefcase size={12} />
+                                {contact.poste}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {contact.linkedinUrl && (
+                          <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                            <Linkedin size={18} />
+                          </a>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                        {contact.email && (
+                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-purple-600 hover:underline">
+                            <Mail size={14} />
+                            {contact.email}
+                            {contact.emailStatus && (
+                              <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                                contact.emailStatus === 'VERIFIED' ? 'bg-green-100 text-green-700' :
+                                contact.emailStatus === 'INVALID' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {contact.emailStatus === 'VERIFIED' ? 'Verifie' : contact.emailStatus === 'INVALID' ? 'Invalide' : contact.emailStatus}
+                              </span>
+                            )}
+                          </a>
+                        )}
+                        {contact.telephoneDirect && (
+                          <a href={`tel:${contact.telephoneDirect}`} className="flex items-center gap-1 text-purple-600 hover:underline">
+                            <Phone size={14} />
+                            {contact.telephoneDirect}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
