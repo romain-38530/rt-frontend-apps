@@ -87,6 +87,16 @@ applications:
         headers:
           - key: 'Cache-Control'
             value: 'public, max-age=0, must-revalidate'
+    customRules:
+      - source: /orders/edit/
+        target: /orders/edit/index.html
+        status: 200
+      - source: /orders/<id>/
+        target: /orders/[id]/index.html
+        status: 200
+      - source: /<*>
+        target: /index.html
+        status: 404-200
     environment:
       variables:
         NEXT_PUBLIC_SITE_URL: 'https://industry.symphonia-controltower.com'
