@@ -110,7 +110,16 @@ class ApiClient {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          // Handle arrays by appending each value separately
+          if (Array.isArray(value)) {
+            value.forEach((item) => {
+              if (item !== undefined && item !== null) {
+                searchParams.append(key, String(item));
+              }
+            });
+          } else {
+            searchParams.append(key, String(value));
+          }
         }
       });
       const queryString = searchParams.toString();
