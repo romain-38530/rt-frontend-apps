@@ -239,14 +239,32 @@ class LemlistService {
     company: any;
     contacts: LemlistLead[];
   }> {
-    // Titres supply chain pour cibler les bons contacts
+    // Titres supply chain, logistique et transport pour cibler les bons contacts
     const supplyChainTitles = [
+      // Anglais - Direction
       'Supply Chain Director', 'VP Supply Chain', 'Logistics Director',
-      'Operations Director', 'COO', 'Supply Chain Manager',
-      'Logistics Manager', 'Transport Manager', 'Procurement Director',
-      'Purchasing Director', 'Directeur Supply Chain', 'Directeur Logistique',
-      'Directeur des Operations', 'Responsable Supply Chain', 'Responsable Logistique',
-      'Responsable Transport', 'Directeur Achats'
+      'Operations Director', 'COO', 'Transport Director', 'Fleet Director',
+      'Distribution Director', 'Warehouse Director', 'Shipping Director',
+      // Anglais - Management
+      'Supply Chain Manager', 'Logistics Manager', 'Transport Manager',
+      'Fleet Manager', 'Distribution Manager', 'Warehouse Manager',
+      'Shipping Manager', 'Freight Manager', 'Procurement Director',
+      'Purchasing Director', 'Operations Manager', 'Import Export Manager',
+      // Francais - Direction
+      'Directeur Supply Chain', 'Directeur Logistique', 'Directeur Transport',
+      'Directeur des Operations', 'Directeur de Flotte', 'Directeur Distribution',
+      'Directeur Entrepot', 'Directeur des Expeditions', 'Directeur Achats',
+      'Directeur Import Export', 'Directeur Fret',
+      // Francais - Responsable
+      'Responsable Supply Chain', 'Responsable Logistique', 'Responsable Transport',
+      'Responsable Flotte', 'Responsable Distribution', 'Responsable Entrepot',
+      'Responsable Expeditions', 'Responsable Achats', 'Responsable Import Export',
+      'Responsable Fret', 'Responsable Exploitation', 'Chef de Quai',
+      // Allemand (pour pays germanophones)
+      'Logistikleiter', 'Transportleiter', 'Lagerleiter', 'Supply Chain Leiter',
+      // Italien
+      'Direttore Logistica', 'Responsabile Logistica', 'Direttore Trasporti',
+      'Responsabile Trasporti', 'Direttore Supply Chain'
     ];
 
     // Rechercher des contacts

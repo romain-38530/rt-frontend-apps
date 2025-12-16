@@ -735,6 +735,41 @@ async function extractExhibitors(page: Page, seen: Set<string>): Promise<Scraped
 }
 
 // Helper function pour extraire les donnees des reponses API
+/**
+ * Verifie si un nom ressemble a une entreprise plutot qu'a un produit
+ */
+function isLikelyCompanyName(name: string): boolean {
+  const nameLower = name.toLowerCase();
+
+  // Patterns de produits a exclure (quantites, unites, descriptions de produits)
+  const productPatterns = [
+    /\d+\s*(g|kg|ml|cl|l|oz|lb|pcs|pieces|units|pack)\b/i,  // Quantites
+    /^\s*(confiture|chocolat|biscuit|gateau|pain|fromage|vin|huile|sauce|soupe|jus|the|cafe|miel|sucre|sel|poivre|epice|conserve|pate|farine|riz|pates|cereale)/i,  // Noms de produits alimentaires
+    /\b(bio|organic|sans gluten|gluten.free|vegan|light|diet|extra|premium|deluxe)\s+(de|au|aux|a la|with)?\s*\w+$/i,  // Descriptions produits
+    /\b(rhubarbe|noix|noisette|amande|pistache|fraise|framboise|cerise|pomme|poire|orange|citron|vanille|caramel)\b/i,  // Ingredients
+    /\b(pot|bocal|bouteille|sachet|boite|barquette|tube)\s+de\b/i,  // Conditionnements
+  ];
+
+  for (const pattern of productPatterns) {
+    if (pattern.test(nameLower)) {
+      return false;
+    }
+  }
+
+  // Patterns d'entreprises (bonus, pas obligatoire)
+  const companyPatterns = [
+    /\b(sarl|sas|sa|sasu|eurl|sci|snc|gmbh|ag|ltd|limited|inc|corp|corporation|company|co\.|llc|plc|bv|nv)\b/i,
+    /\b(group|groupe|holding|international|industrie|industries)\b/i,
+  ];
+
+  // Si tres court (< 5 chars) et pas de pattern entreprise, suspect
+  if (name.length < 5 && !companyPatterns.some(p => p.test(nameLower))) {
+    return false;
+  }
+
+  return true;
+}
+
 function extractFromApiData(data: any, companies: ScrapedCompany[], seen: Set<string>): void {
   if (!data) return;
 
@@ -744,21 +779,26 @@ function extractFromApiData(data: any, companies: ScrapedCompany[], seen: Set<st
       extractFromApiData(item, companies, seen);
     }
   } else if (typeof data === 'object') {
-    // Chercher les champs typiques d'exposants
-    const name = data.name || data.nom || data.raisonSociale || data.companyName ||
-                 data.exhibitorName || data.title || data.label;
+    // Chercher les champs typiques d'exposants (priorite aux champs explicitement "company/exhibitor")
+    const name = data.companyName || data.exhibitorName || data.raisonSociale ||
+                 data.name || data.nom || data.title || data.label;
 
     if (name && typeof name === 'string' && name.length > 2 && name.length < 200) {
-      const key = name.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        companies.push({
-          raisonSociale: name.replace(/\s+/g, ' ').trim(),
-          siteWeb: data.website || data.url || data.siteWeb,
-          pays: data.country || data.pays || 'France',
-          ville: data.city || data.ville,
-          descriptionActivite: data.description || data.activity
-        });
+      // Filtrer les noms de produits
+      if (!isLikelyCompanyName(name)) {
+        console.log(`[SIAL] Skipping product: ${name}`);
+      } else {
+        const key = name.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          companies.push({
+            raisonSociale: name.replace(/\s+/g, ' ').trim(),
+            siteWeb: data.website || data.url || data.siteWeb,
+            pays: data.country || data.pays || 'France',
+            ville: data.city || data.ville,
+            descriptionActivite: data.description || data.activity
+          });
+        }
       }
     }
 

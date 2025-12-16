@@ -1319,19 +1319,39 @@ router.post('/companies/:id/enrich-paid', async (req: Request, res: Response) =>
 
     const createdContacts = [];
     for (const lemlistContact of contacts) {
-      if (!lemlistContact.email) continue;
-      const existingContact = await LeadContact.findOne({
-        entrepriseId: company._id,
-        email: lemlistContact.email.toLowerCase()
-      });
+      // Skip si pas de nom
+      if (!lemlistContact.firstName && !lemlistContact.lastName) continue;
+
+      // Verifier si contact existe deja (par email OU par nom+linkedin)
+      let existingContact = null;
+      if (lemlistContact.email) {
+        existingContact = await LeadContact.findOne({
+          entrepriseId: company._id,
+          email: lemlistContact.email.toLowerCase()
+        });
+      }
+      if (!existingContact && lemlistContact.linkedinUrl) {
+        existingContact = await LeadContact.findOne({
+          entrepriseId: company._id,
+          linkedinUrl: lemlistContact.linkedinUrl
+        });
+      }
+      if (!existingContact && lemlistContact.firstName && lemlistContact.lastName) {
+        existingContact = await LeadContact.findOne({
+          entrepriseId: company._id,
+          prenom: lemlistContact.firstName,
+          nom: lemlistContact.lastName
+        });
+      }
+
       if (!existingContact) {
         const contact = await LeadContact.create({
           entrepriseId: company._id,
           prenom: lemlistContact.firstName,
           nom: lemlistContact.lastName,
           poste: lemlistContact.position,
-          email: lemlistContact.email.toLowerCase(),
-          emailStatus: LemlistService.mapEmailStatus(lemlistContact.enrichmentStatus),
+          email: lemlistContact.email ? lemlistContact.email.toLowerCase() : undefined,
+          emailStatus: lemlistContact.email ? LemlistService.mapEmailStatus(lemlistContact.enrichmentStatus) : 'UNKNOWN',
           linkedinUrl: lemlistContact.linkedinUrl,
           telephoneDirect: lemlistContact.phone,
           seniority: LemlistService.mapSeniority(lemlistContact.position),
@@ -1400,6 +1420,66 @@ router.post('/companies/:id/assign', async (req: Request, res: Response) => {
     });
 
     res.json(company);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Nettoyer les faux leads (produits au lieu d'entreprises)
+router.post('/cleanup-products', async (req: Request, res: Response) => {
+  try {
+    // Patterns de produits a supprimer
+    const productPatterns = [
+      /\d+\s*(g|kg|ml|cl|l|oz|lb|pcs)\b/i,  // Quantites
+      /^(confiture|chocolat|biscuit|gateau|pain|fromage|vin|huile|sauce|soupe|jus|the|cafe|miel|sucre)/i,
+      /\b(rhubarbe|noix|noisette|amande|pistache|fraise|framboise|cerise|pomme|poire|orange|citron|vanille|caramel)\b.*\b(extra|bio|premium|deluxe)\b/i,
+    ];
+
+    // Trouver toutes les entreprises dans le pool
+    const allCompanies = await LeadCompany.find({ inPool: true });
+    const toDelete: string[] = [];
+
+    for (const company of allCompanies) {
+      const name = company.raisonSociale.toLowerCase();
+      for (const pattern of productPatterns) {
+        if (pattern.test(name)) {
+          toDelete.push(company._id.toString());
+          break;
+        }
+      }
+    }
+
+    // Supprimer les faux leads
+    if (toDelete.length > 0) {
+      await LeadCompany.deleteMany({ _id: { $in: toDelete } });
+      await LeadContact.deleteMany({ entrepriseId: { $in: toDelete } });
+    }
+
+    res.json({
+      success: true,
+      deleted: toDelete.length,
+      message: `${toDelete.length} faux leads (produits) supprimes`
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Supprimer une entreprise
+router.delete('/companies/:id', async (req: Request, res: Response) => {
+  try {
+    const company = await LeadCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    // Supprimer les contacts associes
+    await LeadContact.deleteMany({ entrepriseId: company._id });
+    await LeadInteraction.deleteMany({ entrepriseId: company._id });
+    await LeadEmail.deleteMany({ entrepriseId: company._id });
+
+    // Supprimer l'entreprise
+    await LeadCompany.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Entreprise supprimee' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

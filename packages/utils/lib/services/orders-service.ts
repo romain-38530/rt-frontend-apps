@@ -19,6 +19,9 @@ import type {
 interface ApiOrdersResponse {
   success: boolean;
   count: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
   data: any[];
 }
 
@@ -37,11 +40,11 @@ export class OrdersService {
   static async getOrders(filters?: OrderFilters): Promise<PaginatedOrders> {
     const response = await ordersApi.get<ApiOrdersResponse>('/orders', filters);
 
-    // Transform API response to PaginatedOrders format
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 10;
+    // Use values from backend response, fallback to filters/defaults
+    const page = response.page || filters?.page || 1;
+    const limit = response.limit || filters?.limit || 10;
     const total = response.count || response.data?.length || 0;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = response.totalPages || Math.ceil(total / limit);
 
     // Transform each order to have 'id' field
     const orders = (response.data || []).map(transformOrder);
