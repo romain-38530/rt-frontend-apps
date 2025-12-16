@@ -89,10 +89,19 @@ export default function LeadDetailPage() {
     setError(null);
     try {
       const result = await crmApi.getCompany(leadId);
-      if (result.success) {
-        setLead(result.data);
+      // L'API retourne { company, contacts, interactions, emails }
+      if (result.company) {
+        // Transformer salonSourceId en salonSource pour le frontend
+        const lead = {
+          ...result.company,
+          salonSource: result.company.salonSourceId,
+          commercialAssigne: result.company.commercialAssigneId
+        };
+        setLead(lead);
+      } else if (result.error) {
+        setError(result.error);
       } else {
-        setError(result.error || 'Lead non trouve');
+        setError('Lead non trouve');
       }
     } catch (err: any) {
       setError(err.message || 'Erreur de chargement');
