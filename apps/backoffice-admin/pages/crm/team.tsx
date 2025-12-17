@@ -142,9 +142,10 @@ export default function TeamPage() {
         type: filters.type || undefined,
         status: filters.status || undefined
       });
-      setCommerciaux(result.data || result || []);
+      setCommerciaux(result.commercials || result.data || []);
     } catch (error) {
       console.error('Error loading commerciaux:', error);
+      setCommerciaux([]);
     } finally {
       setLoading(false);
     }
@@ -158,9 +159,10 @@ export default function TeamPage() {
         status: filters.commissionStatus || undefined,
         periode: filters.periode || undefined
       });
-      setCommissions(result.data || result || []);
+      setCommissions(result.commissions || result.data || []);
     } catch (error) {
       console.error('Error loading commissions:', error);
+      setCommissions([]);
     } finally {
       setLoading(false);
     }
@@ -169,9 +171,21 @@ export default function TeamPage() {
   const loadStats = async () => {
     try {
       const result = await crmApi.getCommerciauxStats();
-      setStats(result);
+      // Map API response to expected format
+      setStats({
+        totalCommerciaux: result.totalCommerciaux || 0,
+        internal: result.internes || 0,
+        external: result.externes || 0,
+        active: result.commerciauxActifs || 0,
+        totalLeadsAssignes: result.totalLeadsAssignes || 0,
+        totalLeadsConverts: result.totalLeadsConverts || 0,
+        avgTauxConversion: result.avgTauxConversion || 0,
+        totalCommissions: result.commissionsMonth?.total || 0,
+        totalCommissionsPending: result.commissionsMonth?.pending || 0
+      });
     } catch (error) {
       console.error('Error loading stats:', error);
+      setStats(null);
     }
   };
 
