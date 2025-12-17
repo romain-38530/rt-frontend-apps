@@ -27,11 +27,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: str
   pending: { label: 'En attente', color: '#6b7280', bgColor: '#f3f4f6' },
   draft: { label: 'Brouillon', color: '#6b7280', bgColor: '#f3f4f6' },
   created: { label: 'Creee', color: '#3b82f6', bgColor: '#dbeafe' },
+  // Auto-dispatch statuts
+  planification_auto: { label: 'Planification auto', color: '#8b5cf6', bgColor: '#ede9fe' },
+  affret_ia: { label: 'Affret IA', color: '#ec4899', bgColor: '#fce7f3' },
+  echec_planification: { label: 'Echec planification', color: '#dc2626', bgColor: '#fee2e2' },
+  // Carrier statuts
   sent_to_carrier: { label: 'Envoyee', color: '#8b5cf6', bgColor: '#ede9fe' },
   accepted: { label: 'Acceptee', color: '#10b981', bgColor: '#d1fae5' },
   carrier_accepted: { label: 'Acceptee', color: '#10b981', bgColor: '#d1fae5' },
   refused: { label: 'Refusee', color: '#ef4444', bgColor: '#fee2e2' },
   carrier_refused: { label: 'Refusee', color: '#ef4444', bgColor: '#fee2e2' },
+  // Transit statuts
   in_transit: { label: 'En transit', color: '#f59e0b', bgColor: '#fef3c7' },
   arrived_pickup: { label: 'Arrive collecte', color: '#14b8a6', bgColor: '#ccfbf1' },
   loaded: { label: 'Charge', color: '#06b6d4', bgColor: '#cffafe' },

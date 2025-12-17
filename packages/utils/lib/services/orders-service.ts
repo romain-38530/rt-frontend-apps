@@ -216,6 +216,33 @@ export class OrdersService {
   static async getAvailableConstraints(): Promise<any[]> {
     return await ordersApi.get<any[]>('/constraints');
   }
+
+  // ========== AUTO-DISPATCH ==========
+
+  /**
+   * Lancer l'auto-dispatch sur une commande
+   */
+  static async startAutoDispatch(orderId: string): Promise<any> {
+    return await ordersApi.post<any>(`/orders/${orderId}/auto-dispatch`);
+  }
+
+  /**
+   * Répondre à une demande de transport (accepter/refuser)
+   */
+  static async carrierResponse(orderId: string, carrierId: string, response: 'accepted' | 'refused', reason?: string): Promise<any> {
+    return await ordersApi.post<any>(`/orders/${orderId}/carrier-response`, {
+      carrierId,
+      response,
+      reason
+    });
+  }
+
+  /**
+   * Obtenir le statut du dispatch chain
+   */
+  static async getDispatchStatus(orderId: string): Promise<any> {
+    return await ordersApi.get<any>(`/orders/${orderId}/dispatch-status`);
+  }
 }
 
 export default OrdersService;

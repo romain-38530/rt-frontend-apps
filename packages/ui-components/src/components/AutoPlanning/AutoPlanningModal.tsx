@@ -1,20 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-export interface CarrierMatch {
+export interface DispatchCarrier {
   carrierId: string;
   carrierName: string;
   score: number;
-  price: number;
-  eta: string;
-  rating: number;
-  acceptanceRate: number;
-  available: boolean;
+  position: number;
+  status: 'pending' | 'sent' | 'accepted' | 'refused';
+  sentAt?: string;
+  respondedAt?: string;
+  reason?: string;
+}
+
+export interface DispatchEvent {
+  id: string;
+  type: string;
+  timestamp: string;
+  details: string;
+  carrierName?: string;
+  reason?: string;
 }
 
 export interface AutoPlanningModalProps {
   orders: Array<{
     id: string;
-    reference: string;
+    _id?: string;
+    reference?: string;
     pickupAddress?: { city?: string };
     deliveryAddress?: { city?: string };
     goods?: { weight?: number };
@@ -23,158 +33,125 @@ export interface AutoPlanningModalProps {
   onClose: () => void;
   onValidate: (orderId: string, carrierId: string) => Promise<void>;
   onEscalateToAffretIA: (orderIds: string[]) => void;
-  planningApiUrl?: string;
+  ordersApiUrl?: string;
 }
 
-type PlanningStep = 'analyzing' | 'matching' | 'waiting' | 'escalating' | 'completed';
+type PlanningStep = 'starting' | 'dispatching' | 'waiting' | 'completed' | 'failed' | 'affret_ia';
 
 export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
   orders,
   onClose,
   onValidate,
   onEscalateToAffretIA,
-  planningApiUrl = 'http://localhost:3002',
+  ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api',
 }) => {
-  const [step, setStep] = useState<PlanningStep>('analyzing');
-  const [progress, setProgress] = useState(0);
-  const [matches, setMatches] = useState<Record<string, CarrierMatch[]>>({});
-  const [selectedCarriers, setSelectedCarriers] = useState<Record<string, string>>({});
-  const [waitingTime, setWaitingTime] = useState(0);
-  const [validatedOrders, setValidatedOrders] = useState<Set<string>>(new Set());
-  const [pendingOrders, setPendingOrders] = useState<Set<string>>(new Set(orders.map(o => o.id)));
-  const maxWaitTime = 120; // 2 minutes max wait
+  const [step, setStep] = useState<PlanningStep>('starting');
+  const [dispatchChain, setDispatchChain] = useState<DispatchCarrier[]>([]);
+  const [events, setEvents] = useState<DispatchEvent[]>([]);
+  const [currentStatus, setCurrentStatus] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  const maxPollCount = 60; // 60 * 2sec = 2 minutes
 
-  // Simulation de l'analyse et matching
-  useEffect(() => {
-    if (step === 'analyzing') {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setStep('matching');
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 300);
-      return () => clearInterval(interval);
+  const orderId = orders[0]?.id || orders[0]?._id;
+
+  // Start auto-dispatch
+  const startAutoDispatch = useCallback(async () => {
+    if (!orderId) return;
+
+    try {
+      setStep('starting');
+      setError(null);
+
+      const response = await fetch(`${ordersApiUrl}/orders/${orderId}/auto-dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors du demarrage');
+      }
+
+      setDispatchChain(data.data.dispatchChain || []);
+      setCurrentStatus(data.data.status);
+      setStep('dispatching');
+
+    } catch (err: any) {
+      setError(err.message);
+      setStep('failed');
     }
-  }, [step]);
+  }, [orderId, ordersApiUrl]);
 
-  // Simulation du matching transporteurs
-  useEffect(() => {
-    if (step === 'matching') {
-      // Simulate API call to find carriers
-      setTimeout(() => {
-        const simulatedMatches: Record<string, CarrierMatch[]> = {};
-        orders.forEach(order => {
-          simulatedMatches[order.id] = [
-            {
-              carrierId: 'carrier-1',
-              carrierName: 'Transport Express SARL',
-              score: 95,
-              price: (order.estimatedPrice || 500) * 0.95,
-              eta: '2h30',
-              rating: 4.8,
-              acceptanceRate: 92,
-              available: true,
-            },
-            {
-              carrierId: 'carrier-2',
-              carrierName: 'Logistique Rapide',
-              score: 88,
-              price: (order.estimatedPrice || 500) * 0.98,
-              eta: '3h00',
-              rating: 4.5,
-              acceptanceRate: 85,
-              available: true,
-            },
-            {
-              carrierId: 'carrier-3',
-              carrierName: 'Euro Fret Services',
-              score: 82,
-              price: (order.estimatedPrice || 500) * 1.02,
-              eta: '3h30',
-              rating: 4.2,
-              acceptanceRate: 78,
-              available: true,
-            },
-          ];
-        });
-        setMatches(simulatedMatches);
+  // Poll for dispatch status
+  const pollDispatchStatus = useCallback(async () => {
+    if (!orderId) return;
 
-        // Auto-select best match for each order
-        const autoSelected: Record<string, string> = {};
-        Object.keys(simulatedMatches).forEach(orderId => {
-          if (simulatedMatches[orderId].length > 0) {
-            autoSelected[orderId] = simulatedMatches[orderId][0].carrierId;
-          }
-        });
-        setSelectedCarriers(autoSelected);
-        setStep('waiting');
-      }, 2000);
-    }
-  }, [step, orders]);
+    try {
+      const response = await fetch(`${ordersApiUrl}/orders/${orderId}/dispatch-status`);
+      const data = await response.json();
 
-  // Timer d'attente validation
-  useEffect(() => {
-    if (step === 'waiting') {
-      const interval = setInterval(() => {
-        setWaitingTime(prev => {
-          if (prev >= maxWaitTime) {
-            clearInterval(interval);
-            // Check if any orders still pending
-            if (pendingOrders.size > 0) {
-              setStep('escalating');
-            } else {
-              setStep('completed');
-            }
-            return prev;
-          }
+      if (response.ok && data.success) {
+        setDispatchChain(data.data.dispatchChain || []);
+        setEvents(data.data.events || []);
+        setCurrentStatus(data.data.status);
 
-          // Simulate random carrier acceptances
-          if (Math.random() > 0.7 && pendingOrders.size > 0) {
-            const pendingArray = Array.from(pendingOrders);
-            const randomOrder = pendingArray[Math.floor(Math.random() * pendingArray.length)];
-            setValidatedOrders(prev => new Set([...prev, randomOrder]));
-            setPendingOrders(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(randomOrder);
-              return newSet;
-            });
-          }
-
-          return prev + 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [step, pendingOrders]);
-
-  const handleSendToCarriers = async () => {
-    // Send orders to selected carriers
-    for (const orderId of Object.keys(selectedCarriers)) {
-      const carrierId = selectedCarriers[orderId];
-      if (carrierId) {
-        try {
-          await onValidate(orderId, carrierId);
-        } catch (err) {
-          console.error('Error sending to carrier:', err);
+        // Check status
+        if (data.data.status === 'accepted') {
+          setStep('completed');
+        } else if (data.data.status === 'affret_ia') {
+          setStep('affret_ia');
+        } else if (data.data.status === 'echec_planification') {
+          setStep('failed');
+        } else if (data.data.status === 'planification_auto') {
+          // Still in progress
+          setPollCount(prev => prev + 1);
         }
       }
+    } catch (err: any) {
+      console.error('Poll error:', err);
     }
-    setStep('waiting');
+  }, [orderId, ordersApiUrl]);
+
+  // Start dispatch on mount
+  useEffect(() => {
+    startAutoDispatch();
+  }, [startAutoDispatch]);
+
+  // Poll for status updates
+  useEffect(() => {
+    if (step === 'dispatching' && pollCount < maxPollCount) {
+      const timer = setTimeout(pollDispatchStatus, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [step, pollCount, pollDispatchStatus]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'accepted': return '#22c55e';
+      case 'refused': return '#ef4444';
+      case 'sent': return '#f59e0b';
+      default: return '#6b7280';
+    }
   };
 
-  const handleEscalate = () => {
-    const unvalidatedOrderIds = Array.from(pendingOrders);
-    onEscalateToAffretIA(unvalidatedOrderIds);
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'accepted': return 'Accepte';
+      case 'refused': return 'Refuse';
+      case 'sent': return 'En attente';
+      case 'pending': return 'En file';
+      default: return status;
+    }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -194,7 +171,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
         backgroundColor: 'white',
         borderRadius: '16px',
         width: '90%',
-        maxWidth: '800px',
+        maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -206,17 +183,25 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          background: step === 'completed' ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' :
+                     step === 'affret_ia' ? 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)' :
+                     step === 'failed' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
+                     'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
           borderRadius: '16px 16px 0 0',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '32px' }}>🤖</span>
+            <span style={{ fontSize: '32px' }}>
+              {step === 'completed' ? '✅' : step === 'affret_ia' ? '🚀' : step === 'failed' ? '❌' : '🤖'}
+            </span>
             <div>
               <h2 style={{ margin: 0, color: 'white', fontSize: '20px', fontWeight: '700' }}>
-                Planification Automatique
+                {step === 'completed' ? 'Planification Reussie' :
+                 step === 'affret_ia' ? 'Escalade Affret IA' :
+                 step === 'failed' ? 'Echec Planification' :
+                 'Planification Auto'}
               </h2>
               <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>
-                {orders.length} commande{orders.length > 1 ? 's' : ''} à planifier
+                {orders[0]?.reference || orderId}
               </div>
             </div>
           </div>
@@ -239,231 +224,174 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
 
         {/* Content */}
         <div style={{ padding: '24px' }}>
-          {/* Step: Analyzing */}
-          {step === 'analyzing' && (
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
-              <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: '700' }}>
-                Analyse des commandes en cours...
-              </h3>
-              <div style={{
-                width: '100%',
-                height: '8px',
-                backgroundColor: '#e5e7eb',
-                borderRadius: '4px',
-                overflow: 'hidden',
-                marginBottom: '12px',
-              }}>
-                <div style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  backgroundColor: '#f59e0b',
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-              <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                Recherche des transporteurs disponibles...
-              </div>
-            </div>
-          )}
-
-          {/* Step: Matching */}
-          {step === 'matching' && (
+          {/* Starting */}
+          {step === 'starting' && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <div style={{
                 width: '64px',
                 height: '64px',
                 border: '4px solid #e5e7eb',
-                borderTopColor: '#f59e0b',
+                borderTopColor: '#8b5cf6',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite',
                 margin: '0 auto 20px',
               }} />
               <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700' }}>
-                Matching transporteurs...
+                Demarrage de la planification...
               </h3>
               <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                Calcul des meilleurs transporteurs selon vos critères
+                Recherche des meilleurs transporteurs
               </div>
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
 
-          {/* Step: Waiting for validation */}
-          {step === 'waiting' && (
+          {/* Dispatching - Show dispatch chain */}
+          {step === 'dispatching' && (
             <div>
-              {/* Timer */}
               <div style={{
                 textAlign: 'center',
-                padding: '20px',
-                backgroundColor: '#fef3c7',
+                padding: '16px',
+                backgroundColor: '#ede9fe',
                 borderRadius: '12px',
                 marginBottom: '24px',
               }}>
-                <div style={{ fontSize: '14px', color: '#92400e', marginBottom: '8px' }}>
-                  Attente validation transporteurs
+                <div style={{ fontSize: '14px', color: '#6d28d9', marginBottom: '4px' }}>
+                  Statut: <strong>Planification en cours</strong>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: '700', color: '#d97706' }}>
-                  {formatTime(maxWaitTime - waitingTime)}
-                </div>
-                <div style={{
-                  width: '100%',
-                  height: '4px',
-                  backgroundColor: '#fde68a',
-                  borderRadius: '2px',
-                  marginTop: '12px',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    width: `${(waitingTime / maxWaitTime) * 100}%`,
-                    height: '100%',
-                    backgroundColor: '#f59e0b',
-                    transition: 'width 1s linear',
-                  }} />
+                <div style={{ fontSize: '12px', color: '#7c3aed' }}>
+                  Attente reponse transporteur...
                 </div>
               </div>
 
-              {/* Orders status */}
+              {/* Dispatch Chain */}
+              <h4 style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                Chaine de dispatch ({dispatchChain.length} transporteurs)
+              </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {orders.map(order => {
-                  const isValidated = validatedOrders.has(order.id);
-                  const isPending = pendingOrders.has(order.id);
-                  const orderMatches = matches[order.id] || [];
-                  const selectedCarrier = orderMatches.find(m => m.carrierId === selectedCarriers[order.id]);
-
-                  return (
-                    <div
-                      key={order.id}
-                      style={{
-                        padding: '16px',
-                        borderRadius: '12px',
-                        border: isValidated ? '2px solid #22c55e' : '1px solid #e5e7eb',
-                        backgroundColor: isValidated ? '#f0fdf4' : 'white',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: '700', color: '#111827' }}>{order.reference}</div>
-                          <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                            {order.pickupAddress?.city} → {order.deliveryAddress?.city}
-                          </div>
+                {dispatchChain.map((carrier, index) => (
+                  <div
+                    key={carrier.carrierId}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: carrier.status === 'sent' ? '2px solid #f59e0b' :
+                              carrier.status === 'accepted' ? '2px solid #22c55e' :
+                              carrier.status === 'refused' ? '2px solid #ef4444' :
+                              '1px solid #e5e7eb',
+                      backgroundColor: carrier.status === 'sent' ? '#fef3c7' :
+                                      carrier.status === 'accepted' ? '#f0fdf4' :
+                                      carrier.status === 'refused' ? '#fef2f2' :
+                                      'white',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: getStatusColor(carrier.status),
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '14px',
+                        }}>
+                          {carrier.position}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {selectedCarrier && (
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>
-                                {selectedCarrier.carrierName}
-                              </div>
-                              <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                                {selectedCarrier.price.toFixed(0)}€ • {selectedCarrier.eta}
-                              </div>
-                            </div>
-                          )}
-                          <div style={{
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            backgroundColor: isValidated ? '#22c55e' : '#fef3c7',
-                            color: isValidated ? 'white' : '#92400e',
-                          }}>
-                            {isValidated ? '✓ Validé' : '⏳ En attente'}
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>{carrier.carrierName}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Score: {carrier.score}/100
+                            {carrier.sentAt && ` • Envoye a ${formatTime(carrier.sentAt)}`}
                           </div>
                         </div>
                       </div>
+                      <div style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: getStatusColor(carrier.status),
+                        color: 'white',
+                      }}>
+                        {getStatusLabel(carrier.status)}
+                      </div>
                     </div>
-                  );
-                })}
+                    {carrier.reason && (
+                      <div style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#dc2626',
+                      }}>
+                        Raison: {carrier.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
 
-              {/* Stats */}
-              <div style={{
-                display: 'flex',
-                gap: '16px',
-                marginTop: '24px',
-                padding: '16px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '12px',
-              }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#22c55e' }}>{validatedOrders.size}</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Validées</div>
-                </div>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{pendingOrders.size}</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>En attente</div>
-                </div>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#3b82f6' }}>{orders.length}</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Total</div>
-                </div>
-              </div>
-
-              {/* Escalate button */}
-              {pendingOrders.size > 0 && (
-                <button
-                  onClick={handleEscalate}
-                  style={{
-                    width: '100%',
-                    marginTop: '20px',
-                    padding: '14px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
+              {/* Events Timeline */}
+              {events.length > 0 && (
+                <div style={{ marginTop: '24px' }}>
+                  <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                    Historique
+                  </h4>
+                  <div style={{
+                    backgroundColor: '#f9fafb',
                     borderRadius: '8px',
-                    fontSize: '15px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  🚀 Basculer vers Affret.IA ({pendingOrders.size} commande{pendingOrders.size > 1 ? 's' : ''})
-                </button>
+                    padding: '12px',
+                    maxHeight: '150px',
+                    overflow: 'auto',
+                  }}>
+                    {events.map((event, index) => (
+                      <div
+                        key={event.id || index}
+                        style={{
+                          padding: '8px 0',
+                          borderBottom: index < events.length - 1 ? '1px solid #e5e7eb' : 'none',
+                          fontSize: '13px',
+                        }}
+                      >
+                        <div style={{ color: '#6b7280', fontSize: '11px' }}>
+                          {formatTime(event.timestamp)}
+                        </div>
+                        <div style={{ color: '#374151' }}>{event.details}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
 
-          {/* Step: Escalating */}
-          {step === 'escalating' && (
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🚀</div>
-              <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: '700' }}>
-                Escalade vers Affret.IA
-              </h3>
-              <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
-                {pendingOrders.size} commande{pendingOrders.size > 1 ? 's' : ''} non validée{pendingOrders.size > 1 ? 's' : ''} - Publication sur la bourse de fret
-              </div>
-              <button
-                onClick={handleEscalate}
-                style={{
-                  padding: '14px 32px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-              >
-                Ouvrir Affret.IA
-              </button>
-            </div>
-          )}
-
-          {/* Step: Completed */}
+          {/* Completed */}
           {step === 'completed' && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>✅</div>
-              <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: '700', color: '#22c55e' }}>
-                Planification terminée !
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
+              <h3 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: '700', color: '#22c55e' }}>
+                Transporteur assigne !
               </h3>
-              <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
-                Toutes les commandes ont été attribuées à des transporteurs
-              </div>
+              {dispatchChain.find(c => c.status === 'accepted') && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                }}>
+                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#16a34a' }}>
+                    {dispatchChain.find(c => c.status === 'accepted')?.carrierName}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#22c55e' }}>
+                    a accepte la commande
+                  </div>
+                </div>
+              )}
               <button
                 onClick={onClose}
                 style={{
@@ -479,6 +407,78 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
               >
                 Fermer
               </button>
+            </div>
+          )}
+
+          {/* Affret IA */}
+          {step === 'affret_ia' && (
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚀</div>
+              <h3 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: '700', color: '#ec4899' }}>
+                Escalade vers Affret IA
+              </h3>
+              <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
+                Tous les transporteurs ont refuse. La commande a ete transmise a Affret IA pour un matching elargi.
+              </div>
+              <button
+                onClick={() => onEscalateToAffretIA([orderId!])}
+                style={{
+                  padding: '14px 32px',
+                  background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                Voir dans Affret IA
+              </button>
+            </div>
+          )}
+
+          {/* Failed */}
+          {step === 'failed' && (
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>❌</div>
+              <h3 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: '700', color: '#ef4444' }}>
+                Echec de la planification
+              </h3>
+              <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
+                {error || 'Tous les transporteurs ont refuse et vous n\'avez pas d\'abonnement Affret IA.'}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={startAutoDispatch}
+                  style={{
+                    padding: '14px 24px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reessayer
+                </button>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '14px 24px',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
           )}
         </div>

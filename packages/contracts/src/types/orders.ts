@@ -5,6 +5,13 @@
 export type OrderStatus =
   | 'draft'
   | 'created'
+  | 'pending'
+  // Auto-dispatch statuts
+  | 'planification_auto'
+  | 'affret_ia'
+  | 'echec_planification'
+  | 'accepted'
+  // Legacy statuts
   | 'sent_to_carrier'
   | 'carrier_accepted'
   | 'carrier_refused'
@@ -136,6 +143,10 @@ export interface Order {
   // Portal access for sender/recipient
   portalInvitations?: PortalInvitation[];
 
+  // Auto-dispatch
+  events?: OrderEvent[];
+  dispatchChain?: DispatchChain;
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -153,6 +164,17 @@ export interface CreateOrderInput {
   notes?: string;
 }
 
+// Types d'evenements auto-dispatch
+export type AutoDispatchEventType =
+  | 'auto_dispatch_started'
+  | 'sent_to_carrier'
+  | 'carrier_accepted'
+  | 'carrier_refused'
+  | 'escalated_affret_ia'
+  | 'affret_ia_match_found'
+  | 'dispatch_completed'
+  | 'dispatch_failed';
+
 export interface OrderEvent {
   id: string;
   orderId: string;
@@ -162,6 +184,42 @@ export interface OrderEvent {
   userId?: string;
   userName?: string;
   description: string;
+  // Auto-dispatch specific fields
+  carrierId?: string;
+  carrierName?: string;
+  carrierScore?: number;
+  reason?: string;
+}
+
+// Dispatch chain interfaces
+export interface DispatchChainCarrier {
+  carrierId: string;
+  carrierName: string;
+  score: number;
+  status: 'pending' | 'sent' | 'accepted' | 'refused' | 'timeout';
+  sentAt?: string;
+  respondedAt?: string;
+  responseTime?: number;
+  refusalReason?: string;
+}
+
+export interface DispatchChain {
+  orderId: string;
+  status: 'dispatching' | 'completed' | 'failed' | 'affret_ia';
+  currentIndex: number;
+  carriers: DispatchChainCarrier[];
+  startedAt: string;
+  completedAt?: string;
+  assignedCarrierId?: string;
+  assignedCarrierName?: string;
+}
+
+export interface DispatchStatus {
+  orderId: string;
+  status: string;
+  dispatchChain: DispatchChain;
+  events: OrderEvent[];
+  currentCarrier?: DispatchChainCarrier;
 }
 
 export interface OrderTemplate {
