@@ -63,6 +63,15 @@ export default function HomePage() {
       route: '/orders'
     },
     {
+      icon: '🚀',
+      title: 'Mes Affectations',
+      desc: 'Acceptez ou refusez les commandes qui vous sont affectées',
+      locked: false,
+      route: '/mes-affectations',
+      highlight: true,
+      urgent: true
+    },
+    {
       icon: '🏪',
       title: 'Bourse Fret',
       desc: 'Consultez et répondez aux offres de transport AFFRET.IA',
