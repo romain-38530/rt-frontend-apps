@@ -2356,8 +2356,59 @@ router.get('/commercials', async (req: Request, res: Response) => {
 // Creer un commercial
 router.post('/commercials', async (req: Request, res: Response) => {
   try {
-    const commercial = await CrmCommercial.create(req.body);
-    res.status(201).json(commercial);
+    // Generer un mot de passe temporaire
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let tempPassword = '';
+    for (let i = 0; i < 8; i++) {
+      tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    const commercialData = {
+      ...req.body,
+      tempPassword,
+      mustChangePassword: true
+    };
+
+    const commercial = await CrmCommercial.create(commercialData);
+
+    // Envoyer l'email avec les identifiants
+    try {
+      await CrmEmailService.sendEmail({
+        to: commercial.email,
+        subject: 'Vos identifiants Portail Commercial - SYMPHONI.A',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">Bienvenue ${commercial.firstName}!</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+              <p>Votre compte commercial a ete cree. Voici vos identifiants de connexion:</p>
+              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 20px 0;">
+                <p style="margin: 10px 0;"><strong>Code d'acces:</strong> <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${commercial.accessCode}</code></p>
+                <p style="margin: 10px 0;"><strong>Mot de passe:</strong> <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+              </div>
+              <p style="color: #dc2626; font-weight: bold;">Vous devrez changer votre mot de passe lors de votre premiere connexion.</p>
+              <div style="text-align: center; margin-top: 30px;">
+                <a href="https://app.symphonia-controltower.com/commercial/login"
+                   style="background: #2563eb; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                  Acceder au Portail Commercial
+                </a>
+              </div>
+              <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+                En cas de probleme de connexion, contactez votre administrateur.
+              </p>
+            </div>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Erreur envoi email commercial:', emailError);
+    }
+
+    res.status(201).json({
+      ...commercial.toObject(),
+      tempPassword // Renvoyer le mot de passe temporaire (visible une seule fois)
+    });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

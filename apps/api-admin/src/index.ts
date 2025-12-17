@@ -19,6 +19,7 @@ import announcementsRoutes from './routes/announcements';
 import dashboardRoutes from './routes/dashboard';
 import crmRoutes from './routes/crm';
 import authRoutes from './routes/auth';
+import commercialPortalRoutes from './routes/commercial-portal';
 
 // Middleware
 import { authenticateAdmin } from './middleware/auth';
@@ -206,6 +207,7 @@ app.use('/api/v1/admin/api-keys', authenticateAdmin, apiKeysRoutes);
 app.use('/api/v1/admin/audit', authenticateAdmin, auditRoutes);
 app.use('/api/v1/admin/announcements', authenticateAdmin, announcementsRoutes);
 app.use('/api/v1/admin/crm', crmRoutes); // CRM routes (auth handled internally, webhook needs to be public)
+app.use('/api/v1/commercial', commercialPortalRoutes); // Commercial portal (auth handled internally)
 app.use('/api/v1/admin', authenticateAdmin, dashboardRoutes);
 
 // Error handling

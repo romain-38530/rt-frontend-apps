@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 export interface ICrmCommercial extends Document {
   firstName: string;
@@ -14,6 +15,14 @@ export interface ICrmCommercial extends Document {
   avatar?: string;
   notes?: string;
   dateEmbauche?: Date;
+  // Authentification portail commercial
+  accessCode: string;           // Code unique pour connexion (ex: COM-ABC123)
+  passwordHash?: string;        // Mot de passe hashé
+  tempPassword?: string;        // Mot de passe temporaire envoyé par email
+  mustChangePassword: boolean;  // Doit changer son mot de passe
+  lastLogin?: Date;
+  loginAttempts: number;
+  lockedUntil?: Date;
   // Configuration des commissions
   commissionConfig: {
     tauxConversion: number;      // Montant par lead converti (EUR)
@@ -31,6 +40,9 @@ export interface ICrmCommercial extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  // Methods
+  comparePassword(password: string): Promise<boolean>;
+  generateAccessCode(): string;
 }
 
 const CrmCommercialSchema = new Schema({
@@ -55,6 +67,14 @@ const CrmCommercialSchema = new Schema({
   avatar: String,
   notes: String,
   dateEmbauche: Date,
+  // Authentification portail commercial
+  accessCode: { type: String, unique: true, sparse: true },
+  passwordHash: String,
+  tempPassword: String,
+  mustChangePassword: { type: Boolean, default: true },
+  lastLogin: Date,
+  loginAttempts: { type: Number, default: 0 },
+  lockedUntil: Date,
   commissionConfig: {
     tauxConversion: { type: Number, default: 50 },      // 50 EUR par lead converti
     tauxSignature: { type: Number, default: 200 },      // 200 EUR par contrat signe
@@ -73,7 +93,46 @@ const CrmCommercialSchema = new Schema({
   timestamps: true
 });
 
+// Generer un code d'acces unique
+CrmCommercialSchema.methods.generateAccessCode = function(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'COM-';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+// Comparer le mot de passe
+CrmCommercialSchema.methods.comparePassword = async function(password: string): Promise<boolean> {
+  if (!this.passwordHash) return false;
+  return bcrypt.compare(password, this.passwordHash);
+};
+
+// Hash le mot de passe avant sauvegarde
+CrmCommercialSchema.pre('save', async function(next) {
+  if (this.isModified('tempPassword') && this.tempPassword) {
+    this.passwordHash = await bcrypt.hash(this.tempPassword, 10);
+  }
+  // Generer accessCode si pas present
+  if (!this.accessCode) {
+    let code: string;
+    let exists = true;
+    while (exists) {
+      code = 'COM-';
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      exists = await mongoose.model('CrmCommercial').exists({ accessCode: code }) as any;
+    }
+    this.accessCode = code!;
+  }
+  next();
+});
+
 CrmCommercialSchema.index({ email: 1 });
+CrmCommercialSchema.index({ accessCode: 1 });
 CrmCommercialSchema.index({ status: 1 });
 CrmCommercialSchema.index({ type: 1 });
 
