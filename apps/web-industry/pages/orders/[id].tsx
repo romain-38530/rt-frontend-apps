@@ -28,6 +28,13 @@ const OrderMap = dynamic(() => import('../../components/OrderMap'), {
 const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
   draft: { label: 'Brouillon', color: '#6b7280', bgColor: '#f3f4f6' },
   created: { label: 'Créé', color: '#3b82f6', bgColor: '#dbeafe' },
+  pending: { label: 'En attente', color: '#6b7280', bgColor: '#f3f4f6' },
+  // Auto-dispatch statuts
+  planification_auto: { label: 'Planification auto', color: '#8b5cf6', bgColor: '#ede9fe' },
+  affret_ia: { label: 'Affret IA', color: '#ec4899', bgColor: '#fce7f3' },
+  echec_planification: { label: 'Échec planification', color: '#dc2626', bgColor: '#fee2e2' },
+  accepted: { label: 'Accepté', color: '#10b981', bgColor: '#d1fae5' },
+  // Legacy statuts
   sent_to_carrier: { label: 'Envoyé', color: '#8b5cf6', bgColor: '#ede9fe' },
   carrier_accepted: { label: 'Accepté', color: '#10b981', bgColor: '#d1fae5' },
   carrier_refused: { label: 'Refusé', color: '#ef4444', bgColor: '#fee2e2' },
@@ -39,6 +46,20 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: str
   closed: { label: 'Clôturé', color: '#64748b', bgColor: '#f1f5f9' },
   cancelled: { label: 'Annulé', color: '#dc2626', bgColor: '#fee2e2' },
   escalated: { label: 'Escaladé', color: '#f97316', bgColor: '#ffedd5' },
+};
+
+// Icons pour les types d'événements auto-dispatch
+const EVENT_ICONS: Record<string, string> = {
+  auto_dispatch_started: '🚀',
+  sent_to_carrier: '📨',
+  carrier_accepted: '✅',
+  carrier_refused: '❌',
+  escalated_affret_ia: '🤖',
+  affret_ia_match_found: '🎯',
+  dispatch_completed: '🏆',
+  dispatch_failed: '⚠️',
+  comment: '💬',
+  status_change: '🔄',
 };
 
 const getStatusInfo = (status: string) => {
@@ -859,6 +880,130 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
 
+                    {/* Timeline des événements auto-dispatch */}
+                    {(order.events && order.events.length > 0) || (orderAny.dispatchChain) ? (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>🤖</span> Historique de planification
+                        </div>
+
+                        {/* Dispatch Chain Status */}
+                        {orderAny.dispatchChain && (
+                          <div style={{
+                            padding: '12px',
+                            backgroundColor: orderAny.dispatchChain.status === 'completed' ? '#d1fae5' :
+                                           orderAny.dispatchChain.status === 'failed' ? '#fee2e2' :
+                                           orderAny.dispatchChain.status === 'affret_ia' ? '#fce7f3' : '#ede9fe',
+                            borderRadius: '8px',
+                            marginBottom: '16px'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontWeight: '600', fontSize: '13px' }}>
+                                {orderAny.dispatchChain.status === 'completed' ? '✅ Transporteur assigné' :
+                                 orderAny.dispatchChain.status === 'failed' ? '⚠️ Échec de planification' :
+                                 orderAny.dispatchChain.status === 'affret_ia' ? '🤖 Escaladé vers Affret IA' :
+                                 '⏳ Planification en cours...'}
+                              </div>
+                              {orderAny.dispatchChain.assignedCarrierName && (
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#059669' }}>
+                                  {orderAny.dispatchChain.assignedCarrierName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Events Timeline */}
+                        <div style={{ position: 'relative', paddingLeft: '24px' }}>
+                          {/* Ligne verticale */}
+                          <div style={{
+                            position: 'absolute',
+                            left: '7px',
+                            top: '4px',
+                            bottom: '4px',
+                            width: '2px',
+                            backgroundColor: '#e5e7eb'
+                          }} />
+
+                          {(order.events || []).sort((a, b) =>
+                            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                          ).map((event, idx) => (
+                            <div key={event.id || idx} style={{
+                              position: 'relative',
+                              paddingBottom: '16px',
+                              marginLeft: '8px'
+                            }}>
+                              {/* Point sur la timeline */}
+                              <div style={{
+                                position: 'absolute',
+                                left: '-25px',
+                                top: '4px',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                backgroundColor: event.type === 'carrier_accepted' ? '#22c55e' :
+                                               event.type === 'carrier_refused' ? '#ef4444' :
+                                               event.type === 'escalated_affret_ia' ? '#ec4899' :
+                                               event.type === 'auto_dispatch_started' ? '#8b5cf6' :
+                                               '#667eea',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '10px',
+                                color: 'white',
+                                fontWeight: '700',
+                                border: '2px solid white',
+                                boxShadow: '0 0 0 2px #e5e7eb'
+                              }}>
+                                {EVENT_ICONS[event.type] || '📌'}
+                              </div>
+
+                              {/* Contenu de l'événement */}
+                              <div style={{
+                                backgroundColor: '#f9fafb',
+                                padding: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #e5e7eb'
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                                    {event.description || event.type}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#9ca3af', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                    {formatDateTime(event.timestamp)}
+                                  </div>
+                                </div>
+                                {event.carrierName && (
+                                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                    🚛 {event.carrierName}
+                                    {event.carrierScore && <span style={{ marginLeft: '8px', color: '#667eea' }}>Score: {event.carrierScore}/100</span>}
+                                  </div>
+                                )}
+                                {event.reason && (
+                                  <div style={{
+                                    fontSize: '12px',
+                                    color: '#dc2626',
+                                    marginTop: '4px',
+                                    padding: '6px 8px',
+                                    backgroundColor: '#fef2f2',
+                                    borderRadius: '4px'
+                                  }}>
+                                    💬 Raison: {event.reason}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                          {(!order.events || order.events.length === 0) && (
+                            <div style={{ color: '#9ca3af', fontSize: '13px', padding: '12px' }}>
+                              Aucun événement de planification
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
                     {/* TrackingFeed temps réel - visible dès qu'un transporteur est assigné */}
                     {order.carrierId ? (
                       <TrackingFeed
@@ -870,13 +1015,15 @@ export default function OrderDetailPage() {
                         onRefresh={() => console.log('Refreshing tracking data...')}
                       />
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
-                        <div>Aucun événement pour le moment</div>
-                        <div style={{ fontSize: '13px', marginTop: '8px', color: '#6b7280' }}>
-                          Le suivi temps réel sera disponible une fois un transporteur assigné
+                      !order.events || order.events.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
+                          <div>Aucun événement pour le moment</div>
+                          <div style={{ fontSize: '13px', marginTop: '8px', color: '#6b7280' }}>
+                            Le suivi temps réel sera disponible une fois un transporteur assigné
+                          </div>
                         </div>
-                      </div>
+                      ) : null
                     )}
                   </div>
                 )}
