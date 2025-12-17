@@ -754,6 +754,103 @@ export const crmApi = {
     });
     return res.json();
   },
+
+  // Commerciaux
+  getCommerciaux: async (filters?: { type?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.status) params.append('status', filters.status);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createCommercial: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getCommercial: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  updateCommercial: async (id: string, data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  deleteCommercial: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  getCommerciauxStats: async () => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commercials-stats`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  // Commissions
+  getCommissions: async (filters?: { commercialId?: string; periode?: string; type?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.commercialId) params.append('commercialId', filters.commercialId);
+    if (filters?.periode) params.append('periode', filters.periode);
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.status) params.append('status', filters.status);
+    const queryString = params.toString();
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions${queryString ? `?${queryString}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  createCommission: async (data: any) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  validateCommission: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions/${id}/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  payCommission: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions/${id}/pay`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  cancelCommission: async (id: string) => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions/${id}/cancel`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  generateMonthlyCommissions: async () => {
+    const res = await fetch(`${ADMIN_GATEWAY_URL}/api/v1/admin/crm/commissions/generate-monthly`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
 };
 
 // Health Check API

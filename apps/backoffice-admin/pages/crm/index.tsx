@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Users, Mail, TrendingUp, Target, Calendar, Globe, ChevronRight, RefreshCw, Sparkles, FileText, Inbox, Compass } from 'lucide-react';
+import { Building2, Users, Mail, TrendingUp, Target, Calendar, Globe, ChevronRight, RefreshCw, Sparkles, FileText, Inbox, Compass, Briefcase } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 import { DashboardCard } from '../../components/DashboardCard';
 import { crmApi } from '../../lib/api';
@@ -294,6 +294,17 @@ export default function CRMDashboard() {
               <div>
                 <span className="font-semibold block">Pool de Leads</span>
                 <span className="text-sm opacity-75">Piocher des prospects</span>
+              </div>
+              <ChevronRight size={20} className="ml-auto" />
+            </a>
+            <a
+              href="/crm/team"
+              className="flex items-center gap-3 p-4 bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition-colors"
+            >
+              <Briefcase size={24} />
+              <div>
+                <span className="font-semibold block">Equipe Commerciale</span>
+                <span className="text-sm opacity-75">Gerer les commerciaux</span>
               </div>
               <ChevronRight size={20} className="ml-auto" />
             </a>

@@ -8,6 +8,8 @@ import LeadContact from '../models/LeadContact';
 import LeadEmail from '../models/LeadEmail';
 import LeadEmailTemplate from '../models/LeadEmailTemplate';
 import LeadInteraction from '../models/LeadInteraction';
+import CrmCommercial from '../models/CrmCommercial';
+import CrmCommission from '../models/CrmCommission';
 import LemlistService from '../services/lemlist-service';
 import CrmEmailService from '../services/email-service';
 import ScrapingServiceInstance, { ScrapingService } from '../services/scraping-service';
@@ -20,7 +22,7 @@ const router = Router();
 // Apply auth middleware to all routes except webhook
 router.use((req: Request, res: Response, next: NextFunction) => {
   // Allow webhook without auth
-  if (req.path === '/emails/webhook' || req.path === '/migrate-to-pool' || req.path === '/enrich-existing-leads' || req.path === '/leads/sial' || req.path === '/enrich-pool') {
+  if (req.path === '/emails/webhook' || req.path === '/migrate-to-pool' || req.path === '/enrich-existing-leads' || req.path === '/leads/sial' || req.path === '/enrich-pool' || req.path === '/cleanup-products') {
     return next();
   }
   return authenticateAdmin(req as AuthRequest, res, next);
@@ -2290,6 +2292,393 @@ router.get('/pool/stats', async (req: Request, res: Response) => {
       topCommercials
     });
 
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== COMMERCIAUX (EQUIPE CRM) ====================
+
+// Liste des commerciaux
+router.get('/commercials', async (req: Request, res: Response) => {
+  try {
+    const { status, type, search } = req.query;
+    const filter: any = {};
+
+    if (status) filter.status = status;
+    if (type) filter.type = type;
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const commercials = await CrmCommercial.find(filter).sort({ createdAt: -1 });
+
+    // Enrichir avec les leads assignes
+    for (const commercial of commercials) {
+      const leadsAssignes = await LeadCompany.countDocuments({ commercialAssigneId: commercial._id });
+      const leadsEnCours = await LeadCompany.countDocuments({
+        commercialAssigneId: commercial._id,
+        statutProspection: { $in: ['ASSIGNED', 'CONTACTED', 'IN_PROGRESS'] }
+      });
+      const leadsConverts = await LeadCompany.countDocuments({
+        commercialAssigneId: commercial._id,
+        statutProspection: 'CONVERTED'
+      });
+
+      commercial.stats.leadsAssignes = leadsAssignes;
+      commercial.stats.leadsEnCours = leadsEnCours;
+      commercial.stats.leadsConverts = leadsConverts;
+      commercial.stats.tauxConversion = leadsAssignes > 0 ? Math.round((leadsConverts / leadsAssignes) * 100) : 0;
+
+      // Commissions
+      const commissions = await CrmCommission.aggregate([
+        { $match: { commercialId: commercial._id } },
+        { $group: {
+          _id: '$status',
+          total: { $sum: '$montant' }
+        }}
+      ]);
+
+      commercial.stats.commissionsTotal = commissions.reduce((sum, c) => sum + (c.total || 0), 0);
+      commercial.stats.commissionsPending = commissions.find(c => c._id === 'pending')?.total || 0;
+    }
+
+    res.json({ commercials, total: commercials.length });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Creer un commercial
+router.post('/commercials', async (req: Request, res: Response) => {
+  try {
+    const commercial = await CrmCommercial.create(req.body);
+    res.status(201).json(commercial);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Obtenir un commercial
+router.get('/commercials/:id', async (req: Request, res: Response) => {
+  try {
+    const commercial = await CrmCommercial.findById(req.params.id);
+    if (!commercial) return res.status(404).json({ error: 'Commercial non trouve' });
+
+    // Leads assignes
+    const leads = await LeadCompany.find({ commercialAssigneId: commercial._id })
+      .select('raisonSociale statutProspection scoreLead createdAt')
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    // Commissions
+    const commissions = await CrmCommission.find({ commercialId: commercial._id })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json({ commercial, leads, commissions });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Modifier un commercial
+router.put('/commercials/:id', async (req: Request, res: Response) => {
+  try {
+    const commercial = await CrmCommercial.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+    if (!commercial) return res.status(404).json({ error: 'Commercial non trouve' });
+    res.json(commercial);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Supprimer un commercial
+router.delete('/commercials/:id', async (req: Request, res: Response) => {
+  try {
+    const commercial = await CrmCommercial.findById(req.params.id);
+    if (!commercial) return res.status(404).json({ error: 'Commercial non trouve' });
+
+    // Reassigner les leads au pool
+    await LeadCompany.updateMany(
+      { commercialAssigneId: commercial._id },
+      { $unset: { commercialAssigneId: 1, dateAssignation: 1 } }
+    );
+
+    await CrmCommercial.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Commercial supprime et leads reassignes au pool' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stats equipe commerciale
+router.get('/commercials-stats', async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const [
+      totalCommerciaux,
+      commerciauxActifs,
+      internes,
+      externes
+    ] = await Promise.all([
+      CrmCommercial.countDocuments(),
+      CrmCommercial.countDocuments({ status: 'active' }),
+      CrmCommercial.countDocuments({ type: 'internal', status: 'active' }),
+      CrmCommercial.countDocuments({ type: 'external', status: 'active' })
+    ]);
+
+    // Commissions du mois
+    const commissionsMonth = await CrmCommission.aggregate([
+      { $match: { periode: currentMonth } },
+      { $group: {
+        _id: '$status',
+        total: { $sum: '$montant' },
+        count: { $sum: 1 }
+      }}
+    ]);
+
+    const commissionsPending = commissionsMonth.find(c => c._id === 'pending')?.total || 0;
+    const commissionsPaid = commissionsMonth.find(c => c._id === 'paid')?.total || 0;
+
+    // Top performers
+    const topPerformers = await CrmCommercial.find({ status: 'active' })
+      .sort({ 'stats.leadsConverts': -1 })
+      .limit(5)
+      .select('firstName lastName stats');
+
+    res.json({
+      totalCommerciaux,
+      commerciauxActifs,
+      internes,
+      externes,
+      commissionsMonth: {
+        pending: commissionsPending,
+        paid: commissionsPaid,
+        total: commissionsPending + commissionsPaid
+      },
+      topPerformers
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== COMMISSIONS ====================
+
+// Liste des commissions
+router.get('/commissions', async (req: Request, res: Response) => {
+  try {
+    const { commercialId, status, periode, page = 1, limit = 50 } = req.query;
+    const filter: any = {};
+
+    if (commercialId) filter.commercialId = commercialId;
+    if (status) filter.status = status;
+    if (periode) filter.periode = periode;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [commissions, total] = await Promise.all([
+      CrmCommission.find(filter)
+        .populate('commercialId', 'firstName lastName email type')
+        .populate('leadCompanyId', 'raisonSociale')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      CrmCommission.countDocuments(filter)
+    ]);
+
+    // Totaux par status
+    const totals = await CrmCommission.aggregate([
+      { $match: filter },
+      { $group: {
+        _id: '$status',
+        total: { $sum: '$montant' },
+        count: { $sum: 1 }
+      }}
+    ]);
+
+    res.json({
+      commissions,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totals: {
+        pending: totals.find(t => t._id === 'pending')?.total || 0,
+        validated: totals.find(t => t._id === 'validated')?.total || 0,
+        paid: totals.find(t => t._id === 'paid')?.total || 0
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Creer une commission
+router.post('/commissions', async (req: Request, res: Response) => {
+  try {
+    const commission = await CrmCommission.create(req.body);
+
+    // Mettre a jour les stats du commercial
+    if (commission.commercialId) {
+      await CrmCommercial.findByIdAndUpdate(commission.commercialId, {
+        $inc: { 'stats.commissionsPending': commission.montant }
+      });
+    }
+
+    const populated = await CrmCommission.findById(commission._id)
+      .populate('commercialId', 'firstName lastName email')
+      .populate('leadCompanyId', 'raisonSociale');
+
+    res.status(201).json(populated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Valider une commission
+router.post('/commissions/:id/validate', async (req: Request, res: Response) => {
+  try {
+    const commission = await CrmCommission.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          status: 'validated',
+          dateValidation: new Date()
+        }
+      },
+      { new: true }
+    ).populate('commercialId', 'firstName lastName email');
+
+    if (!commission) return res.status(404).json({ error: 'Commission non trouvee' });
+
+    res.json(commission);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Marquer une commission comme payee
+router.post('/commissions/:id/pay', async (req: Request, res: Response) => {
+  try {
+    const commission = await CrmCommission.findById(req.params.id);
+    if (!commission) return res.status(404).json({ error: 'Commission non trouvee' });
+
+    commission.status = 'paid';
+    commission.datePaiement = new Date();
+    await commission.save();
+
+    // Mettre a jour les stats du commercial
+    if (commission.commercialId) {
+      await CrmCommercial.findByIdAndUpdate(commission.commercialId, {
+        $inc: {
+          'stats.commissionsPending': -commission.montant,
+          'stats.commissionsTotal': commission.montant
+        }
+      });
+    }
+
+    const populated = await CrmCommission.findById(commission._id)
+      .populate('commercialId', 'firstName lastName email');
+
+    res.json(populated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Annuler une commission
+router.post('/commissions/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const commission = await CrmCommission.findById(req.params.id);
+    if (!commission) return res.status(404).json({ error: 'Commission non trouvee' });
+
+    const oldStatus = commission.status;
+    commission.status = 'cancelled';
+    await commission.save();
+
+    // Ajuster les stats du commercial si necessaire
+    if (commission.commercialId && oldStatus === 'pending') {
+      await CrmCommercial.findByIdAndUpdate(commission.commercialId, {
+        $inc: { 'stats.commissionsPending': -commission.montant }
+      });
+    }
+
+    res.json(commission);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generer les commissions du mois pour tous les commerciaux
+router.post('/commissions/generate-monthly', async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const periode = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const commerciaux = await CrmCommercial.find({ status: 'active' });
+    const created: any[] = [];
+
+    for (const commercial of commerciaux) {
+      // Verifier si deja genere
+      const existing = await CrmCommission.findOne({
+        commercialId: commercial._id,
+        periode,
+        type: 'conversion'
+      });
+
+      if (existing) continue;
+
+      // Compter les leads convertis ce mois
+      const leadsConvertisMois = await LeadCompany.countDocuments({
+        commercialAssigneId: commercial._id,
+        statutProspection: 'CONVERTED',
+        updatedAt: {
+          $gte: new Date(now.getFullYear(), now.getMonth(), 1),
+          $lt: new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        }
+      });
+
+      if (leadsConvertisMois > 0) {
+        const montant = leadsConvertisMois * (commercial.commissionConfig?.tauxConversion || 50);
+        const commission = await CrmCommission.create({
+          commercialId: commercial._id,
+          type: 'conversion',
+          montant,
+          periode,
+          description: `${leadsConvertisMois} leads convertis en ${periode}`
+        });
+        created.push(commission);
+      }
+
+      // Bonus objectif atteint
+      if (commercial.objectifMensuel && leadsConvertisMois >= commercial.objectifMensuel) {
+        const bonus = await CrmCommission.create({
+          commercialId: commercial._id,
+          type: 'bonus',
+          montant: commercial.commissionConfig?.bonusObjectif || 500,
+          periode,
+          description: `Bonus objectif atteint (${leadsConvertisMois}/${commercial.objectifMensuel})`
+        });
+        created.push(bonus);
+      }
+    }
+
+    res.json({
+      success: true,
+      periode,
+      commissionsCreated: created.length,
+      commissions: created
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

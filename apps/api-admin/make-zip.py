@@ -3,7 +3,7 @@ import os
 
 os.chdir('deploy')
 
-with zipfile.ZipFile('../deploy-v2.8.3-cleanup-endpoint.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+with zipfile.ZipFile('../deploy-v2.9.0-crm-team.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
     for root, dirs, files in os.walk('.'):
         for file in files:
             filepath = os.path.join(root, file)
