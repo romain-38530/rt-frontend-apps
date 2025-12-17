@@ -130,4 +130,4 @@ export type { AppointmentRequestFormProps, AppointmentRequestData, AppointmentRe
 
 // Auto Planning Components - Planification automatique avec escalade Affret.IA
 export { AutoPlanningModal } from './components/AutoPlanning';
-export type { AutoPlanningModalProps, CarrierMatch } from './components/AutoPlanning';
+export type { AutoPlanningModalProps, DispatchCarrier, DispatchEvent } from './components/AutoPlanning';
