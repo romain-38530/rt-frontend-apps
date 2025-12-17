@@ -77,7 +77,8 @@ export class OrdersService {
    * Mettre à jour une commande
    */
   static async updateOrder(orderId: string, updates: Partial<Order>): Promise<Order> {
-    return await ordersApi.put<Order>(`/orders/${orderId}`, updates);
+    const response = await ordersApi.put<{ success: boolean; data: any }>(`/orders/${orderId}`, updates);
+    return transformOrder(response.data);
   }
 
   /**
