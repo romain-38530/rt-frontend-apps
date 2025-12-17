@@ -145,7 +145,7 @@ export interface Order {
 
   // Auto-dispatch
   events?: OrderEvent[];
-  dispatchChain?: DispatchChain;
+  dispatchChain?: AutoDispatchChain;
 
   // Metadata
   createdAt: string;
@@ -191,8 +191,8 @@ export interface OrderEvent {
   reason?: string;
 }
 
-// Dispatch chain interfaces
-export interface DispatchChainCarrier {
+// Auto-dispatch chain interfaces (simplified version for order context)
+export interface AutoDispatchCarrier {
   carrierId: string;
   carrierName: string;
   score: number;
@@ -203,23 +203,23 @@ export interface DispatchChainCarrier {
   refusalReason?: string;
 }
 
-export interface DispatchChain {
+export interface AutoDispatchChain {
   orderId: string;
   status: 'dispatching' | 'completed' | 'failed' | 'affret_ia';
   currentIndex: number;
-  carriers: DispatchChainCarrier[];
+  carriers: AutoDispatchCarrier[];
   startedAt: string;
   completedAt?: string;
   assignedCarrierId?: string;
   assignedCarrierName?: string;
 }
 
-export interface DispatchStatus {
+export interface AutoDispatchStatus {
   orderId: string;
   status: string;
-  dispatchChain: DispatchChain;
+  dispatchChain: AutoDispatchChain;
   events: OrderEvent[];
-  currentCarrier?: DispatchChainCarrier;
+  currentCarrier?: AutoDispatchCarrier;
 }
 
 export interface OrderTemplate {
