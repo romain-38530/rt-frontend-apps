@@ -2,28 +2,28 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
-  LayoutDashboard, Users, Target, Building2, MapPin, Calendar, Phone, Mail,
-  LogOut, Search, Filter, ChevronRight, CheckCircle, AlertCircle, Package
+  LayoutDashboard, Users, Target, Building2, MapPin, Mail, Globe, Star,
+  LogOut, Search, Filter, CheckCircle, AlertCircle, Package
 } from 'lucide-react';
 
 const COMMERCIAL_API_URL = process.env.NEXT_PUBLIC_ADMIN_GATEWAY_URL || 'https://ddaywxps9n701.cloudfront.net';
 
 interface PoolLead {
   _id: string;
-  companyName: string;
-  siret?: string;
-  address?: {
-    city?: string;
-    postalCode?: string;
+  raisonSociale: string;
+  siteWeb?: string;
+  telephone?: string;
+  emailGenerique?: string;
+  adresse?: {
+    ville?: string;
+    codePostal?: string;
+    pays?: string;
   };
-  contact?: {
-    email?: string;
-    phone?: string;
-  };
-  enrichedData?: {
-    effectif?: string;
-    chiffreAffaires?: number;
-    activitePrincipale?: string;
+  secteurActivite?: string;
+  scoreLead?: number;
+  nbContactsEnrichis?: number;
+  salonSourceId?: {
+    nom: string;
   };
   createdAt: string;
 }
@@ -38,8 +38,7 @@ export default function CommercialPool() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [filters, setFilters] = useState({
-    city: '',
-    minCA: ''
+    city: ''
   });
 
   useEffect(() => {
@@ -65,8 +64,7 @@ export default function CommercialPool() {
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
-      if (filters.city) params.append('city', filters.city);
-      if (filters.minCA) params.append('minCA', filters.minCA);
+      if (filters.city) params.append('ville', filters.city);
 
       const res = await fetch(`${COMMERCIAL_API_URL}/api/v1/commercial/pool?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -106,7 +104,7 @@ export default function CommercialPool() {
         throw new Error(data.error || 'Erreur lors de la selection');
       }
 
-      setSuccess(`${data.lead.companyName} a ete ajoute a vos leads. Un email a ete envoye au prospect.`);
+      setSuccess(`${data.lead.raisonSociale} a ete ajoute a vos leads. Un email a ete envoye au prospect.`);
       setLeads(prev => prev.filter(l => l._id !== leadId));
 
       // Redirect to the lead detail after 2 seconds
@@ -133,13 +131,6 @@ export default function CommercialPool() {
     localStorage.removeItem('commercial_token');
     localStorage.removeItem('commercial_user');
     router.push('/commercial/login');
-  };
-
-  const formatCA = (ca?: number) => {
-    if (!ca) return '-';
-    if (ca >= 1000000) return `${(ca / 1000000).toFixed(1)}M €`;
-    if (ca >= 1000) return `${(ca / 1000).toFixed(0)}K €`;
-    return `${ca} €`;
   };
 
   if (loading && leads.length === 0) {
@@ -269,38 +260,44 @@ export default function CommercialPool() {
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                       <Building2 className="w-6 h-6 text-blue-600" />
                     </div>
-                    {lead.enrichedData?.chiffreAffaires && (
-                      <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                        {formatCA(lead.enrichedData.chiffreAffaires)}
+                    {lead.scoreLead && lead.scoreLead > 0 && (
+                      <span className="text-sm font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded flex items-center gap-1">
+                        <Star className="w-3 h-3" /> {lead.scoreLead}
                       </span>
                     )}
                   </div>
 
-                  <h3 className="font-semibold text-gray-900 mb-2">{lead.companyName}</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{lead.raisonSociale}</h3>
 
-                  {lead.enrichedData?.activitePrincipale && (
+                  {lead.secteurActivite && (
                     <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                      {lead.enrichedData.activitePrincipale}
+                      {lead.secteurActivite}
                     </p>
                   )}
 
                   <div className="space-y-2 text-sm text-gray-600">
-                    {lead.address?.city && (
+                    {lead.adresse?.ville && (
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-gray-400" />
-                        <span>{lead.address.postalCode} {lead.address.city}</span>
+                        <span>{lead.adresse.codePostal} {lead.adresse.ville}</span>
                       </div>
                     )}
-                    {lead.enrichedData?.effectif && (
+                    {lead.siteWeb && (
                       <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span>{lead.enrichedData.effectif} salaries</span>
+                        <Globe className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{lead.siteWeb}</span>
                       </div>
                     )}
-                    {lead.contact?.email && (
+                    {lead.emailGenerique && (
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="truncate">{lead.contact.email}</span>
+                        <span className="truncate">{lead.emailGenerique}</span>
+                      </div>
+                    )}
+                    {lead.nbContactsEnrichis && lead.nbContactsEnrichis > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-400" />
+                        <span>{lead.nbContactsEnrichis} contact{lead.nbContactsEnrichis > 1 ? 's' : ''}</span>
                       </div>
                     )}
                   </div>
