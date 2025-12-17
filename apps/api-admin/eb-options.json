@@ -47,17 +47,17 @@
   {
     "Namespace": "aws:elasticbeanstalk:application:environment",
     "OptionName": "CRM_SMTP_USER",
-    "Value": "commerce@symphonia-controltower.com"
+    "Value": "commerciaux@symphonia-controltower.com"
   },
   {
     "Namespace": "aws:elasticbeanstalk:application:environment",
     "OptionName": "CRM_SMTP_PASSWORD",
-    "Value": "Commerce2024!CRM"
+    "Value": "Commerciaux2024!CRM"
   },
   {
     "Namespace": "aws:elasticbeanstalk:application:environment",
     "OptionName": "CRM_FROM_EMAIL",
-    "Value": "commerce@symphonia-controltower.com"
+    "Value": "commerciaux@symphonia-controltower.com"
   },
   {
     "Namespace": "aws:elasticbeanstalk:application:environment",

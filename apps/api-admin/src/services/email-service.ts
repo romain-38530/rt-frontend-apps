@@ -41,7 +41,7 @@ class CrmEmailService {
       secure: process.env.CRM_SMTP_SECURE !== 'false',
       user: process.env.CRM_SMTP_USER || '',
       password: process.env.CRM_SMTP_PASSWORD || '',
-      fromEmail: process.env.CRM_FROM_EMAIL || 'commerce@symphonia-controltower.com',
+      fromEmail: process.env.CRM_FROM_EMAIL || 'commerciaux@symphonia-controltower.com',
       fromName: process.env.CRM_FROM_NAME || 'Equipe Commerciale SYMPHONI.A'
     };
 
