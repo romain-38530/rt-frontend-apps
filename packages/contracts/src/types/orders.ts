@@ -147,6 +147,9 @@ export interface Order {
   events?: OrderEvent[];
   dispatchChain?: AutoDispatchChain;
 
+  // Customer reference (external system reference)
+  customerReference?: string;
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -162,6 +165,8 @@ export interface CreateOrderInput {
   constraints?: Constraint[];
   carrierId?: string;
   notes?: string;
+  // Customer reference (external system reference)
+  customerReference?: string;
 }
 
 // Types d'evenements auto-dispatch
