@@ -11,10 +11,10 @@
  * - Blocage/Deblocage
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
-import { isAuthenticated, getAuthToken } from '../lib/auth';
+import { isAuthenticated, getAuthToken, getUser } from '../lib/auth';
 import * as carrierApi from '@shared/services/carrier-referencing-api';
 
 // Types locaux pour le state
@@ -69,8 +69,11 @@ export default function TransporteursPage() {
     until: ''
   });
 
-  // ID industriel (a recuperer du contexte auth)
-  const industrielId = 'IND-001';
+  // ID industriel dynamique depuis l'utilisateur connecte
+  const industrielId = useMemo(() => {
+    const user = getUser();
+    return user?.id || user?.industrialId || user?._id || '';
+  }, [mounted]);
 
   // ==========================================================================
   // CHARGEMENT DES DONNEES
