@@ -288,6 +288,372 @@ export default function OrderDetailPage() {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(price);
   };
 
+  // Fonction d'impression du contrat de transport
+  const handlePrint = () => {
+    if (!order) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const orderData = order as any;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Contrat de Transport - ${order.reference}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            color: #1f2937;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .logo { font-size: 28px; font-weight: 800; color: #667eea; }
+          .logo span { color: #764ba2; }
+          .doc-title {
+            text-align: right;
+          }
+          .doc-title h1 {
+            font-size: 24px;
+            color: #111827;
+            margin-bottom: 4px;
+          }
+          .doc-title .ref {
+            font-size: 18px;
+            color: #667eea;
+            font-weight: 700;
+          }
+          .doc-title .customer-ref {
+            font-size: 14px;
+            color: #059669;
+            font-weight: 600;
+            margin-top: 4px;
+          }
+          .doc-title .date {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+          }
+          .section {
+            margin-bottom: 24px;
+            page-break-inside: avoid;
+          }
+          .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            padding: 8px 16px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+          }
+          .section-title.green { background: #22c55e; }
+          .section-title.blue { background: #3b82f6; }
+          .section-title.purple { background: #8b5cf6; }
+          .section-title.orange { background: #f59e0b; }
+          .section-title.gray { background: #6b7280; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+          .box {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+          }
+          .box-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+          }
+          .box-content { font-size: 13px; }
+          .box-content strong { display: block; font-size: 14px; color: #111827; margin-bottom: 4px; }
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .info-row:last-child { border-bottom: none; }
+          .info-label { color: #6b7280; font-weight: 500; }
+          .info-value { color: #111827; font-weight: 600; text-align: right; }
+          .parties-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+          .party-box {
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid;
+          }
+          .party-box.industrial { background: #dbeafe; border-color: #3b82f6; }
+          .party-box.carrier { background: #dcfce7; border-color: #22c55e; }
+          .party-box.sender { background: #fef3c7; border-color: #f59e0b; }
+          .party-label { font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+          .party-name { font-size: 14px; font-weight: 700; color: #111827; }
+          .party-detail { font-size: 12px; color: #6b7280; margin-top: 4px; }
+          .goods-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          .goods-table th {
+            background: #f3f4f6;
+            padding: 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+          }
+          .goods-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+          }
+          .price-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+          }
+          .price-label { font-size: 12px; opacity: 0.9; }
+          .price-value { font-size: 28px; font-weight: 800; margin-top: 4px; }
+          .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+          }
+          .signature-box {
+            border: 1px dashed #d1d5db;
+            padding: 20px;
+            height: 120px;
+            border-radius: 8px;
+          }
+          .signature-label {
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .legal {
+            margin-top: 30px;
+            font-size: 10px;
+            color: #9ca3af;
+            text-align: center;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 4px;
+          }
+          @media print {
+            body { padding: 20px; }
+            .section { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">SYMPHONI<span>.A</span></div>
+          <div class="doc-title">
+            <h1>CONTRAT DE TRANSPORT</h1>
+            <div class="ref">${order.reference}</div>
+            ${orderData.customerReference ? `<div class="customer-ref">Réf. client: ${orderData.customerReference}</div>` : ''}
+            <div class="date">Émis le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
+        </div>
+
+        <!-- Parties prenantes -->
+        <div class="section">
+          <div class="section-title purple">PARTIES AU CONTRAT</div>
+          <div class="parties-grid">
+            <div class="party-box industrial">
+              <div class="party-label" style="color: #1e40af;">Donneur d'ordre</div>
+              <div class="party-name">${orderData.industrialName || orderData.organizationName || orderData.companyName || 'Non défini'}</div>
+            </div>
+            <div class="party-box carrier">
+              <div class="party-label" style="color: #15803d;">Transporteur</div>
+              <div class="party-name">${orderData.carrierName || orderData.assignedCarrier?.carrierName || order.carrierId || 'En attente d\'assignation'}</div>
+              ${orderData.assignedCarrier?.driverName ? `<div class="party-detail">Chauffeur: ${orderData.assignedCarrier.driverName}</div>` : ''}
+              ${orderData.assignedCarrier?.vehiclePlate ? `<div class="party-detail">Véhicule: ${orderData.assignedCarrier.vehiclePlate}</div>` : ''}
+            </div>
+            <div class="party-box sender">
+              <div class="party-label" style="color: #92400e;">Expéditeur</div>
+              <div class="party-name">${orderData.senderName || orderData.forwarderName || 'Non défini'}</div>
+              ${orderData.senderEmail ? `<div class="party-detail">${orderData.senderEmail}</div>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Enlèvement et Livraison -->
+        <div class="section">
+          <div class="grid">
+            <div>
+              <div class="section-title green">ENLÈVEMENT</div>
+              <div class="box">
+                <div class="box-title">Adresse</div>
+                <div class="box-content">
+                  <strong>${order.pickupAddress?.street || '-'}</strong>
+                  ${order.pickupAddress?.postalCode || ''} ${order.pickupAddress?.city || ''}
+                  <br/>${order.pickupAddress?.country || 'France'}
+                </div>
+              </div>
+              <div class="box" style="margin-top: 12px;">
+                <div class="box-title">Contact sur place</div>
+                <div class="box-content">
+                  <strong>${order.pickupAddress?.contactName || '-'}</strong>
+                  ${order.pickupAddress?.contactPhone ? `Tél: ${order.pickupAddress.contactPhone}` : ''}
+                  ${order.pickupAddress?.contactEmail ? `<br/>Email: ${order.pickupAddress.contactEmail}` : ''}
+                </div>
+              </div>
+              <div class="box" style="margin-top: 12px;">
+                <div class="box-title">Date prévue</div>
+                <div class="box-content">
+                  <strong>${order.dates?.pickupDate ? new Date(order.dates.pickupDate).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '-'}</strong>
+                  ${order.dates?.pickupTimeSlotStart ? `Créneau: ${order.dates.pickupTimeSlotStart}${order.dates.pickupTimeSlotEnd ? ` - ${order.dates.pickupTimeSlotEnd}` : ''}` : ''}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="section-title blue">LIVRAISON</div>
+              <div class="box">
+                <div class="box-title">Adresse</div>
+                <div class="box-content">
+                  <strong>${order.deliveryAddress?.street || '-'}</strong>
+                  ${order.deliveryAddress?.postalCode || ''} ${order.deliveryAddress?.city || ''}
+                  <br/>${order.deliveryAddress?.country || 'France'}
+                </div>
+              </div>
+              <div class="box" style="margin-top: 12px;">
+                <div class="box-title">Contact sur place</div>
+                <div class="box-content">
+                  <strong>${order.deliveryAddress?.contactName || '-'}</strong>
+                  ${order.deliveryAddress?.contactPhone ? `Tél: ${order.deliveryAddress.contactPhone}` : ''}
+                  ${order.deliveryAddress?.contactEmail ? `<br/>Email: ${order.deliveryAddress.contactEmail}` : ''}
+                </div>
+              </div>
+              <div class="box" style="margin-top: 12px;">
+                <div class="box-title">Date prévue</div>
+                <div class="box-content">
+                  <strong>${order.dates?.deliveryDate ? new Date(order.dates.deliveryDate).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '-'}</strong>
+                  ${order.dates?.deliveryTimeSlotStart ? `Créneau: ${order.dates.deliveryTimeSlotStart}${order.dates.deliveryTimeSlotEnd ? ` - ${order.dates.deliveryTimeSlotEnd}` : ''}` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Marchandise -->
+        <div class="section">
+          <div class="section-title orange">MARCHANDISE TRANSPORTÉE</div>
+          <table class="goods-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Poids</th>
+                <th>Volume</th>
+                <th>Quantité</th>
+                <th>Palettes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>${order.goods?.description || '-'}</strong></td>
+                <td>${order.goods?.weight || 0} kg</td>
+                <td>${order.goods?.volume ? `${order.goods.volume} m³` : '-'}</td>
+                <td>${order.goods?.quantity || 1} colis</td>
+                <td>${order.goods?.palettes || 0} palettes</td>
+              </tr>
+            </tbody>
+          </table>
+          ${order.goods?.packaging ? `<div style="margin-top: 12px; font-size: 12px;"><strong>Emballage:</strong> ${order.goods.packaging}</div>` : ''}
+          ${order.goods?.value ? `<div style="margin-top: 4px; font-size: 12px;"><strong>Valeur déclarée:</strong> ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: order.currency || 'EUR' }).format(order.goods.value)}</div>` : ''}
+        </div>
+
+        <!-- Prix et conditions -->
+        <div class="section">
+          <div class="section-title gray">CONDITIONS FINANCIÈRES</div>
+          <div class="grid">
+            <div class="price-box">
+              <div class="price-label">Prix du transport</div>
+              <div class="price-value">${order.finalPrice || order.estimatedPrice ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: order.currency || 'EUR' }).format(order.finalPrice || order.estimatedPrice || 0) : 'À définir'}</div>
+            </div>
+            <div class="box">
+              <div class="info-row">
+                <span class="info-label">Distance estimée</span>
+                <span class="info-value">${orderData.distanceKm ? `${orderData.distanceKm} km` : '-'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Durée estimée</span>
+                <span class="info-value">${orderData.durationMinutes ? `${Math.floor(orderData.durationMinutes / 60)}h${String(orderData.durationMinutes % 60).padStart(2, '0')}` : '-'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Niveau de tracking</span>
+                <span class="info-value">${order.trackingLevel === 'premium' ? 'Premium (GPS temps réel)' : order.trackingLevel === 'gps' ? 'GPS' : 'Standard'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${order.notes ? `
+        <div class="section">
+          <div class="section-title gray">INSTRUCTIONS PARTICULIÈRES</div>
+          <div class="box">
+            <div class="box-content">${order.notes}</div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${order.constraints && order.constraints.length > 0 ? `
+        <div class="section">
+          <div class="section-title orange">CONTRAINTES DE TRANSPORT</div>
+          <div class="box">
+            <div class="box-content">
+              ${order.constraints.map(c => `<span style="display: inline-block; margin: 4px; padding: 4px 12px; background: #fef3c7; border-radius: 4px; font-size: 12px;">${c.type}${c.value ? `: ${c.value}` : ''}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Signatures -->
+        <div class="footer">
+          <div class="signature-box">
+            <div class="signature-label">Signature du donneur d'ordre</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-label">Signature du transporteur</div>
+          </div>
+        </div>
+
+        <div class="legal">
+          Ce contrat de transport est soumis aux conditions générales de vente du transporteur et à la Convention relative au contrat de transport international de marchandises par route (CMR).
+          <br/>Document généré automatiquement par SYMPHONI.A le ${new Date().toLocaleString('fr-FR')}
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
@@ -410,7 +776,10 @@ export default function OrderDetailPage() {
                     📍 Suivi GPS
                   </button>
                 )}
-                <button style={{ padding: '10px 16px', border: '1px solid #e5e7eb', backgroundColor: 'white', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                <button
+                  onClick={handlePrint}
+                  style={{ padding: '10px 16px', border: '1px solid #e5e7eb', backgroundColor: 'white', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                >
                   📄 Imprimer
                 </button>
               </div>
