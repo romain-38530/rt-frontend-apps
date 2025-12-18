@@ -33,6 +33,11 @@ export default function EditOrderPage() {
 
   // Form state
   const [formData, setFormData] = useState({
+    // Stakeholders
+    senderName: '',
+    senderEmail: '',
+    recipientName: '',
+    recipientEmail: '',
     // Pickup
     pickupStreet: '',
     pickupCity: '',
@@ -75,24 +80,34 @@ export default function EditOrderPage() {
       setOrder(orderData);
 
       // Pre-fill form with order data
+      const data = orderData as any;
       setFormData({
+        // Stakeholders
+        senderName: data.senderName || data.forwarderName || '',
+        senderEmail: data.senderEmail || data.forwarderEmail || '',
+        recipientName: data.recipientName || '',
+        recipientEmail: data.recipientEmail || '',
+        // Pickup
         pickupStreet: orderData.pickupAddress?.street || '',
         pickupCity: orderData.pickupAddress?.city || '',
         pickupPostalCode: orderData.pickupAddress?.postalCode || '',
         pickupContactName: orderData.pickupAddress?.contactName || '',
         pickupContactPhone: orderData.pickupAddress?.contactPhone || '',
         pickupDate: orderData.dates?.pickupDate ? new Date(orderData.dates.pickupDate).toISOString().slice(0, 16) : '',
+        // Delivery
         deliveryStreet: orderData.deliveryAddress?.street || '',
         deliveryCity: orderData.deliveryAddress?.city || '',
         deliveryPostalCode: orderData.deliveryAddress?.postalCode || '',
         deliveryContactName: orderData.deliveryAddress?.contactName || '',
         deliveryContactPhone: orderData.deliveryAddress?.contactPhone || '',
         deliveryDate: orderData.dates?.deliveryDate ? new Date(orderData.dates.deliveryDate).toISOString().slice(0, 16) : '',
+        // Goods
         goodsDescription: orderData.goods?.description || '',
         goodsWeight: orderData.goods?.weight || 0,
         goodsVolume: orderData.goods?.volume || 0,
         goodsQuantity: orderData.goods?.quantity || 1,
         goodsPalettes: orderData.goods?.palettes || 0,
+        // Notes
         notes: orderData.notes || '',
       });
     } catch (err: any) {
@@ -111,7 +126,13 @@ export default function EditOrderPage() {
     setSuccessMessage(null);
 
     try {
-      const updates: Partial<Order> = {
+      const updates: Partial<Order> & Record<string, any> = {
+        // Stakeholders
+        senderName: formData.senderName,
+        senderEmail: formData.senderEmail,
+        recipientName: formData.recipientName,
+        recipientEmail: formData.recipientEmail,
+        // Addresses
         pickupAddress: {
           ...order.pickupAddress,
           street: formData.pickupStreet,
@@ -265,6 +286,69 @@ export default function EditOrderPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px' }}>
+          {/* Parties prenantes - Full width */}
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Parties prenantes
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              {/* Expediteur */}
+              <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#92400e', margin: 0 }}>Expediteur</h3>
+                  {formData.senderEmail && (
+                    <a
+                      href={`https://expediteur.symphonia-controltower.com/orders/?email=${encodeURIComponent(formData.senderEmail)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: '600' }}
+                    >
+                      Ouvrir portail
+                    </a>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Nom</label>
+                    <input type="text" value={formData.senderName} onChange={(e) => setFormData({ ...formData, senderName: e.target.value })} style={inputStyle} placeholder="Nom de l'expediteur" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input type="email" value={formData.senderEmail} onChange={(e) => setFormData({ ...formData, senderEmail: e.target.value })} style={inputStyle} placeholder="email@expediteur.com" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Destinataire */}
+              <div style={{ padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#1e40af', margin: 0 }}>Destinataire</h3>
+                  {formData.recipientEmail && (
+                    <a
+                      href={`https://destinataire.symphonia-controltower.com/orders/?email=${encodeURIComponent(formData.recipientEmail)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}
+                    >
+                      Ouvrir portail
+                    </a>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Nom</label>
+                    <input type="text" value={formData.recipientName} onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })} style={inputStyle} placeholder="Nom du destinataire" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input type="email" value={formData.recipientEmail} onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })} style={inputStyle} placeholder="email@destinataire.com" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             {/* Collecte */}
             <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
