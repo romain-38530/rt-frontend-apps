@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { carriersApi } from '../lib/api';
 
 export default function HomePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);
+  const [isCompliant, setIsCompliant] = useState(false);
+  const [complianceScore, setComplianceScore] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -26,8 +29,31 @@ export default function HomePage() {
       setSubscription(defaultSub);
       localStorage.setItem('userSubscription', JSON.stringify(defaultSub));
     }
+
+    // Charger le statut de conformité pour débloquer les modules
+    loadComplianceStatus();
+
     setLoading(false);
   }, []);
+
+  const loadComplianceStatus = async () => {
+    try {
+      const status = await carriersApi.getVigilanceStatus();
+      const score = status?.complianceScore || status?.score || 0;
+      setComplianceScore(score);
+      // Conforme si score >= 80 et statut 'compliant'
+      setIsCompliant(score >= 80 && (status?.overallStatus === 'compliant' || status?.status === 'compliant'));
+    } catch (err) {
+      console.error('Error loading compliance:', err);
+      // En cas d'erreur API, on vérifie le cache local
+      const cached = localStorage.getItem('complianceStatus');
+      if (cached) {
+        const { score, isCompliant: compliant } = JSON.parse(cached);
+        setComplianceScore(score);
+        setIsCompliant(compliant);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -188,6 +214,17 @@ export default function HomePage() {
       desc: 'Préfacturations, factures et documents vigilance',
       locked: false,
       route: '/billing'
+    },
+    {
+      icon: '💰',
+      title: 'Grille Tarifaire',
+      desc: isCompliant
+        ? 'Consultez et négociez vos tarifs avec les industriels'
+        : `Documents à jour requis (${complianceScore}% - objectif 80%)`,
+      locked: !isCompliant,
+      route: '/grille-tarifaire',
+      highlight: isCompliant,
+      requiresCompliance: true
     }
   ];
 
@@ -393,12 +430,14 @@ export default function HomePage() {
                 </p>
                 {item.locked ? (
                   <button
-                    onClick={() => router.push('/subscription')}
+                    onClick={() => router.push((item as any).requiresCompliance ? '/vigilance' : '/subscription')}
                     style={{
                       marginTop: '8px',
                       padding: '10px 20px',
-                      background: 'rgba(255,255,255,0.9)',
-                      color: '#4A90E2',
+                      background: (item as any).requiresCompliance
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : 'rgba(255,255,255,0.9)',
+                      color: (item as any).requiresCompliance ? 'white' : '#4A90E2',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
@@ -407,7 +446,7 @@ export default function HomePage() {
                       width: '100%',
                       transition: 'all 0.2s ease'
                     }}>
-                    🔓 Débloquer
+                    {(item as any).requiresCompliance ? '📄 Mettre à jour mes documents' : '🔓 Débloquer'}
                   </button>
                 ) : (
                   <button
