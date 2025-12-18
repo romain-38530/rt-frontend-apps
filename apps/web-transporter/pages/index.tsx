@@ -96,6 +96,22 @@ export default function HomePage() {
       highlight: true
     },
     {
+      icon: '🤝',
+      title: 'Mon Référencement',
+      desc: 'Vos partenaires industriels, niveau et statut de référencement',
+      locked: false,
+      route: '/referencement',
+      highlight: true
+    },
+    {
+      icon: '📊',
+      title: 'Mon Score',
+      desc: 'Performance, KPIs et évolution de votre score transporteur',
+      locked: false,
+      route: '/scoring',
+      highlight: true
+    },
+    {
       icon: '📄',
       title: 'Documents Transport',
       desc: 'Uploadez vos BL, CMR et POD avec OCR automatique',

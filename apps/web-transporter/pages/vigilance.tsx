@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
-import { vigilanceApi } from '../lib/api';
+import { carriersApi } from '../lib/api';
 import { useToast } from '@rt/ui-components';
 
 interface VigilanceDocument {
@@ -49,9 +49,9 @@ export default function VigilancePage() {
     try {
       // Appel API
       const [statusData, docsData, alertsData] = await Promise.all([
-        vigilanceApi.getStatus(),
-        vigilanceApi.getDocuments(),
-        vigilanceApi.getAlerts(),
+        carriersApi.getVigilanceStatus(),
+        carriersApi.getDocuments(),
+        carriersApi.getVigilanceAlerts(),
       ]);
 
       if (statusData && (statusData.complianceScore !== undefined || docsData.documents)) {
@@ -148,7 +148,7 @@ export default function VigilancePage() {
   const handleUpload = async (docType: string, file: File) => {
     setUploadingDoc(docType);
     try {
-      await vigilanceApi.uploadDocument(docType, file);
+      await carriersApi.uploadDocument({ type: docType as any, file });
       toast.success(`Document ${docType} téléversé avec succès !`);
       loadVigilance();
     } catch (err) {

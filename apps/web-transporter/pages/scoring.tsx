@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
+import { carriersApi } from '../lib/api';
 
 // Types
 interface TransportScore {

@@ -59,6 +59,9 @@ export const API_CONFIG = {
 
   // TMS Sync API
   TMS_SYNC_API: process.env.NEXT_PUBLIC_TMS_SYNC_API_URL || 'https://d1yk7yneclf57m.cloudfront.net',
+
+  // Carriers API (Référencement Transporteurs - authz-eb)
+  CARRIERS_API: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://ddaywxps9n701.cloudfront.net',
 };
 
 // Helper to get auth headers
@@ -1334,6 +1337,290 @@ export const preinvoicesApi = {
       headers: getAuthHeaders()
     });
     return res.text();
+  }
+};
+
+
+// ============================================
+// CARRIERS API - Référencement Transporteurs
+// Connexion avec le backend authz-eb pour:
+// - Profil transporteur et statut de référencement
+// - Documents de conformité avec S3 et OCR
+// - Alertes de vigilance
+// - Performance et scoring
+// - Liste des industriels partenaires
+// ============================================
+
+export const carriersApi = {
+  // === PROFIL TRANSPORTEUR ===
+
+  /** Récupérer son profil transporteur avec tous les détails */
+  getMyProfile: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Mettre à jour son profil */
+  updateProfile: async (data: {
+    companyName?: string;
+    contact?: { name?: string; email?: string; phone?: string };
+    address?: { street?: string; city?: string; postalCode?: string; country?: string };
+    fleet?: { trucks?: number; trailers?: number; drivers?: number };
+    certifications?: string[];
+    serviceZones?: string[];
+  }) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // === RÉFÉRENCEMENT PAR INDUSTRIELS ===
+
+  /** Liste des industriels qui m'ont référencé */
+  getMyReferencings: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/referencings`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Détail du référencement avec un industriel */
+  getReferencingDetails: async (industrialId: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/referencings/${industrialId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // === DOCUMENTS DE CONFORMITÉ AVEC S3 + OCR ===
+
+  /** Liste de mes documents de conformité */
+  getDocuments: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Obtenir une URL présignée pour upload S3 */
+  getDocumentUploadUrl: async (params: {
+    type: 'kbis' | 'urssaf' | 'insurance' | 'license' | 'identity' | 'rib' | 'capacite_financiere' | 'other';
+    fileName: string;
+    contentType: string;
+  }) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/upload-url`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params)
+    });
+    return res.json();
+  },
+
+  /** Upload vers S3 avec URL présignée */
+  uploadToS3: async (uploadUrl: string, file: File): Promise<boolean> => {
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+    return res.ok;
+  },
+
+  /** Confirmer l'upload et déclencher l'OCR */
+  confirmDocumentUpload: async (params: {
+    type: string;
+    fileName: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    s3Key: string;
+  }) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/confirm-upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params)
+    });
+    return res.json();
+  },
+
+  /** Upload complet: URL + S3 + confirm + OCR auto */
+  uploadDocument: async (params: {
+    type: 'kbis' | 'urssaf' | 'insurance' | 'license' | 'identity' | 'rib' | 'capacite_financiere' | 'other';
+    file: File;
+  }) => {
+    // 1. Obtenir l'URL présignée
+    const { uploadUrl, s3Key, bucket } = await carriersApi.getDocumentUploadUrl({
+      type: params.type,
+      fileName: params.file.name,
+      contentType: params.file.type
+    });
+
+    // 2. Upload vers S3
+    const uploadSuccess = await carriersApi.uploadToS3(uploadUrl, params.file);
+    if (!uploadSuccess) {
+      throw new Error('Échec upload S3');
+    }
+
+    // 3. Confirmer et déclencher OCR
+    const result = await carriersApi.confirmDocumentUpload({
+      type: params.type,
+      fileName: s3Key.split('/').pop() || params.file.name,
+      originalName: params.file.name,
+      mimeType: params.file.type,
+      fileSize: params.file.size,
+      s3Key
+    });
+
+    return result;
+  },
+
+  /** Analyser un document avec OCR (Textract) */
+  analyzeDocument: async (documentId: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/${documentId}/analyze`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Définir manuellement la date d'expiration */
+  setDocumentExpiry: async (documentId: string, expiryDate: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/${documentId}/set-expiry`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ expiryDate })
+    });
+    return res.json();
+  },
+
+  /** Télécharger un document */
+  getDocumentDownloadUrl: async (documentId: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/${documentId}/download`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Supprimer un document */
+  deleteDocument: async (documentId: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/documents/${documentId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // === VIGILANCE & ALERTES ===
+
+  /** Statut de conformité global */
+  getVigilanceStatus: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/vigilance`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Alertes de vigilance (documents expirés ou bientôt) */
+  getVigilanceAlerts: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/vigilance/alerts`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // === PERFORMANCE & SCORING ===
+
+  /** Score et performance globale */
+  getPerformance: async (params?: { period?: string; industrialId?: string }) => {
+    const carrierId = getCarrierId();
+    const searchParams = new URLSearchParams();
+    if (params?.period) searchParams.append('period', params.period);
+    if (params?.industrialId) searchParams.append('industrialId', params.industrialId);
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/performance${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Historique des performances */
+  getPerformanceHistory: async (params?: { period?: string; limit?: number }) => {
+    const carrierId = getCarrierId();
+    const searchParams = new URLSearchParams();
+    if (params?.period) searchParams.append('period', params.period);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/performance/history${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Score détaillé par critère */
+  getScoreDetails: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/score/details`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // === ÉVÉNEMENTS & HISTORIQUE ===
+
+  /** Historique des événements (référencements, upgrades, etc.) */
+  getEvents: async (params?: { type?: string; limit?: number }) => {
+    const carrierId = getCarrierId();
+    const searchParams = new URLSearchParams();
+    if (params?.type) searchParams.append('type', params.type);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/events${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // === ONBOARDING ===
+
+  /** Statut d'onboarding */
+  getOnboardingStatus: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/onboarding`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Compléter une étape d'onboarding */
+  completeOnboardingStep: async (step: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/onboarding/complete`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ step })
+    });
+    return res.json();
   }
 };
 
