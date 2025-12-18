@@ -636,18 +636,9 @@ export default function OrderDetailPage() {
                 <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   {/* Expediteur */}
                   <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
-                      {orderAny.senderEmail && (
-                        <a
-                          href={`https://transitaire.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.senderEmail)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: '600' }}
-                        >
-                          Ouvrir portail →
-                        </a>
-                      )}
+                      <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px' }}>Logisticien, Industriel, Fournisseur ou Transitaire</div>
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
                       {orderAny.senderName || orderAny.forwarderName || 'Non défini'}
@@ -665,7 +656,7 @@ export default function OrderDetailPage() {
                       <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af' }}>Destinataire</div>
                       {orderAny.recipientEmail && (
                         <a
-                          href={`https://destinataire.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.recipientEmail)}`}
+                          href={`https://d3b6p09ihn5w7r.amplifyapp.com/orders/?email=${encodeURIComponent(orderAny.recipientEmail)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}
