@@ -183,12 +183,18 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Include senderType in the submission
-    const dataWithSenderType = {
+    // Include stakeholder information in the submission
+    const dataWithStakeholders = {
       ...formData,
+      // Sender/Expediteur info
       senderType,
+      senderName: formData.pickupAddress.contactName,
+      senderEmail: formData.pickupAddress.contactEmail,
+      // Recipient/Destinataire info
+      recipientName: formData.deliveryAddress.contactName,
+      recipientEmail: formData.deliveryAddress.contactEmail,
     };
-    await onSubmit(dataWithSenderType as any);
+    await onSubmit(dataWithStakeholders as any);
   };
 
   // Style des inputs
@@ -457,13 +463,22 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 />
               </div>
 
+              {/* Section Destinataire */}
+              <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #93c5fd', marginTop: '8px' }}>
+                <label style={{ ...labelStyle, color: '#1e40af', marginBottom: '0' }}>Destinataire</label>
+                <div style={{ fontSize: '12px', color: '#3b82f6', marginTop: '4px' }}>
+                  Le destinataire recevra un accès au portail pour suivre sa commande.
+                </div>
+              </div>
+
               <div>
-                <label style={labelStyle}>Nom du contact *</label>
+                <label style={labelStyle}>Nom du contact (Destinataire) *</label>
                 <input
                   type="text"
                   value={formData.deliveryAddress.contactName}
                   onChange={(e) => updateDeliveryAddress('contactName', e.target.value)}
                   style={inputStyle}
+                  placeholder="Nom du destinataire"
                   required
                 />
               </div>
