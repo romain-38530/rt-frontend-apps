@@ -438,18 +438,511 @@ const ZONES_FRANCE = [
   { code: '976', name: 'Mayotte' },
 ];
 
+// Provinces/Régions Europe par pays
 const ZONES_EUROPE = [
-  { code: 'BE', name: 'Belgique' },
-  { code: 'LU', name: 'Luxembourg' },
-  { code: 'DE', name: 'Allemagne' },
-  { code: 'NL', name: 'Pays-Bas' },
-  { code: 'ES', name: 'Espagne' },
-  { code: 'IT', name: 'Italie' },
-  { code: 'CH', name: 'Suisse' },
-  { code: 'UK', name: 'Royaume-Uni' },
-  { code: 'PT', name: 'Portugal' },
-  { code: 'AT', name: 'Autriche' },
-  { code: 'PL', name: 'Pologne' },
+  // 🇧🇪 Belgique - 10 provinces
+  { code: 'BE-VAN', name: 'Anvers', country: 'BE' },
+  { code: 'BE-BRU', name: 'Bruxelles-Capitale', country: 'BE' },
+  { code: 'BE-VBR', name: 'Brabant flamand', country: 'BE' },
+  { code: 'BE-WBR', name: 'Brabant wallon', country: 'BE' },
+  { code: 'BE-VLI', name: 'Limbourg', country: 'BE' },
+  { code: 'BE-VWV', name: 'Flandre-Occidentale', country: 'BE' },
+  { code: 'BE-VOV', name: 'Flandre-Orientale', country: 'BE' },
+  { code: 'BE-WHT', name: 'Hainaut', country: 'BE' },
+  { code: 'BE-WLG', name: 'Liège', country: 'BE' },
+  { code: 'BE-WLX', name: 'Luxembourg', country: 'BE' },
+  { code: 'BE-WNA', name: 'Namur', country: 'BE' },
+
+  // 🇱🇺 Luxembourg - 12 cantons
+  { code: 'LU-CA', name: 'Capellen', country: 'LU' },
+  { code: 'LU-CL', name: 'Clervaux', country: 'LU' },
+  { code: 'LU-DI', name: 'Diekirch', country: 'LU' },
+  { code: 'LU-EC', name: 'Echternach', country: 'LU' },
+  { code: 'LU-ES', name: 'Esch-sur-Alzette', country: 'LU' },
+  { code: 'LU-GR', name: 'Grevenmacher', country: 'LU' },
+  { code: 'LU-LU', name: 'Luxembourg', country: 'LU' },
+  { code: 'LU-ME', name: 'Mersch', country: 'LU' },
+  { code: 'LU-RD', name: 'Redange', country: 'LU' },
+  { code: 'LU-RM', name: 'Remich', country: 'LU' },
+  { code: 'LU-VD', name: 'Vianden', country: 'LU' },
+  { code: 'LU-WI', name: 'Wiltz', country: 'LU' },
+
+  // 🇩🇪 Allemagne - 16 Länder
+  { code: 'DE-BW', name: 'Bade-Wurtemberg', country: 'DE' },
+  { code: 'DE-BY', name: 'Bavière', country: 'DE' },
+  { code: 'DE-BE', name: 'Berlin', country: 'DE' },
+  { code: 'DE-BB', name: 'Brandebourg', country: 'DE' },
+  { code: 'DE-HB', name: 'Brême', country: 'DE' },
+  { code: 'DE-HH', name: 'Hambourg', country: 'DE' },
+  { code: 'DE-HE', name: 'Hesse', country: 'DE' },
+  { code: 'DE-MV', name: 'Mecklembourg-Poméranie', country: 'DE' },
+  { code: 'DE-NI', name: 'Basse-Saxe', country: 'DE' },
+  { code: 'DE-NW', name: 'Rhénanie-du-Nord-Westphalie', country: 'DE' },
+  { code: 'DE-RP', name: 'Rhénanie-Palatinat', country: 'DE' },
+  { code: 'DE-SL', name: 'Sarre', country: 'DE' },
+  { code: 'DE-SN', name: 'Saxe', country: 'DE' },
+  { code: 'DE-ST', name: 'Saxe-Anhalt', country: 'DE' },
+  { code: 'DE-SH', name: 'Schleswig-Holstein', country: 'DE' },
+  { code: 'DE-TH', name: 'Thuringe', country: 'DE' },
+
+  // 🇳🇱 Pays-Bas - 12 provinces
+  { code: 'NL-DR', name: 'Drenthe', country: 'NL' },
+  { code: 'NL-FL', name: 'Flevoland', country: 'NL' },
+  { code: 'NL-FR', name: 'Frise', country: 'NL' },
+  { code: 'NL-GE', name: 'Gueldre', country: 'NL' },
+  { code: 'NL-GR', name: 'Groningue', country: 'NL' },
+  { code: 'NL-LI', name: 'Limbourg', country: 'NL' },
+  { code: 'NL-NB', name: 'Brabant-Septentrional', country: 'NL' },
+  { code: 'NL-NH', name: 'Hollande-Septentrionale', country: 'NL' },
+  { code: 'NL-OV', name: 'Overijssel', country: 'NL' },
+  { code: 'NL-UT', name: 'Utrecht', country: 'NL' },
+  { code: 'NL-ZE', name: 'Zélande', country: 'NL' },
+  { code: 'NL-ZH', name: 'Hollande-Méridionale', country: 'NL' },
+
+  // 🇪🇸 Espagne - 17 communautés autonomes
+  { code: 'ES-AN', name: 'Andalousie', country: 'ES' },
+  { code: 'ES-AR', name: 'Aragon', country: 'ES' },
+  { code: 'ES-AS', name: 'Asturies', country: 'ES' },
+  { code: 'ES-IB', name: 'Îles Baléares', country: 'ES' },
+  { code: 'ES-CN', name: 'Îles Canaries', country: 'ES' },
+  { code: 'ES-CB', name: 'Cantabrie', country: 'ES' },
+  { code: 'ES-CL', name: 'Castille-et-León', country: 'ES' },
+  { code: 'ES-CM', name: 'Castille-La Manche', country: 'ES' },
+  { code: 'ES-CT', name: 'Catalogne', country: 'ES' },
+  { code: 'ES-EX', name: 'Estrémadure', country: 'ES' },
+  { code: 'ES-GA', name: 'Galice', country: 'ES' },
+  { code: 'ES-MD', name: 'Madrid', country: 'ES' },
+  { code: 'ES-MC', name: 'Murcie', country: 'ES' },
+  { code: 'ES-NC', name: 'Navarre', country: 'ES' },
+  { code: 'ES-PV', name: 'Pays basque', country: 'ES' },
+  { code: 'ES-RI', name: 'La Rioja', country: 'ES' },
+  { code: 'ES-VC', name: 'Communauté valencienne', country: 'ES' },
+
+  // 🇮🇹 Italie - 20 régions
+  { code: 'IT-21', name: 'Piémont', country: 'IT' },
+  { code: 'IT-23', name: 'Val d\'Aoste', country: 'IT' },
+  { code: 'IT-25', name: 'Lombardie', country: 'IT' },
+  { code: 'IT-32', name: 'Trentin-Haut-Adige', country: 'IT' },
+  { code: 'IT-34', name: 'Vénétie', country: 'IT' },
+  { code: 'IT-36', name: 'Frioul-Vénétie Julienne', country: 'IT' },
+  { code: 'IT-42', name: 'Ligurie', country: 'IT' },
+  { code: 'IT-45', name: 'Émilie-Romagne', country: 'IT' },
+  { code: 'IT-52', name: 'Toscane', country: 'IT' },
+  { code: 'IT-55', name: 'Ombrie', country: 'IT' },
+  { code: 'IT-57', name: 'Marches', country: 'IT' },
+  { code: 'IT-62', name: 'Latium', country: 'IT' },
+  { code: 'IT-65', name: 'Abruzzes', country: 'IT' },
+  { code: 'IT-67', name: 'Molise', country: 'IT' },
+  { code: 'IT-72', name: 'Campanie', country: 'IT' },
+  { code: 'IT-75', name: 'Pouilles', country: 'IT' },
+  { code: 'IT-77', name: 'Basilicate', country: 'IT' },
+  { code: 'IT-78', name: 'Calabre', country: 'IT' },
+  { code: 'IT-82', name: 'Sicile', country: 'IT' },
+  { code: 'IT-88', name: 'Sardaigne', country: 'IT' },
+
+  // 🇨🇭 Suisse - 26 cantons
+  { code: 'CH-AG', name: 'Argovie', country: 'CH' },
+  { code: 'CH-AR', name: 'Appenzell Rhodes-Extérieures', country: 'CH' },
+  { code: 'CH-AI', name: 'Appenzell Rhodes-Intérieures', country: 'CH' },
+  { code: 'CH-BL', name: 'Bâle-Campagne', country: 'CH' },
+  { code: 'CH-BS', name: 'Bâle-Ville', country: 'CH' },
+  { code: 'CH-BE', name: 'Berne', country: 'CH' },
+  { code: 'CH-FR', name: 'Fribourg', country: 'CH' },
+  { code: 'CH-GE', name: 'Genève', country: 'CH' },
+  { code: 'CH-GL', name: 'Glaris', country: 'CH' },
+  { code: 'CH-GR', name: 'Grisons', country: 'CH' },
+  { code: 'CH-JU', name: 'Jura', country: 'CH' },
+  { code: 'CH-LU', name: 'Lucerne', country: 'CH' },
+  { code: 'CH-NE', name: 'Neuchâtel', country: 'CH' },
+  { code: 'CH-NW', name: 'Nidwald', country: 'CH' },
+  { code: 'CH-OW', name: 'Obwald', country: 'CH' },
+  { code: 'CH-SG', name: 'Saint-Gall', country: 'CH' },
+  { code: 'CH-SH', name: 'Schaffhouse', country: 'CH' },
+  { code: 'CH-SZ', name: 'Schwytz', country: 'CH' },
+  { code: 'CH-SO', name: 'Soleure', country: 'CH' },
+  { code: 'CH-TG', name: 'Thurgovie', country: 'CH' },
+  { code: 'CH-TI', name: 'Tessin', country: 'CH' },
+  { code: 'CH-UR', name: 'Uri', country: 'CH' },
+  { code: 'CH-VS', name: 'Valais', country: 'CH' },
+  { code: 'CH-VD', name: 'Vaud', country: 'CH' },
+  { code: 'CH-ZG', name: 'Zoug', country: 'CH' },
+  { code: 'CH-ZH', name: 'Zurich', country: 'CH' },
+
+  // 🇬🇧 Royaume-Uni - régions principales
+  { code: 'UK-ENG-NE', name: 'North East England', country: 'UK' },
+  { code: 'UK-ENG-NW', name: 'North West England', country: 'UK' },
+  { code: 'UK-ENG-YH', name: 'Yorkshire and Humber', country: 'UK' },
+  { code: 'UK-ENG-EM', name: 'East Midlands', country: 'UK' },
+  { code: 'UK-ENG-WM', name: 'West Midlands', country: 'UK' },
+  { code: 'UK-ENG-EE', name: 'East of England', country: 'UK' },
+  { code: 'UK-ENG-LO', name: 'London', country: 'UK' },
+  { code: 'UK-ENG-SE', name: 'South East England', country: 'UK' },
+  { code: 'UK-ENG-SW', name: 'South West England', country: 'UK' },
+  { code: 'UK-SCT', name: 'Scotland', country: 'UK' },
+  { code: 'UK-WLS', name: 'Wales', country: 'UK' },
+  { code: 'UK-NIR', name: 'Northern Ireland', country: 'UK' },
+
+  // 🇵🇹 Portugal - 18 districts + régions autonomes
+  { code: 'PT-01', name: 'Aveiro', country: 'PT' },
+  { code: 'PT-02', name: 'Beja', country: 'PT' },
+  { code: 'PT-03', name: 'Braga', country: 'PT' },
+  { code: 'PT-04', name: 'Bragance', country: 'PT' },
+  { code: 'PT-05', name: 'Castelo Branco', country: 'PT' },
+  { code: 'PT-06', name: 'Coimbra', country: 'PT' },
+  { code: 'PT-07', name: 'Évora', country: 'PT' },
+  { code: 'PT-08', name: 'Faro', country: 'PT' },
+  { code: 'PT-09', name: 'Guarda', country: 'PT' },
+  { code: 'PT-10', name: 'Leiria', country: 'PT' },
+  { code: 'PT-11', name: 'Lisbonne', country: 'PT' },
+  { code: 'PT-12', name: 'Portalegre', country: 'PT' },
+  { code: 'PT-13', name: 'Porto', country: 'PT' },
+  { code: 'PT-14', name: 'Santarém', country: 'PT' },
+  { code: 'PT-15', name: 'Setúbal', country: 'PT' },
+  { code: 'PT-16', name: 'Viana do Castelo', country: 'PT' },
+  { code: 'PT-17', name: 'Vila Real', country: 'PT' },
+  { code: 'PT-18', name: 'Viseu', country: 'PT' },
+  { code: 'PT-20', name: 'Açores', country: 'PT' },
+  { code: 'PT-30', name: 'Madère', country: 'PT' },
+
+  // 🇦🇹 Autriche - 9 Länder
+  { code: 'AT-1', name: 'Burgenland', country: 'AT' },
+  { code: 'AT-2', name: 'Carinthie', country: 'AT' },
+  { code: 'AT-3', name: 'Basse-Autriche', country: 'AT' },
+  { code: 'AT-4', name: 'Haute-Autriche', country: 'AT' },
+  { code: 'AT-5', name: 'Salzbourg', country: 'AT' },
+  { code: 'AT-6', name: 'Styrie', country: 'AT' },
+  { code: 'AT-7', name: 'Tyrol', country: 'AT' },
+  { code: 'AT-8', name: 'Vorarlberg', country: 'AT' },
+  { code: 'AT-9', name: 'Vienne', country: 'AT' },
+
+  // 🇵🇱 Pologne - 16 voïvodies
+  { code: 'PL-DS', name: 'Basse-Silésie', country: 'PL' },
+  { code: 'PL-KP', name: 'Cujavie-Poméranie', country: 'PL' },
+  { code: 'PL-LU', name: 'Lublin', country: 'PL' },
+  { code: 'PL-LB', name: 'Lubusz', country: 'PL' },
+  { code: 'PL-LD', name: 'Łódź', country: 'PL' },
+  { code: 'PL-MA', name: 'Petite-Pologne', country: 'PL' },
+  { code: 'PL-MZ', name: 'Mazovie', country: 'PL' },
+  { code: 'PL-OP', name: 'Opole', country: 'PL' },
+  { code: 'PL-PK', name: 'Basses-Carpates', country: 'PL' },
+  { code: 'PL-PD', name: 'Podlachie', country: 'PL' },
+  { code: 'PL-PM', name: 'Poméranie', country: 'PL' },
+  { code: 'PL-SL', name: 'Silésie', country: 'PL' },
+  { code: 'PL-SK', name: 'Sainte-Croix', country: 'PL' },
+  { code: 'PL-WN', name: 'Warmie-Mazurie', country: 'PL' },
+  { code: 'PL-WP', name: 'Grande-Pologne', country: 'PL' },
+  { code: 'PL-ZP', name: 'Poméranie-Occidentale', country: 'PL' },
+
+  // 🇨🇿 République tchèque - 14 régions
+  { code: 'CZ-PR', name: 'Prague', country: 'CZ' },
+  { code: 'CZ-ST', name: 'Bohême centrale', country: 'CZ' },
+  { code: 'CZ-JC', name: 'Bohême du Sud', country: 'CZ' },
+  { code: 'CZ-PL', name: 'Plzeň', country: 'CZ' },
+  { code: 'CZ-KA', name: 'Karlovy Vary', country: 'CZ' },
+  { code: 'CZ-US', name: 'Ústí nad Labem', country: 'CZ' },
+  { code: 'CZ-LI', name: 'Liberec', country: 'CZ' },
+  { code: 'CZ-KR', name: 'Hradec Králové', country: 'CZ' },
+  { code: 'CZ-PA', name: 'Pardubice', country: 'CZ' },
+  { code: 'CZ-VY', name: 'Vysočina', country: 'CZ' },
+  { code: 'CZ-JM', name: 'Moravie du Sud', country: 'CZ' },
+  { code: 'CZ-OL', name: 'Olomouc', country: 'CZ' },
+  { code: 'CZ-ZL', name: 'Zlín', country: 'CZ' },
+  { code: 'CZ-MO', name: 'Moravie-Silésie', country: 'CZ' },
+
+  // 🇸🇰 Slovaquie - 8 régions
+  { code: 'SK-BL', name: 'Bratislava', country: 'SK' },
+  { code: 'SK-TA', name: 'Trnava', country: 'SK' },
+  { code: 'SK-TC', name: 'Trenčín', country: 'SK' },
+  { code: 'SK-NI', name: 'Nitra', country: 'SK' },
+  { code: 'SK-ZI', name: 'Žilina', country: 'SK' },
+  { code: 'SK-BC', name: 'Banská Bystrica', country: 'SK' },
+  { code: 'SK-PV', name: 'Prešov', country: 'SK' },
+  { code: 'SK-KI', name: 'Košice', country: 'SK' },
+
+  // 🇭🇺 Hongrie - 19 comitats + Budapest
+  { code: 'HU-BU', name: 'Budapest', country: 'HU' },
+  { code: 'HU-PE', name: 'Pest', country: 'HU' },
+  { code: 'HU-FE', name: 'Fejér', country: 'HU' },
+  { code: 'HU-KE', name: 'Komárom-Esztergom', country: 'HU' },
+  { code: 'HU-VE', name: 'Veszprém', country: 'HU' },
+  { code: 'HU-GS', name: 'Győr-Moson-Sopron', country: 'HU' },
+  { code: 'HU-VA', name: 'Vas', country: 'HU' },
+  { code: 'HU-ZA', name: 'Zala', country: 'HU' },
+  { code: 'HU-BA', name: 'Baranya', country: 'HU' },
+  { code: 'HU-SO', name: 'Somogy', country: 'HU' },
+  { code: 'HU-TO', name: 'Tolna', country: 'HU' },
+  { code: 'HU-BK', name: 'Bács-Kiskun', country: 'HU' },
+  { code: 'HU-CS', name: 'Csongrád', country: 'HU' },
+  { code: 'HU-BE', name: 'Békés', country: 'HU' },
+  { code: 'HU-JN', name: 'Jász-Nagykun-Szolnok', country: 'HU' },
+  { code: 'HU-HE', name: 'Heves', country: 'HU' },
+  { code: 'HU-NO', name: 'Nógrád', country: 'HU' },
+  { code: 'HU-HB', name: 'Hajdú-Bihar', country: 'HU' },
+  { code: 'HU-SZ', name: 'Szabolcs-Szatmár-Bereg', country: 'HU' },
+  { code: 'HU-BZ', name: 'Borsod-Abaúj-Zemplén', country: 'HU' },
+
+  // 🇷🇴 Roumanie - 41 județe + Bucarest
+  { code: 'RO-B', name: 'Bucarest', country: 'RO' },
+  { code: 'RO-AB', name: 'Alba', country: 'RO' },
+  { code: 'RO-AR', name: 'Arad', country: 'RO' },
+  { code: 'RO-BC', name: 'Bacău', country: 'RO' },
+  { code: 'RO-BH', name: 'Bihor', country: 'RO' },
+  { code: 'RO-BN', name: 'Bistrița-Năsăud', country: 'RO' },
+  { code: 'RO-BR', name: 'Brăila', country: 'RO' },
+  { code: 'RO-BV', name: 'Brașov', country: 'RO' },
+  { code: 'RO-BT', name: 'Botoșani', country: 'RO' },
+  { code: 'RO-BZ', name: 'Buzău', country: 'RO' },
+  { code: 'RO-CL', name: 'Călărași', country: 'RO' },
+  { code: 'RO-CS', name: 'Caraș-Severin', country: 'RO' },
+  { code: 'RO-CJ', name: 'Cluj', country: 'RO' },
+  { code: 'RO-CT', name: 'Constanța', country: 'RO' },
+  { code: 'RO-CV', name: 'Covasna', country: 'RO' },
+  { code: 'RO-DB', name: 'Dâmbovița', country: 'RO' },
+  { code: 'RO-DJ', name: 'Dolj', country: 'RO' },
+  { code: 'RO-GL', name: 'Galați', country: 'RO' },
+  { code: 'RO-GR', name: 'Giurgiu', country: 'RO' },
+  { code: 'RO-GJ', name: 'Gorj', country: 'RO' },
+  { code: 'RO-HR', name: 'Harghita', country: 'RO' },
+  { code: 'RO-HD', name: 'Hunedoara', country: 'RO' },
+  { code: 'RO-IL', name: 'Ialomița', country: 'RO' },
+  { code: 'RO-IS', name: 'Iași', country: 'RO' },
+  { code: 'RO-IF', name: 'Ilfov', country: 'RO' },
+  { code: 'RO-MM', name: 'Maramureș', country: 'RO' },
+  { code: 'RO-MH', name: 'Mehedinți', country: 'RO' },
+  { code: 'RO-MS', name: 'Mureș', country: 'RO' },
+  { code: 'RO-NT', name: 'Neamț', country: 'RO' },
+  { code: 'RO-OT', name: 'Olt', country: 'RO' },
+  { code: 'RO-PH', name: 'Prahova', country: 'RO' },
+  { code: 'RO-SJ', name: 'Sălaj', country: 'RO' },
+  { code: 'RO-SM', name: 'Satu Mare', country: 'RO' },
+  { code: 'RO-SB', name: 'Sibiu', country: 'RO' },
+  { code: 'RO-SV', name: 'Suceava', country: 'RO' },
+  { code: 'RO-TR', name: 'Teleorman', country: 'RO' },
+  { code: 'RO-TM', name: 'Timiș', country: 'RO' },
+  { code: 'RO-TL', name: 'Tulcea', country: 'RO' },
+  { code: 'RO-VL', name: 'Vâlcea', country: 'RO' },
+  { code: 'RO-VS', name: 'Vaslui', country: 'RO' },
+  { code: 'RO-VN', name: 'Vrancea', country: 'RO' },
+
+  // 🇧🇬 Bulgarie - 28 oblasts
+  { code: 'BG-01', name: 'Blagoevgrad', country: 'BG' },
+  { code: 'BG-02', name: 'Bourgas', country: 'BG' },
+  { code: 'BG-03', name: 'Dobrich', country: 'BG' },
+  { code: 'BG-04', name: 'Gabrovo', country: 'BG' },
+  { code: 'BG-05', name: 'Haskovo', country: 'BG' },
+  { code: 'BG-06', name: 'Kardjali', country: 'BG' },
+  { code: 'BG-07', name: 'Kyoustendil', country: 'BG' },
+  { code: 'BG-08', name: 'Lovetch', country: 'BG' },
+  { code: 'BG-09', name: 'Montana', country: 'BG' },
+  { code: 'BG-10', name: 'Pazardjik', country: 'BG' },
+  { code: 'BG-11', name: 'Pernik', country: 'BG' },
+  { code: 'BG-12', name: 'Pleven', country: 'BG' },
+  { code: 'BG-13', name: 'Plovdiv', country: 'BG' },
+  { code: 'BG-14', name: 'Razgrad', country: 'BG' },
+  { code: 'BG-15', name: 'Rousse', country: 'BG' },
+  { code: 'BG-16', name: 'Choumen', country: 'BG' },
+  { code: 'BG-17', name: 'Silistra', country: 'BG' },
+  { code: 'BG-18', name: 'Sliven', country: 'BG' },
+  { code: 'BG-19', name: 'Smolyan', country: 'BG' },
+  { code: 'BG-20', name: 'Sofia-ville', country: 'BG' },
+  { code: 'BG-21', name: 'Sofia-région', country: 'BG' },
+  { code: 'BG-22', name: 'Stara Zagora', country: 'BG' },
+  { code: 'BG-23', name: 'Targovichte', country: 'BG' },
+  { code: 'BG-24', name: 'Varna', country: 'BG' },
+  { code: 'BG-25', name: 'Veliko Tarnovo', country: 'BG' },
+  { code: 'BG-26', name: 'Vidin', country: 'BG' },
+  { code: 'BG-27', name: 'Vratsa', country: 'BG' },
+  { code: 'BG-28', name: 'Yambol', country: 'BG' },
+
+  // 🇭🇷 Croatie - 21 comitats
+  { code: 'HR-01', name: 'Zagreb (comitat)', country: 'HR' },
+  { code: 'HR-02', name: 'Krapina-Zagorje', country: 'HR' },
+  { code: 'HR-03', name: 'Sisak-Moslavina', country: 'HR' },
+  { code: 'HR-04', name: 'Karlovac', country: 'HR' },
+  { code: 'HR-05', name: 'Varaždin', country: 'HR' },
+  { code: 'HR-06', name: 'Koprivnica-Križevci', country: 'HR' },
+  { code: 'HR-07', name: 'Bjelovar-Bilogora', country: 'HR' },
+  { code: 'HR-08', name: 'Primorje-Gorski Kotar', country: 'HR' },
+  { code: 'HR-09', name: 'Lika-Senj', country: 'HR' },
+  { code: 'HR-10', name: 'Virovitica-Podravina', country: 'HR' },
+  { code: 'HR-11', name: 'Požega-Slavonie', country: 'HR' },
+  { code: 'HR-12', name: 'Brod-Posavina', country: 'HR' },
+  { code: 'HR-13', name: 'Zadar', country: 'HR' },
+  { code: 'HR-14', name: 'Osijek-Baranja', country: 'HR' },
+  { code: 'HR-15', name: 'Šibenik-Knin', country: 'HR' },
+  { code: 'HR-16', name: 'Vukovar-Syrmie', country: 'HR' },
+  { code: 'HR-17', name: 'Split-Dalmatie', country: 'HR' },
+  { code: 'HR-18', name: 'Istrie', country: 'HR' },
+  { code: 'HR-19', name: 'Dubrovnik-Neretva', country: 'HR' },
+  { code: 'HR-20', name: 'Međimurje', country: 'HR' },
+  { code: 'HR-21', name: 'Zagreb (ville)', country: 'HR' },
+
+  // 🇸🇮 Slovénie - régions statistiques
+  { code: 'SI-PO', name: 'Pomurska', country: 'SI' },
+  { code: 'SI-PD', name: 'Podravska', country: 'SI' },
+  { code: 'SI-KO', name: 'Koroška', country: 'SI' },
+  { code: 'SI-SA', name: 'Savinjska', country: 'SI' },
+  { code: 'SI-ZS', name: 'Zasavska', country: 'SI' },
+  { code: 'SI-SP', name: 'Spodnjeposavska', country: 'SI' },
+  { code: 'SI-JV', name: 'Jugovzhodna Slovenija', country: 'SI' },
+  { code: 'SI-OS', name: 'Osrednjeslovenska', country: 'SI' },
+  { code: 'SI-GO', name: 'Gorenjska', country: 'SI' },
+  { code: 'SI-NO', name: 'Notranjsko-kraška', country: 'SI' },
+  { code: 'SI-GP', name: 'Goriška', country: 'SI' },
+  { code: 'SI-OB', name: 'Obalno-kraška', country: 'SI' },
+
+  // 🇬🇷 Grèce - 13 périphéries
+  { code: 'GR-A', name: 'Macédoine-Orientale-et-Thrace', country: 'GR' },
+  { code: 'GR-B', name: 'Macédoine-Centrale', country: 'GR' },
+  { code: 'GR-C', name: 'Macédoine-Occidentale', country: 'GR' },
+  { code: 'GR-D', name: 'Épire', country: 'GR' },
+  { code: 'GR-E', name: 'Thessalie', country: 'GR' },
+  { code: 'GR-F', name: 'Îles Ioniennes', country: 'GR' },
+  { code: 'GR-G', name: 'Grèce-Occidentale', country: 'GR' },
+  { code: 'GR-H', name: 'Grèce-Centrale', country: 'GR' },
+  { code: 'GR-I', name: 'Attique', country: 'GR' },
+  { code: 'GR-J', name: 'Péloponnèse', country: 'GR' },
+  { code: 'GR-K', name: 'Égée-Septentrionale', country: 'GR' },
+  { code: 'GR-L', name: 'Égée-Méridionale', country: 'GR' },
+  { code: 'GR-M', name: 'Crète', country: 'GR' },
+
+  // 🇩🇰 Danemark - 5 régions
+  { code: 'DK-84', name: 'Hovedstaden (Capitale)', country: 'DK' },
+  { code: 'DK-82', name: 'Midtjylland (Jutland central)', country: 'DK' },
+  { code: 'DK-81', name: 'Nordjylland (Jutland du Nord)', country: 'DK' },
+  { code: 'DK-85', name: 'Sjælland (Seeland)', country: 'DK' },
+  { code: 'DK-83', name: 'Syddanmark (Danemark du Sud)', country: 'DK' },
+
+  // 🇸🇪 Suède - 21 comtés
+  { code: 'SE-AB', name: 'Stockholm', country: 'SE' },
+  { code: 'SE-AC', name: 'Västerbotten', country: 'SE' },
+  { code: 'SE-BD', name: 'Norrbotten', country: 'SE' },
+  { code: 'SE-C', name: 'Uppsala', country: 'SE' },
+  { code: 'SE-D', name: 'Södermanland', country: 'SE' },
+  { code: 'SE-E', name: 'Östergötland', country: 'SE' },
+  { code: 'SE-F', name: 'Jönköping', country: 'SE' },
+  { code: 'SE-G', name: 'Kronoberg', country: 'SE' },
+  { code: 'SE-H', name: 'Kalmar', country: 'SE' },
+  { code: 'SE-I', name: 'Gotland', country: 'SE' },
+  { code: 'SE-K', name: 'Blekinge', country: 'SE' },
+  { code: 'SE-M', name: 'Skåne', country: 'SE' },
+  { code: 'SE-N', name: 'Halland', country: 'SE' },
+  { code: 'SE-O', name: 'Västra Götaland', country: 'SE' },
+  { code: 'SE-S', name: 'Värmland', country: 'SE' },
+  { code: 'SE-T', name: 'Örebro', country: 'SE' },
+  { code: 'SE-U', name: 'Västmanland', country: 'SE' },
+  { code: 'SE-W', name: 'Dalarna', country: 'SE' },
+  { code: 'SE-X', name: 'Gävleborg', country: 'SE' },
+  { code: 'SE-Y', name: 'Västernorrland', country: 'SE' },
+  { code: 'SE-Z', name: 'Jämtland', country: 'SE' },
+
+  // 🇫🇮 Finlande - 19 régions
+  { code: 'FI-01', name: 'Åland', country: 'FI' },
+  { code: 'FI-02', name: 'Finlande du Sud', country: 'FI' },
+  { code: 'FI-04', name: 'Ostrobotnie du Sud', country: 'FI' },
+  { code: 'FI-05', name: 'Savonie du Sud', country: 'FI' },
+  { code: 'FI-06', name: 'Carélie du Sud', country: 'FI' },
+  { code: 'FI-07', name: 'Kajanaland', country: 'FI' },
+  { code: 'FI-08', name: 'Tavastie', country: 'FI' },
+  { code: 'FI-09', name: 'Finlande centrale', country: 'FI' },
+  { code: 'FI-10', name: 'Kymenlaakso', country: 'FI' },
+  { code: 'FI-11', name: 'Laponie', country: 'FI' },
+  { code: 'FI-12', name: 'Pirkanmaa', country: 'FI' },
+  { code: 'FI-13', name: 'Ostrobotnie', country: 'FI' },
+  { code: 'FI-14', name: 'Carélie du Nord', country: 'FI' },
+  { code: 'FI-15', name: 'Ostrobotnie du Nord', country: 'FI' },
+  { code: 'FI-16', name: 'Savonie du Nord', country: 'FI' },
+  { code: 'FI-17', name: 'Päijänne-Tavastie', country: 'FI' },
+  { code: 'FI-18', name: 'Satakunta', country: 'FI' },
+  { code: 'FI-19', name: 'Uusimaa', country: 'FI' },
+  { code: 'FI-20', name: 'Finlande du Sud-Ouest', country: 'FI' },
+
+  // 🇮🇪 Irlande - 4 provinces
+  { code: 'IE-C', name: 'Connacht', country: 'IE' },
+  { code: 'IE-L', name: 'Leinster', country: 'IE' },
+  { code: 'IE-M', name: 'Munster', country: 'IE' },
+  { code: 'IE-U', name: 'Ulster (Irlande)', country: 'IE' },
+
+  // 🇳🇴 Norvège - 11 comtés
+  { code: 'NO-03', name: 'Oslo', country: 'NO' },
+  { code: 'NO-11', name: 'Rogaland', country: 'NO' },
+  { code: 'NO-15', name: 'Møre og Romsdal', country: 'NO' },
+  { code: 'NO-18', name: 'Nordland', country: 'NO' },
+  { code: 'NO-30', name: 'Viken', country: 'NO' },
+  { code: 'NO-34', name: 'Innlandet', country: 'NO' },
+  { code: 'NO-38', name: 'Vestfold og Telemark', country: 'NO' },
+  { code: 'NO-42', name: 'Agder', country: 'NO' },
+  { code: 'NO-46', name: 'Vestland', country: 'NO' },
+  { code: 'NO-50', name: 'Trøndelag', country: 'NO' },
+  { code: 'NO-54', name: 'Troms og Finnmark', country: 'NO' },
+
+  // 🇪🇪 Estonie - 15 comtés
+  { code: 'EE-37', name: 'Harjumaa', country: 'EE' },
+  { code: 'EE-39', name: 'Hiiumaa', country: 'EE' },
+  { code: 'EE-45', name: 'Ida-Virumaa', country: 'EE' },
+  { code: 'EE-50', name: 'Jõgevamaa', country: 'EE' },
+  { code: 'EE-52', name: 'Järvamaa', country: 'EE' },
+  { code: 'EE-56', name: 'Läänemaa', country: 'EE' },
+  { code: 'EE-60', name: 'Lääne-Virumaa', country: 'EE' },
+  { code: 'EE-64', name: 'Põlvamaa', country: 'EE' },
+  { code: 'EE-68', name: 'Pärnumaa', country: 'EE' },
+  { code: 'EE-71', name: 'Raplamaa', country: 'EE' },
+  { code: 'EE-74', name: 'Saaremaa', country: 'EE' },
+  { code: 'EE-79', name: 'Tartumaa', country: 'EE' },
+  { code: 'EE-81', name: 'Valgamaa', country: 'EE' },
+  { code: 'EE-84', name: 'Viljandimaa', country: 'EE' },
+  { code: 'EE-87', name: 'Võrumaa', country: 'EE' },
+
+  // 🇱🇻 Lettonie - régions
+  { code: 'LV-RIX', name: 'Riga', country: 'LV' },
+  { code: 'LV-KUR', name: 'Kurzeme', country: 'LV' },
+  { code: 'LV-LAT', name: 'Latgale', country: 'LV' },
+  { code: 'LV-VID', name: 'Vidzeme', country: 'LV' },
+  { code: 'LV-ZEM', name: 'Zemgale', country: 'LV' },
+  { code: 'LV-PIE', name: 'Pierīga', country: 'LV' },
+
+  // 🇱🇹 Lituanie - 10 comtés
+  { code: 'LT-AL', name: 'Alytus', country: 'LT' },
+  { code: 'LT-KU', name: 'Kaunas', country: 'LT' },
+  { code: 'LT-KL', name: 'Klaipėda', country: 'LT' },
+  { code: 'LT-MR', name: 'Marijampolė', country: 'LT' },
+  { code: 'LT-PN', name: 'Panevėžys', country: 'LT' },
+  { code: 'LT-SA', name: 'Šiauliai', country: 'LT' },
+  { code: 'LT-TA', name: 'Tauragė', country: 'LT' },
+  { code: 'LT-TE', name: 'Telšiai', country: 'LT' },
+  { code: 'LT-UT', name: 'Utena', country: 'LT' },
+  { code: 'LT-VL', name: 'Vilnius', country: 'LT' },
+];
+
+// Liste des pays pour regroupement
+const EUROPEAN_COUNTRIES = [
+  { code: 'BE', name: 'Belgique', flag: '🇧🇪' },
+  { code: 'LU', name: 'Luxembourg', flag: '🇱🇺' },
+  { code: 'DE', name: 'Allemagne', flag: '🇩🇪' },
+  { code: 'NL', name: 'Pays-Bas', flag: '🇳🇱' },
+  { code: 'ES', name: 'Espagne', flag: '🇪🇸' },
+  { code: 'IT', name: 'Italie', flag: '🇮🇹' },
+  { code: 'CH', name: 'Suisse', flag: '🇨🇭' },
+  { code: 'UK', name: 'Royaume-Uni', flag: '🇬🇧' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'AT', name: 'Autriche', flag: '🇦🇹' },
+  { code: 'PL', name: 'Pologne', flag: '🇵🇱' },
+  { code: 'CZ', name: 'République tchèque', flag: '🇨🇿' },
+  { code: 'SK', name: 'Slovaquie', flag: '🇸🇰' },
+  { code: 'HU', name: 'Hongrie', flag: '🇭🇺' },
+  { code: 'RO', name: 'Roumanie', flag: '🇷🇴' },
+  { code: 'BG', name: 'Bulgarie', flag: '🇧🇬' },
+  { code: 'HR', name: 'Croatie', flag: '🇭🇷' },
+  { code: 'SI', name: 'Slovénie', flag: '🇸🇮' },
+  { code: 'GR', name: 'Grèce', flag: '🇬🇷' },
+  { code: 'DK', name: 'Danemark', flag: '🇩🇰' },
+  { code: 'SE', name: 'Suède', flag: '🇸🇪' },
+  { code: 'FI', name: 'Finlande', flag: '🇫🇮' },
+  { code: 'IE', name: 'Irlande', flag: '🇮🇪' },
+  { code: 'NO', name: 'Norvège', flag: '🇳🇴' },
+  { code: 'EE', name: 'Estonie', flag: '🇪🇪' },
+  { code: 'LV', name: 'Lettonie', flag: '🇱🇻' },
+  { code: 'LT', name: 'Lituanie', flag: '🇱🇹' },
 ];
 
 export default function GrilleTarifaireConfigPage() {
@@ -1049,7 +1542,7 @@ export default function GrilleTarifaireConfigPage() {
 
               <div style={cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0 }}>Zones Europe</h3>
+                  <h3 style={{ margin: 0 }}>Régions Europe ({ZONES_EUROPE.length} régions dans {EUROPEAN_COUNTRIES.length} pays)</h3>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
@@ -1061,29 +1554,68 @@ export default function GrilleTarifaireConfigPage() {
                   </label>
                 </div>
                 {includeEurope && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {ZONES_EUROPE.map(zone => (
-                      <button
-                        key={zone.code}
-                        onClick={() => toggleZone(zone.code)}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '20px',
-                          border: selectedZones.includes(zone.code)
-                            ? '2px solid #667eea'
-                            : '1px solid rgba(255,255,255,0.2)',
-                          background: selectedZones.includes(zone.code)
-                            ? 'rgba(102,126,234,0.3)'
-                            : 'rgba(255,255,255,0.05)',
-                          color: 'white',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                        }}
-                      >
-                        {selectedZones.includes(zone.code) && '✓ '}
-                        {zone.name}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {EUROPEAN_COUNTRIES.map(country => {
+                      const countryZones = ZONES_EUROPE.filter(z => z.country === country.code);
+                      const selectedCount = countryZones.filter(z => selectedZones.includes(z.code)).length;
+                      const isAllSelected = selectedCount === countryZones.length;
+
+                      return (
+                        <div key={country.code} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '20px' }}>{country.flag}</span>
+                              <span style={{ fontWeight: '600' }}>{country.name}</span>
+                              <span style={{ fontSize: '12px', opacity: 0.6 }}>({selectedCount}/{countryZones.length})</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (isAllSelected) {
+                                  setSelectedZones(zones => zones.filter(z => !countryZones.some(cz => cz.code === z)));
+                                } else {
+                                  setSelectedZones(zones => [...new Set([...zones, ...countryZones.map(z => z.code)])]);
+                                }
+                              }}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                background: isAllSelected ? 'rgba(102,126,234,0.3)' : 'rgba(255,255,255,0.05)',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                              }}
+                            >
+                              {isAllSelected ? '✓ Tout sélectionné' : 'Tout sélectionner'}
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {countryZones.map(zone => (
+                              <button
+                                key={zone.code}
+                                onClick={() => toggleZone(zone.code)}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  border: selectedZones.includes(zone.code)
+                                    ? '2px solid #667eea'
+                                    : '1px solid rgba(255,255,255,0.15)',
+                                  background: selectedZones.includes(zone.code)
+                                    ? 'rgba(102,126,234,0.3)'
+                                    : 'rgba(255,255,255,0.02)',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                }}
+                              >
+                                {selectedZones.includes(zone.code) && '✓ '}
+                                {zone.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
