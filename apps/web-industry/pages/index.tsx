@@ -145,6 +145,13 @@ export default function HomePage() {
       route: '/pricing-grids'
     },
     {
+      icon: '⚙️',
+      title: 'Config. Grille Tarifaire',
+      desc: 'Définissez la structure des grilles et les frais annexes',
+      locked: !(user?.modules?.grillesTarifaires?.active || subscription?.tier !== 'free'),
+      route: '/grille-tarifaire-config'
+    },
+    {
       icon: '💶',
       title: 'Facturation',
       desc: 'Préfacturations, écarts tarifaires et export ERP',
