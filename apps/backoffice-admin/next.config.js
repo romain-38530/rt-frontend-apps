@@ -11,6 +11,9 @@ const nextConfig = {
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
   output: 'export',
 
+  // Trailing slash pour compatibilité avec les redirects Amplify
+  trailingSlash: true,
+
   // Disable image optimization for static export
   images: {
     unoptimized: true,
