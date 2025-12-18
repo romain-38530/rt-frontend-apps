@@ -55,6 +55,21 @@ interface AdditionalFee {
   category: 'manutention' | 'attente' | 'livraison' | 'administratif' | 'exceptionnel' | 'carburant' | 'autre';
 }
 
+// Fichiers joints à la demande de tarif
+interface AttachedFile {
+  id: string;
+  name: string;
+  originalName: string;
+  type: 'excel' | 'pdf' | 'other';
+  mimeType: string;
+  size: number;
+  url?: string;
+  s3Key?: string;
+  description?: string;
+  category: 'template' | 'specifications' | 'conditions' | 'other';
+  uploadedAt: string;
+}
+
 interface PricingGridConfig {
   id: string;
   name: string;
@@ -65,6 +80,7 @@ interface PricingGridConfig {
   columns: PricingColumn[];
   vehicleTypes: VehicleType[];
   additionalFees: AdditionalFee[];
+  attachedFiles: AttachedFile[];
   fuelSurcharge: {
     type: 'indexed' | 'fixed' | 'none';
     indexReference?: string;
@@ -947,7 +963,7 @@ const EUROPEAN_COUNTRIES = [
 
 export default function GrilleTarifaireConfigPage() {
   const router = useSafeRouter();
-  const [activeTab, setActiveTab] = useState<'structure' | 'fees' | 'vehicles' | 'zones' | 'settings'>('structure');
+  const [activeTab, setActiveTab] = useState<'structure' | 'fees' | 'vehicles' | 'zones' | 'attachments' | 'settings'>('structure');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -960,6 +976,11 @@ export default function GrilleTarifaireConfigPage() {
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>(DEFAULT_VEHICLES);
   const [selectedZones, setSelectedZones] = useState<string[]>(['75', '77', '78', '91', '92', '93', '94', '95', '69', '13', '59', '33', '31']);
   const [includeEurope, setIncludeEurope] = useState(false);
+
+  // Fichiers joints
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   // Settings
   const [fuelSurchargeType, setFuelSurchargeType] = useState<'indexed' | 'fixed' | 'none'>('indexed');
@@ -1065,6 +1086,121 @@ export default function GrilleTarifaireConfigPage() {
     );
   };
 
+  // === Gestion des fichiers joints ===
+  const getFileType = (mimeType: string): 'excel' | 'pdf' | 'other' => {
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('xlsx') || mimeType.includes('xls')) {
+      return 'excel';
+    }
+    if (mimeType.includes('pdf')) {
+      return 'pdf';
+    }
+    return 'other';
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleFileUpload = async (files: FileList | null, category: AttachedFile['category'] = 'other') => {
+    if (!files || files.length === 0) return;
+
+    setUploadingFile(true);
+    try {
+      for (const file of Array.from(files)) {
+        // Vérifier le type de fichier
+        const allowedTypes = [
+          'application/pdf',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/csv'
+        ];
+        if (!allowedTypes.includes(file.type)) {
+          setError(`Type de fichier non autorisé: ${file.name}. Seuls les fichiers Excel, PDF et CSV sont acceptés.`);
+          continue;
+        }
+
+        // Vérifier la taille (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`Fichier trop volumineux: ${file.name}. Taille max: 10 MB`);
+          continue;
+        }
+
+        // Créer l'objet fichier (dans un vrai cas, on uploaderait vers S3)
+        const newFile: AttachedFile = {
+          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          originalName: file.name,
+          type: getFileType(file.type),
+          mimeType: file.type,
+          size: file.size,
+          category,
+          uploadedAt: new Date().toISOString(),
+          // En production: s3Key et url seraient remplis après upload S3
+        };
+
+        setAttachedFiles(prev => [...prev, newFile]);
+        setSuccess(`Fichier "${file.name}" ajouté avec succès`);
+      }
+    } catch (err: any) {
+      setError(`Erreur lors de l'upload: ${err.message}`);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFileUpload(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragOver(false);
+  };
+
+  const updateFileCategory = (fileId: string, category: AttachedFile['category']) => {
+    setAttachedFiles(files =>
+      files.map(f => f.id === fileId ? { ...f, category } : f)
+    );
+  };
+
+  const updateFileDescription = (fileId: string, description: string) => {
+    setAttachedFiles(files =>
+      files.map(f => f.id === fileId ? { ...f, description } : f)
+    );
+  };
+
+  const deleteFile = (fileId: string) => {
+    if (!confirm('Supprimer ce fichier ?')) return;
+    setAttachedFiles(files => files.filter(f => f.id !== fileId));
+    setSuccess('Fichier supprimé');
+  };
+
+  const getFileIcon = (type: AttachedFile['type']): string => {
+    switch (type) {
+      case 'excel': return '📊';
+      case 'pdf': return '📄';
+      default: return '📎';
+    }
+  };
+
+  const getCategoryLabel = (category: AttachedFile['category']): string => {
+    const labels: Record<AttachedFile['category'], string> = {
+      template: '📝 Modèle à remplir',
+      specifications: '📋 Cahier des charges',
+      conditions: '⚖️ Conditions générales',
+      other: '📎 Autre document'
+    };
+    return labels[category];
+  };
+
   const saveConfiguration = async () => {
     setLoading(true);
     try {
@@ -1085,6 +1221,7 @@ export default function GrilleTarifaireConfigPage() {
         columns: [],
         vehicleTypes: vehicleTypes.filter(v => v.isActive),
         additionalFees: additionalFees.filter(f => f.isActive),
+        attachedFiles: attachedFiles,
         fuelSurcharge: {
           type: fuelSurchargeType,
           indexReference: fuelIndexReference,
@@ -1188,6 +1325,7 @@ export default function GrilleTarifaireConfigPage() {
               { id: 'fees', label: '💰 Frais Annexes', desc: 'Frais d\'exploitation' },
               { id: 'vehicles', label: '🚛 Véhicules', desc: 'Types de véhicules' },
               { id: 'zones', label: '🗺️ Zones', desc: 'Zones géographiques' },
+              { id: 'attachments', label: `📎 Documents${attachedFiles.length > 0 ? ` (${attachedFiles.length})` : ''}`, desc: 'Fichiers joints' },
               { id: 'settings', label: '⚙️ Paramètres', desc: 'Carburant, remises' },
             ].map(tab => (
               <button
@@ -1619,6 +1757,206 @@ export default function GrilleTarifaireConfigPage() {
                   </div>
                 )}
               </div>
+            </>
+          )}
+
+          {/* Tab: Documents joints */}
+          {activeTab === 'attachments' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ margin: 0 }}>Documents à envoyer aux transporteurs</h2>
+                  <p style={{ margin: '4px 0 0', opacity: 0.7, fontSize: '14px' }}>
+                    Joignez des fichiers Excel ou PDF que les transporteurs recevront avec la demande de tarif
+                  </p>
+                </div>
+              </div>
+
+              {/* Zone de drop */}
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                style={{
+                  ...cardStyle,
+                  border: dragOver ? '2px dashed #667eea' : '2px dashed rgba(255,255,255,0.2)',
+                  background: dragOver ? 'rgba(102,126,234,0.1)' : 'rgba(255,255,255,0.05)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <input
+                  type="file"
+                  id="file-upload"
+                  multiple
+                  accept=".pdf,.xls,.xlsx,.csv"
+                  style={{ display: 'none' }}
+                  onChange={e => handleFileUpload(e.target.files)}
+                />
+                <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'block' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px', opacity: uploadingFile ? 0.5 : 1 }}>
+                    {uploadingFile ? '⏳' : '📤'}
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+                    {uploadingFile ? 'Upload en cours...' : 'Glissez-déposez vos fichiers ici'}
+                  </div>
+                  <div style={{ opacity: 0.7, fontSize: '14px' }}>
+                    ou cliquez pour sélectionner des fichiers
+                  </div>
+                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ background: 'rgba(16,185,129,0.2)', padding: '6px 12px', borderRadius: '12px', fontSize: '12px' }}>
+                      📊 Excel (.xlsx, .xls)
+                    </span>
+                    <span style={{ background: 'rgba(239,68,68,0.2)', padding: '6px 12px', borderRadius: '12px', fontSize: '12px' }}>
+                      📄 PDF
+                    </span>
+                    <span style={{ background: 'rgba(59,130,246,0.2)', padding: '6px 12px', borderRadius: '12px', fontSize: '12px' }}>
+                      📋 CSV
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '12px', opacity: 0.5, fontSize: '12px' }}>
+                    Taille max: 10 MB par fichier
+                  </div>
+                </label>
+              </div>
+
+              {/* Catégories de fichiers */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                {[
+                  { id: 'template', icon: '📝', label: 'Modèle à remplir', desc: 'Template Excel que le transporteur doit compléter' },
+                  { id: 'specifications', icon: '📋', label: 'Cahier des charges', desc: 'Spécifications techniques, contraintes' },
+                  { id: 'conditions', icon: '⚖️', label: 'Conditions générales', desc: 'CGV, conditions de paiement' },
+                  { id: 'other', icon: '📎', label: 'Autre document', desc: 'Documentation complémentaire' },
+                ].map(cat => (
+                  <div
+                    key={cat.id}
+                    style={{
+                      ...cardStyle,
+                      marginBottom: 0,
+                      padding: '16px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.multiple = true;
+                      input.accept = '.pdf,.xls,.xlsx,.csv';
+                      input.onchange = (e) => handleFileUpload((e.target as HTMLInputElement).files, cat.id as any);
+                      input.click();
+                    }}
+                  >
+                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{cat.icon}</div>
+                    <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{cat.label}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.6 }}>{cat.desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Liste des fichiers joints */}
+              {attachedFiles.length > 0 && (
+                <div style={cardStyle}>
+                  <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📎 Fichiers joints
+                    <span style={{ fontSize: '12px', opacity: 0.6 }}>({attachedFiles.length})</span>
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {attachedFiles.map(file => (
+                      <div
+                        key={file.id}
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '16px',
+                        }}
+                      >
+                        {/* Icône */}
+                        <div style={{ fontSize: '36px', flexShrink: 0 }}>
+                          {getFileIcon(file.type)}
+                        </div>
+
+                        {/* Infos */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: '600', marginBottom: '4px', wordBreak: 'break-word' }}>
+                            {file.originalName}
+                          </div>
+                          <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '8px' }}>
+                            {formatFileSize(file.size)} • Ajouté le {new Date(file.uploadedAt).toLocaleDateString('fr-FR')}
+                          </div>
+
+                          {/* Catégorie */}
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                            <select
+                              value={file.category}
+                              onChange={e => updateFileCategory(file.id, e.target.value as AttachedFile['category'])}
+                              style={{
+                                background: 'rgba(30,30,50,0.8)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                              }}
+                            >
+                              <option value="template">📝 Modèle à remplir</option>
+                              <option value="specifications">📋 Cahier des charges</option>
+                              <option value="conditions">⚖️ Conditions générales</option>
+                              <option value="other">📎 Autre</option>
+                            </select>
+                          </div>
+
+                          {/* Description */}
+                          <input
+                            placeholder="Description du fichier (optionnel)"
+                            value={file.description || ''}
+                            onChange={e => updateFileDescription(file.id, e.target.value)}
+                            style={{
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'white',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              width: '100%',
+                            }}
+                          />
+                        </div>
+
+                        {/* Actions */}
+                        <button
+                          onClick={() => deleteFile(file.id)}
+                          style={{
+                            background: 'rgba(239,68,68,0.2)',
+                            border: 'none',
+                            color: '#ef4444',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            flexShrink: 0,
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Message si aucun fichier */}
+              {attachedFiles.length === 0 && (
+                <div style={{ ...cardStyle, textAlign: 'center', opacity: 0.6 }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
+                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>Aucun fichier joint</div>
+                  <div style={{ fontSize: '14px' }}>
+                    Ajoutez des fichiers Excel ou PDF pour les envoyer aux transporteurs
+                  </div>
+                </div>
+              )}
             </>
           )}
 
