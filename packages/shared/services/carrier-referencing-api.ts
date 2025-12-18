@@ -708,6 +708,50 @@ export async function getBlockingHistory(carrierId: string): Promise<{
 // API FUNCTIONS - DOCUMENTS
 // =============================================================================
 
+/**
+ * Obtenir une URL presignee S3 pour upload de document
+ */
+export async function getDocumentUploadUrl(
+  carrierId: string,
+  params: {
+    fileName: string;
+    contentType: string;
+    documentType: CarrierDocumentType;
+  }
+): Promise<{
+  uploadUrl: string;
+  s3Key: string;
+  expiresIn: number;
+  bucket: string;
+}> {
+  return fetchAPI(`/carriers/${carrierId}/documents/upload-url`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+/**
+ * Confirmer l'upload et creer l'enregistrement document
+ */
+export async function confirmDocumentUpload(
+  carrierId: string,
+  params: {
+    s3Key: string;
+    documentType: CarrierDocumentType;
+    fileName: string;
+    expiresAt?: string;
+    notes?: string;
+  }
+): Promise<{ document: CarrierDocument }> {
+  return fetchAPI(`/carriers/${carrierId}/documents/confirm-upload`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+/**
+ * Upload complet d'un document (presigned URL + upload S3 + confirmation)
+ */
 export async function uploadDocument(
   carrierId: string,
   params: {
@@ -716,29 +760,102 @@ export async function uploadDocument(
     expiresAt?: string;
     notes?: string;
   }
-): Promise<{ document: CarrierDocument; uploadUrl: string; event: CarrierEvent }> {
-  const formData = new FormData();
-  formData.append('file', params.file);
-  formData.append('type', params.type);
-  if (params.expiresAt) formData.append('expiresAt', params.expiresAt);
-  if (params.notes) formData.append('notes', params.notes);
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const response = await fetch(`${API_BASE_URL}/carriers/${carrierId}/documents`, {
-    method: 'POST',
-    headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    body: formData,
+): Promise<{ document: CarrierDocument; analyzed?: boolean }> {
+  // 1. Obtenir URL presignee
+  const { uploadUrl, s3Key } = await getDocumentUploadUrl(carrierId, {
+    fileName: params.file.name,
+    contentType: params.file.type || 'application/octet-stream',
+    documentType: params.type,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erreur upload' }));
-    throw new Error(error.error || `Erreur ${response.status}`);
+  // 2. Upload direct vers S3
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: params.file,
+    headers: {
+      'Content-Type': params.file.type || 'application/octet-stream',
+    },
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Erreur upload S3: ${uploadResponse.status}`);
   }
 
-  return response.json();
+  // 3. Confirmer l'upload
+  const { document } = await confirmDocumentUpload(carrierId, {
+    s3Key,
+    documentType: params.type,
+    fileName: params.file.name,
+    expiresAt: params.expiresAt,
+    notes: params.notes,
+  });
+
+  // 4. Lancer l'analyse OCR automatique (non-bloquant)
+  let analyzed = false;
+  try {
+    await analyzeDocument(carrierId, document.id);
+    analyzed = true;
+  } catch (e) {
+    console.warn('OCR analysis failed:', e);
+  }
+
+  return { document, analyzed };
+}
+
+/**
+ * Analyser un document avec OCR (Textract) pour extraire les dates
+ */
+export async function analyzeDocument(
+  carrierId: string,
+  documentId: string
+): Promise<{
+  success: boolean;
+  documentId: string;
+  analysis: {
+    extractedText: string;
+    datesFound: Array<{
+      raw: string;
+      parsed: string;
+      isValidityDate: boolean;
+      context: string;
+    }>;
+    suggestedExpiryDate: string | null;
+    confidence: 'high' | 'medium' | 'low' | 'none';
+  };
+  updated: boolean;
+}> {
+  return fetchAPI(`/carriers/${carrierId}/documents/${documentId}/analyze`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Definir manuellement la date d'expiration d'un document
+ */
+export async function setDocumentExpiry(
+  carrierId: string,
+  documentId: string,
+  expiryDate: string
+): Promise<{
+  success: boolean;
+  documentId: string;
+  expiryDate: string;
+  vigilanceStatus: VigilanceStatus;
+}> {
+  return fetchAPI(`/carriers/${carrierId}/documents/${documentId}/set-expiry`, {
+    method: 'POST',
+    body: JSON.stringify({ expiryDate }),
+  });
+}
+
+/**
+ * Obtenir un document specifique avec URL de telechargement
+ */
+export async function getDocument(
+  carrierId: string,
+  documentId: string
+): Promise<{ document: CarrierDocument }> {
+  return fetchAPI(`/carriers/${carrierId}/documents/${documentId}`);
 }
 
 export async function getDocuments(carrierId: string): Promise<{
@@ -1048,6 +1165,92 @@ export async function getVigilanceStats(industrielId: string): Promise<{
   complianceRate: number;           // % transporteurs conformes
 }> {
   return fetchAPI(`/stats/vigilance/${industrielId}`);
+}
+
+// =============================================================================
+// API FUNCTIONS - PERFORMANCE TRANSPORTEURS
+// =============================================================================
+
+export interface CarrierPerformanceMetrics {
+  onTimeRate: number;              // % livraisons a l'heure
+  damageRate: number;              // % dommages
+  totalDeliveries: number;
+  avgCommunicationRating: number | null;
+  incidentCount: number;
+  lastUpdated: string;
+}
+
+export interface CarrierPerformanceRecord {
+  orderId: string;
+  deliveryType: 'on_time' | 'late' | 'early';
+  delayMinutes: number;
+  wasOnTime: boolean;
+  damageReported: boolean;
+  damageDescription?: string;
+  communicationRating: number | null;
+  incidentType: 'none' | 'delay' | 'damage' | 'no_show' | 'other';
+  incidentDescription?: string;
+  deliveredAt: string;
+  expectedAt: string | null;
+  recordedAt: string;
+  source: string;
+}
+
+/**
+ * Obtenir les metriques de performance d'un transporteur
+ */
+export async function getCarrierPerformance(
+  carrierId: string,
+  params?: {
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }
+): Promise<{
+  success: boolean;
+  carrierId: string;
+  metrics: CarrierPerformanceMetrics;
+  score: number;
+  scoreDetails: Record<string, number>;
+  records: CarrierPerformanceRecord[];
+  count: number;
+}> {
+  const query = new URLSearchParams();
+  if (params?.limit) query.append('limit', params.limit.toString());
+  if (params?.startDate) query.append('startDate', params.startDate);
+  if (params?.endDate) query.append('endDate', params.endDate);
+
+  const queryString = query.toString();
+  return fetchAPI(`/carriers/${carrierId}/performance${queryString ? `?${queryString}` : ''}`);
+}
+
+/**
+ * Enregistrer une performance de livraison (appele par le tracking)
+ */
+export async function recordCarrierPerformance(
+  carrierId: string,
+  params: {
+    orderId: string;
+    deliveryType: 'on_time' | 'late' | 'early';
+    delayMinutes?: number;
+    damageReported?: boolean;
+    damageDescription?: string;
+    communicationRating?: number;
+    incidentType?: 'none' | 'delay' | 'damage' | 'no_show' | 'other';
+    incidentDescription?: string;
+    deliveredAt?: string;
+    expectedAt?: string;
+  }
+): Promise<{
+  success: boolean;
+  carrierId: string;
+  orderId: string;
+  performanceMetrics: CarrierPerformanceMetrics;
+}> {
+  return fetchAPI(`/carriers/${carrierId}/performance`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 }
 
 // =============================================================================
