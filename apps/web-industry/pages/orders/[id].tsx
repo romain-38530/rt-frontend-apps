@@ -636,9 +636,46 @@ export default function OrderDetailPage() {
                 <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   {/* Expediteur */}
                   <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
-                      <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px' }}>Logisticien, Industriel, Fournisseur ou Transitaire</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
+                        <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px' }}>
+                          {orderAny.senderType === 'industriel' ? 'Industriel (interne)' :
+                           orderAny.senderType === 'logisticien' ? 'Logisticien de l\'industriel' :
+                           'Externe (Fournisseur/Transitaire)'}
+                        </div>
+                      </div>
+                      {/* Action button based on sender type */}
+                      {(orderAny.senderType === 'industriel' || orderAny.senderType === 'logisticien') ? (
+                        <a
+                          href="/planning"
+                          style={{ fontSize: '11px', color: '#92400e', textDecoration: 'none', fontWeight: '600', padding: '4px 8px', backgroundColor: '#fcd34d', borderRadius: '4px' }}
+                        >
+                          📅 Planning
+                        </a>
+                      ) : orderAny.senderType === 'externe' && orderAny.senderEmail ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${order.id}/send-supplier-invitation`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: orderAny.senderEmail, name: orderAny.senderName }),
+                              });
+                              if (response.ok) {
+                                toast.success('Invitation envoyée au fournisseur');
+                              } else {
+                                throw new Error('Erreur lors de l\'envoi');
+                              }
+                            } catch (err) {
+                              toast.error('Erreur lors de l\'envoi de l\'invitation');
+                            }
+                          }}
+                          style={{ fontSize: '11px', color: 'white', fontWeight: '600', padding: '4px 8px', backgroundColor: '#f59e0b', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                        >
+                          ✉️ Envoyer invitation
+                        </button>
+                      ) : null}
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
                       {orderAny.senderName || orderAny.forwarderName || 'Non défini'}

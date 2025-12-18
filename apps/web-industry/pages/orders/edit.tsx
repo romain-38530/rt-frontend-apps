@@ -34,6 +34,7 @@ export default function EditOrderPage() {
   // Form state
   const [formData, setFormData] = useState({
     // Stakeholders
+    senderType: 'externe' as 'industriel' | 'logisticien' | 'externe',
     senderName: '',
     senderEmail: '',
     recipientName: '',
@@ -83,6 +84,7 @@ export default function EditOrderPage() {
       const data = orderData as any;
       setFormData({
         // Stakeholders
+        senderType: data.senderType || 'externe',
         senderName: data.senderName || data.forwarderName || '',
         senderEmail: data.senderEmail || data.forwarderEmail || '',
         recipientName: data.recipientName || '',
@@ -128,6 +130,7 @@ export default function EditOrderPage() {
     try {
       const updates: Partial<Order> & Record<string, any> = {
         // Stakeholders
+        senderType: formData.senderType,
         senderName: formData.senderName,
         senderEmail: formData.senderEmail,
         recipientName: formData.recipientName,
@@ -295,11 +298,42 @@ export default function EditOrderPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               {/* Expediteur */}
               <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#92400e', margin: 0 }}>Expéditeur</h3>
-                  <div style={{ fontSize: '11px', color: '#b45309', marginTop: '4px' }}>Logisticien, Industriel, Fournisseur ou Transitaire</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#92400e', margin: 0 }}>Expéditeur</h3>
+                  </div>
+                  {/* Action button based on sender type */}
+                  {formData.senderType === 'industriel' && (
+                    <a
+                      href="/planning"
+                      style={{ fontSize: '12px', color: '#92400e', textDecoration: 'none', fontWeight: '600', padding: '4px 8px', backgroundColor: '#fcd34d', borderRadius: '4px' }}
+                    >
+                      📅 Planning
+                    </a>
+                  )}
+                  {formData.senderType === 'logisticien' && (
+                    <a
+                      href="/planning"
+                      style={{ fontSize: '12px', color: '#92400e', textDecoration: 'none', fontWeight: '600', padding: '4px 8px', backgroundColor: '#fcd34d', borderRadius: '4px' }}
+                    >
+                      📅 Planning
+                    </a>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Type d'expéditeur <span style={{ color: '#dc2626' }}>*</span></label>
+                    <select
+                      value={formData.senderType}
+                      onChange={(e) => setFormData({ ...formData, senderType: e.target.value as any })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                      required
+                    >
+                      <option value="industriel">Industriel (interne)</option>
+                      <option value="logisticien">Logisticien de l'industriel</option>
+                      <option value="externe">Externe (Fournisseur/Transitaire)</option>
+                    </select>
+                  </div>
                   <div>
                     <label style={labelStyle}>Nom <span style={{ color: '#dc2626' }}>*</span></label>
                     <input type="text" value={formData.senderName} onChange={(e) => setFormData({ ...formData, senderName: e.target.value })} style={inputStyle} placeholder="Nom de l'expediteur" required />
@@ -308,6 +342,13 @@ export default function EditOrderPage() {
                     <label style={labelStyle}>Email <span style={{ color: '#dc2626' }}>*</span></label>
                     <input type="email" value={formData.senderEmail} onChange={(e) => setFormData({ ...formData, senderEmail: e.target.value })} style={inputStyle} placeholder="email@expediteur.com" required />
                   </div>
+                  {formData.senderType === 'externe' && formData.senderEmail && (
+                    <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#fcd34d', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '12px', color: '#92400e', marginBottom: '8px' }}>
+                        Un email d'invitation sera envoyé à l'expéditeur avec un code d'accès au portail fournisseur.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

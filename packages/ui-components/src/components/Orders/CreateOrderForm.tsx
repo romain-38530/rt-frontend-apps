@@ -37,6 +37,9 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   initialData,
   isLoading = false,
 }) => {
+  // Type d'expéditeur
+  const [senderType, setSenderType] = useState<'industriel' | 'logisticien' | 'externe'>('externe');
+
   // État du formulaire
   const [formData, setFormData] = useState<CreateOrderInput>({
     pickupAddress: initialData?.pickupAddress || {
@@ -180,7 +183,12 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(formData);
+    // Include senderType in the submission
+    const dataWithSenderType = {
+      ...formData,
+      senderType,
+    };
+    await onSubmit(dataWithSenderType as any);
   };
 
   // Style des inputs
@@ -279,8 +287,32 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 />
               </div>
 
+              <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                <label style={{ ...labelStyle, color: '#92400e' }}>Type d'expéditeur *</label>
+                <select
+                  value={senderType}
+                  onChange={(e) => setSenderType(e.target.value as any)}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  required
+                >
+                  <option value="industriel">Industriel (interne)</option>
+                  <option value="logisticien">Logisticien de l'industriel</option>
+                  <option value="externe">Externe (Fournisseur/Transitaire)</option>
+                </select>
+                {senderType === 'externe' && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#92400e' }}>
+                    Un email d'invitation sera envoyé avec un code d'accès au portail fournisseur.
+                  </div>
+                )}
+                {(senderType === 'industriel' || senderType === 'logisticien') && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#92400e' }}>
+                    Accès direct au planning de l'industriel.
+                  </div>
+                )}
+              </div>
+
               <div>
-                <label style={labelStyle}>Nom du contact *</label>
+                <label style={labelStyle}>Nom du contact (Expéditeur) *</label>
                 <input
                   type="text"
                   value={formData.pickupAddress.contactName}
