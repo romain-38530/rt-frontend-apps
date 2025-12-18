@@ -310,12 +310,12 @@ export default function EditOrderPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <label style={labelStyle}>Nom</label>
-                    <input type="text" value={formData.senderName} onChange={(e) => setFormData({ ...formData, senderName: e.target.value })} style={inputStyle} placeholder="Nom de l'expediteur" />
+                    <label style={labelStyle}>Nom <span style={{ color: '#dc2626' }}>*</span></label>
+                    <input type="text" value={formData.senderName} onChange={(e) => setFormData({ ...formData, senderName: e.target.value })} style={inputStyle} placeholder="Nom de l'expediteur" required />
                   </div>
                   <div>
-                    <label style={labelStyle}>Email</label>
-                    <input type="email" value={formData.senderEmail} onChange={(e) => setFormData({ ...formData, senderEmail: e.target.value })} style={inputStyle} placeholder="email@expediteur.com" />
+                    <label style={labelStyle}>Email <span style={{ color: '#dc2626' }}>*</span></label>
+                    <input type="email" value={formData.senderEmail} onChange={(e) => setFormData({ ...formData, senderEmail: e.target.value })} style={inputStyle} placeholder="email@expediteur.com" required />
                   </div>
                 </div>
               </div>
@@ -337,12 +337,12 @@ export default function EditOrderPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <label style={labelStyle}>Nom</label>
-                    <input type="text" value={formData.recipientName} onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })} style={inputStyle} placeholder="Nom du destinataire" />
+                    <label style={labelStyle}>Nom <span style={{ color: '#dc2626' }}>*</span></label>
+                    <input type="text" value={formData.recipientName} onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })} style={inputStyle} placeholder="Nom du destinataire" required />
                   </div>
                   <div>
-                    <label style={labelStyle}>Email</label>
-                    <input type="email" value={formData.recipientEmail} onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })} style={inputStyle} placeholder="email@destinataire.com" />
+                    <label style={labelStyle}>Email <span style={{ color: '#dc2626' }}>*</span></label>
+                    <input type="email" value={formData.recipientEmail} onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })} style={inputStyle} placeholder="email@destinataire.com" required />
                   </div>
                 </div>
               </div>

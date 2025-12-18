@@ -628,6 +628,64 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
+              {/* Section Parties Prenantes */}
+              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', backgroundColor: '#f5f3ff', borderBottom: '2px solid #8b5cf6' }}>
+                  <span style={{ fontSize: '16px', fontWeight: '700', color: '#6d28d9' }}>Parties prenantes</span>
+                </div>
+                <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  {/* Expediteur */}
+                  <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
+                      {orderAny.senderEmail && (
+                        <a
+                          href={`https://expediteur.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.senderEmail)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: '600' }}
+                        >
+                          Ouvrir portail →
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                      {orderAny.senderName || orderAny.forwarderName || 'Non défini'}
+                    </div>
+                    {orderAny.senderEmail && (
+                      <div style={{ fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        ✉️ {orderAny.senderEmail}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Destinataire */}
+                  <div style={{ padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af' }}>Destinataire</div>
+                      {orderAny.recipientEmail && (
+                        <a
+                          href={`https://destinataire.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.recipientEmail)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}
+                        >
+                          Ouvrir portail →
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                      {orderAny.recipientName || 'Non défini'}
+                    </div>
+                    {orderAny.recipientEmail && (
+                      <div style={{ fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        ✉️ {orderAny.recipientEmail}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Section Enlèvement */}
               <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', backgroundColor: '#f0fdf4', borderBottom: '2px solid #22c55e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
