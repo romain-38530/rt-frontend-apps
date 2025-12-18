@@ -640,7 +640,7 @@ export default function OrderDetailPage() {
                       <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
                       {orderAny.senderEmail && (
                         <a
-                          href={`https://expediteur.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.senderEmail)}`}
+                          href={`https://transitaire.symphonia-controltower.com/orders/?email=${encodeURIComponent(orderAny.senderEmail)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: '600' }}

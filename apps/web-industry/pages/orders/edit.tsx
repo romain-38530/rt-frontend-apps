@@ -299,7 +299,7 @@ export default function EditOrderPage() {
                   <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#92400e', margin: 0 }}>Expediteur</h3>
                   {formData.senderEmail && (
                     <a
-                      href={`https://expediteur.symphonia-controltower.com/orders/?email=${encodeURIComponent(formData.senderEmail)}`}
+                      href={`https://transitaire.symphonia-controltower.com/orders/?email=${encodeURIComponent(formData.senderEmail)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: '600' }}
