@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Users, Mail, TrendingUp, Target, Calendar, Globe, ChevronRight, RefreshCw, Sparkles, FileText, Inbox, Compass, Briefcase } from 'lucide-react';
+import { Building2, Users, Mail, TrendingUp, Target, Calendar, Globe, ChevronRight, RefreshCw, Sparkles, FileText, Inbox, Compass, Briefcase, Truck } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 import { DashboardCard } from '../../components/DashboardCard';
 import { crmApi } from '../../lib/api';
@@ -338,6 +338,17 @@ export default function CRMDashboard() {
               <div>
                 <span className="font-semibold block">Templates</span>
                 <span className="text-sm opacity-75">Modeles d'emails</span>
+              </div>
+              <ChevronRight size={20} className="ml-auto" />
+            </a>
+            <a
+              href="/crm/transport-scraping"
+              className="flex items-center gap-3 p-4 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+            >
+              <Truck size={24} />
+              <div>
+                <span className="font-semibold block">Affret IA - B2P</span>
+                <span className="text-sm opacity-75">Scraping transporteurs</span>
               </div>
               <ChevronRight size={20} className="ml-auto" />
             </a>
