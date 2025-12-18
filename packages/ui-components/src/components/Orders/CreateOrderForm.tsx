@@ -141,14 +141,16 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           formData.pickupAddress.street !== '' &&
           formData.pickupAddress.city !== '' &&
           formData.pickupAddress.postalCode !== '' &&
-          formData.pickupAddress.contactName !== ''
+          formData.pickupAddress.contactName !== '' &&
+          formData.pickupAddress.contactEmail !== ''
         );
       case 2: // Adresse de livraison
         return (
           formData.deliveryAddress.street !== '' &&
           formData.deliveryAddress.city !== '' &&
           formData.deliveryAddress.postalCode !== '' &&
-          formData.deliveryAddress.contactName !== ''
+          formData.deliveryAddress.contactName !== '' &&
+          formData.deliveryAddress.contactEmail !== ''
         );
       case 3: // Dates
         return (
@@ -299,13 +301,14 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
               </div>
 
               <div>
-                <label style={labelStyle}>Email du contact</label>
+                <label style={labelStyle}>Email du contact (Expéditeur) *</label>
                 <input
                   type="email"
                   value={formData.pickupAddress.contactEmail}
                   onChange={(e) => updatePickupAddress('contactEmail', e.target.value)}
                   style={inputStyle}
-                  placeholder="email@exemple.com"
+                  placeholder="email@expediteur.com"
+                  required
                 />
               </div>
 
@@ -444,13 +447,14 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
               </div>
 
               <div>
-                <label style={labelStyle}>Email du contact</label>
+                <label style={labelStyle}>Email du contact (Destinataire) *</label>
                 <input
                   type="email"
                   value={formData.deliveryAddress.contactEmail}
                   onChange={(e) => updateDeliveryAddress('contactEmail', e.target.value)}
                   style={inputStyle}
-                  placeholder="email@exemple.com"
+                  placeholder="email@destinataire.com"
+                  required
                 />
               </div>
 
