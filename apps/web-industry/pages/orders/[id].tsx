@@ -342,6 +342,19 @@ export default function OrderDetailPage() {
                     <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>
                       Transport n°{order.reference}
                     </h1>
+                    {orderAny.customerReference && (
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        backgroundColor: '#f0fdf4',
+                        color: '#166534',
+                        border: '1px solid #86efac',
+                      }}>
+                        Réf. client: {orderAny.customerReference}
+                      </span>
+                    )}
                     <span style={{
                       padding: '4px 12px',
                       borderRadius: '4px',
@@ -743,7 +756,7 @@ export default function OrderDetailPage() {
                     </div>
                     {/* Contact */}
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact expéditeur</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Enlèvement chez :</div>
                       {order.pickupAddress.contactName && (
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.pickupAddress.contactName}</div>
                       )}
@@ -831,7 +844,7 @@ export default function OrderDetailPage() {
                     </div>
                     {/* Contact */}
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact destinataire</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Livraison chez :</div>
                       {order.deliveryAddress.contactName && (
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.deliveryAddress.contactName}</div>
                       )}

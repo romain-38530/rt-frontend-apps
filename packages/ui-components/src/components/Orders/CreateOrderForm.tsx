@@ -40,6 +40,9 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   // Type d'expéditeur
   const [senderType, setSenderType] = useState<'industriel' | 'logisticien' | 'externe'>('externe');
 
+  // Référence client
+  const [customerReference, setCustomerReference] = useState<string>(initialData?.customerReference || '');
+
   // État du formulaire
   const [formData, setFormData] = useState<CreateOrderInput>({
     pickupAddress: initialData?.pickupAddress || {
@@ -186,6 +189,8 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     // Include stakeholder information in the submission
     const dataWithStakeholders = {
       ...formData,
+      // Customer reference
+      customerReference,
       // Sender/Expediteur info
       senderType,
       senderName: formData.pickupAddress.contactName,
@@ -247,6 +252,21 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {/* Référence commande client */}
+              <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac', marginBottom: '8px' }}>
+                <label style={{ ...labelStyle, color: '#166534' }}>Numéro de commande client</label>
+                <input
+                  type="text"
+                  value={customerReference}
+                  onChange={(e) => setCustomerReference(e.target.value)}
+                  style={inputStyle}
+                  placeholder="Votre référence interne (ex: PO-2024-001)"
+                />
+                <div style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>
+                  Référence pour retrouver facilement cette commande dans votre système.
+                </div>
+              </div>
+
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Adresse *</label>
                 <AddressAutocomplete

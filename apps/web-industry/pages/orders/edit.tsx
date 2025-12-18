@@ -33,6 +33,8 @@ export default function EditOrderPage() {
 
   // Form state
   const [formData, setFormData] = useState({
+    // Customer reference
+    customerReference: '',
     // Stakeholders
     senderType: 'externe' as 'industriel' | 'logisticien' | 'externe',
     senderName: '',
@@ -83,6 +85,8 @@ export default function EditOrderPage() {
       // Pre-fill form with order data
       const data = orderData as any;
       setFormData({
+        // Customer reference
+        customerReference: data.customerReference || '',
         // Stakeholders
         senderType: data.senderType || 'externe',
         senderName: data.senderName || data.forwarderName || '',
@@ -129,6 +133,8 @@ export default function EditOrderPage() {
 
     try {
       const updates: Partial<Order> & Record<string, any> = {
+        // Customer reference
+        customerReference: formData.customerReference,
         // Stakeholders
         senderType: formData.senderType,
         senderName: formData.senderName,
@@ -289,6 +295,26 @@ export default function EditOrderPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px' }}>
+          {/* Référence commande client */}
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Référence commande
+            </h2>
+            <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+              <label style={labelStyle}>Numéro de commande client</label>
+              <input
+                type="text"
+                value={formData.customerReference}
+                onChange={(e) => setFormData({ ...formData, customerReference: e.target.value })}
+                style={inputStyle}
+                placeholder="Votre référence interne (ex: PO-2024-001)"
+              />
+              <div style={{ fontSize: '12px', color: '#15803d', marginTop: '8px' }}>
+                Référence pour retrouver facilement cette commande dans votre système.
+              </div>
+            </div>
+          </div>
+
           {/* Parties prenantes - Full width */}
           <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '8px' }}>
