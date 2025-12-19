@@ -1626,5 +1626,87 @@ export const pricingGridsApi = {
       headers: getAuthHeaders()
     });
     return res.json();
+  },
+
+  // ===== INTERCONNEXIONS =====
+
+  // Récupérer la liste des transporteurs depuis le CRM
+  getCarriers: async (search?: string, page = 1, limit = 50) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/carriers?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Récupérer les détails d'un transporteur avec son historique
+  getCarrierDetails: async (carrierId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/carrier/${carrierId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Calculer le prix d'un transport basé sur les grilles acceptées
+  calculatePrice: async (params: {
+    origin?: { department?: string; region?: string; country?: string };
+    destination?: { department?: string; region?: string; country?: string };
+    weight?: number;
+    volume?: number;
+    pallets?: number;
+    vehicleType?: string;
+    distance?: number;
+    carrierId?: string;
+  }) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/calculate-price`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params)
+    });
+    return res.json();
+  },
+
+  // Récupérer les accords tarifaires actifs
+  getPricingAgreements: async (carrierId?: string, status = 'accepted') => {
+    const params = new URLSearchParams();
+    if (carrierId) params.append('carrierId', carrierId);
+    params.append('status', status);
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/pricing-agreements?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Récupérer les scores des transporteurs
+  getCarrierScores: async () => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/carrier-scores`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Obtenir des recommandations de transporteurs via AFFRET.IA
+  getCarrierRecommendations: async (zones?: any[], vehicleTypes?: string[], criteria?: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/recommend-carriers`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ zones, vehicleTypes, criteria })
+    });
+    return res.json();
+  },
+
+  // Créer une ligne de facturation basée sur un accord
+  createInvoiceLine: async (orderId: string, proposalId: string, priceUsed: number) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/interconnect/create-invoice-line`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ orderId, proposalId, priceUsed })
+    });
+    return res.json();
   }
 };
