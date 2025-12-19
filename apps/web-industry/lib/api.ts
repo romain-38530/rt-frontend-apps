@@ -61,7 +61,7 @@ export const API_CONFIG = {
   DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net',
 
   // Pricing Grids API - Grilles tarifaires personnalisées
-  PRICING_GRIDS_API: process.env.NEXT_PUBLIC_PRICING_GRIDS_API_URL || 'https://d1pricing-grids.cloudfront.net'
+  PRICING_GRIDS_API: process.env.NEXT_PUBLIC_PRICING_GRIDS_API_URL || 'https://d16zes4rbh7uzi.cloudfront.net'
 };
 
 // Helper to get auth headers
