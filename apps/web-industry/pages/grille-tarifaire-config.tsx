@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
-import { API_CONFIG } from '../lib/api';
+import { API_CONFIG, pricingGridsApi } from '../lib/api';
 
 // Types pour la configuration de grille
 interface ZoneDefinition {
@@ -1127,21 +1127,31 @@ export default function GrilleTarifaireConfigPage() {
           continue;
         }
 
-        // Créer l'objet fichier (dans un vrai cas, on uploaderait vers S3)
-        const newFile: AttachedFile = {
-          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name.replace(/\.[^/.]+$/, ''),
-          originalName: file.name,
-          type: getFileType(file.type),
-          mimeType: file.type,
-          size: file.size,
-          category,
-          uploadedAt: new Date().toISOString(),
-          // En production: s3Key et url seraient remplis après upload S3
+        // Upload vers S3 via l'API
+        const response = await pricingGridsApi.uploadFile(file, category);
+
+        if (response.error) {
+          setError(`Erreur upload ${file.name}: ${response.error}`);
+          continue;
+        }
+
+        // Ajouter le fichier uploadé à la liste
+        const uploadedFile: AttachedFile = {
+          id: response.file.id,
+          name: response.file.name,
+          originalName: response.file.originalName,
+          type: response.file.type,
+          mimeType: response.file.mimeType,
+          size: response.file.size,
+          url: response.file.url,
+          s3Key: response.file.s3Key,
+          category: response.file.category,
+          description: response.file.description || '',
+          uploadedAt: response.file.uploadedAt
         };
 
-        setAttachedFiles(prev => [...prev, newFile]);
-        setSuccess(`Fichier "${file.name}" ajouté avec succès`);
+        setAttachedFiles(prev => [...prev, uploadedFile]);
+        setSuccess(`Fichier "${file.name}" uploadé avec succès sur S3`);
       }
     } catch (err: any) {
       setError(`Erreur lors de l'upload: ${err.message}`);
@@ -1177,10 +1187,26 @@ export default function GrilleTarifaireConfigPage() {
     );
   };
 
-  const deleteFile = (fileId: string) => {
+  const deleteFile = async (fileId: string) => {
     if (!confirm('Supprimer ce fichier ?')) return;
-    setAttachedFiles(files => files.filter(f => f.id !== fileId));
-    setSuccess('Fichier supprimé');
+
+    try {
+      // Supprimer de S3 via l'API
+      const response = await pricingGridsApi.deleteFile(fileId);
+
+      if (response.error) {
+        setError(`Erreur suppression: ${response.error}`);
+        return;
+      }
+
+      // Retirer de la liste locale
+      setAttachedFiles(files => files.filter(f => f.id !== fileId));
+      setSuccess('Fichier supprimé de S3');
+    } catch (err: any) {
+      // Si erreur API, supprimer quand même localement (fichier peut ne pas exister sur S3)
+      setAttachedFiles(files => files.filter(f => f.id !== fileId));
+      setSuccess('Fichier supprimé');
+    }
   };
 
   const getFileIcon = (type: AttachedFile['type']): string => {
@@ -1191,7 +1217,7 @@ export default function GrilleTarifaireConfigPage() {
     }
   };
 
-  const getCategoryLabel = (category: AttachedFile['category']): string => {
+  const getFileCategoryLabel = (category: AttachedFile['category']): string => {
     const labels: Record<AttachedFile['category'], string> = {
       template: '📝 Modèle à remplir',
       specifications: '📋 Cahier des charges',
@@ -1204,51 +1230,91 @@ export default function GrilleTarifaireConfigPage() {
   const saveConfiguration = async () => {
     setLoading(true);
     try {
-      // Ici on sauvegarderait vers l'API
-      const config: PricingGridConfig = {
-        id: `config-${Date.now()}`,
+      // Préparer les zones sélectionnées
+      const selectedZonesFrance = selectedZones
+        .filter(code => ZONES_FRANCE.some(z => z.code === code))
+        .map(code => {
+          const zone = ZONES_FRANCE.find(z => z.code === code);
+          return { code, name: zone?.name || code, type: 'department' as const };
+        });
+
+      const selectedZonesEurope = selectedZones
+        .filter(code => ZONES_EUROPE.some(z => z.code === code))
+        .map(code => {
+          const zone = ZONES_EUROPE.find(z => z.code === code);
+          return { code, name: zone?.name || code, country: (zone as any)?.country, type: 'region' as const };
+        });
+
+      // Préparer les frais
+      const standardFees = additionalFees.filter(f => f.isActive).map(f => ({
+        id: f.id,
+        name: f.name,
+        type: f.calculationType === 'fixed' ? 'fixed' as const : 'percentage' as const,
+        value: f.defaultValue || 0,
+        description: f.description,
+        mandatory: f.isRequired,
+        conditions: f.applicableTo.join(', ')
+      }));
+
+      // Préparer les véhicules
+      const selectedVehicles = vehicleTypes.filter(v => v.isActive).map(v => ({
+        id: v.id,
+        name: v.name,
+        category: v.code,
+        description: v.capacity
+      }));
+
+      // Préparer la configuration pour l'API
+      const configData = {
         name: configName,
         description: configDescription,
-        version: '1.0',
-        transportTypes: selectedTransportTypes as any[],
-        zones: selectedZones.map(code => ({
-          id: code,
-          code,
-          name: [...ZONES_FRANCE, ...ZONES_EUROPE].find(z => z.code === code)?.name || code,
-          type: ZONES_EUROPE.some(z => z.code === code) ? 'country' : 'department',
-          isRequired: false
+        zonesConfig: {
+          type: 'department' as const,
+          selectedZonesFrance,
+          selectedZonesEurope
+        },
+        feesConfig: {
+          standardFees,
+          customFees: []
+        },
+        vehiclesConfig: {
+          selectedVehicles,
+          customVehicles: []
+        },
+        attachedFilesData: attachedFiles.map(f => ({
+          id: f.id,
+          name: f.name,
+          originalName: f.originalName,
+          type: f.type,
+          mimeType: f.mimeType,
+          size: f.size,
+          url: f.url,
+          s3Key: f.s3Key,
+          description: f.description,
+          category: f.category,
+          uploadedAt: f.uploadedAt
         })),
-        columns: [],
-        vehicleTypes: vehicleTypes.filter(v => v.isActive),
-        additionalFees: additionalFees.filter(f => f.isActive),
-        attachedFiles: attachedFiles,
-        fuelSurcharge: {
-          type: fuelSurchargeType,
-          indexReference: fuelIndexReference,
-          updateFrequency: 'monthly'
-        },
-        paymentTerms: {
-          defaultDays: defaultPaymentDays,
-          options: [15, 30, 45, 60]
-        },
-        volumeDiscounts: {
-          enabled: enableVolumeDiscounts,
-          thresholds: volumeThresholds
-        },
-        validityPeriod: {
-          defaultMonths: validityMonths,
-          minMonths: 3,
-          maxMonths: 24
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'draft'
+        settings: {
+          currency: 'EUR',
+          taxRate: 20,
+          validityDays: validityMonths * 30,
+          paymentTermsDays: defaultPaymentDays,
+          notes: ''
+        }
       };
 
-      console.log('Saving config:', config);
-      setSuccess('Configuration enregistrée !');
+      // Appel API pour créer la configuration
+      const response = await pricingGridsApi.createConfig(configData);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      console.log('Configuration saved:', response.config);
+      setSuccess('Configuration enregistrée avec succès !');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error saving configuration:', err);
+      setError(err.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setLoading(false);
     }
@@ -1926,21 +1992,42 @@ export default function GrilleTarifaireConfigPage() {
                         </div>
 
                         {/* Actions */}
-                        <button
-                          onClick={() => deleteFile(file.id)}
-                          style={{
-                            background: 'rgba(239,68,68,0.2)',
-                            border: 'none',
-                            color: '#ef4444',
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            flexShrink: 0,
-                          }}
-                        >
-                          🗑️
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          {/* Télécharger */}
+                          {file.url && (
+                            <button
+                              onClick={() => window.open(file.url, '_blank')}
+                              style={{
+                                background: 'rgba(59,130,246,0.2)',
+                                border: 'none',
+                                color: '#3b82f6',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                              }}
+                              title="Télécharger"
+                            >
+                              ⬇️
+                            </button>
+                          )}
+                          {/* Supprimer */}
+                          <button
+                            onClick={() => deleteFile(file.id)}
+                            style={{
+                              background: 'rgba(239,68,68,0.2)',
+                              border: 'none',
+                              color: '#ef4444',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                            }}
+                            title="Supprimer"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

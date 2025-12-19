@@ -58,7 +58,10 @@ export const API_CONFIG = {
   CHATBOT_API: process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'https://de1913kh0ya48.cloudfront.net',
 
   // Dispatch API (Orders API handles dispatch)
-  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net'
+  DISPATCH_API: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net',
+
+  // Pricing Grids API - Grilles tarifaires personnalisées
+  PRICING_GRIDS_API: process.env.NEXT_PUBLIC_PRICING_GRIDS_API_URL || 'https://d1pricing-grids.cloudfront.net'
 };
 
 // Helper to get auth headers
@@ -1254,6 +1257,372 @@ export const preinvoicesApi = {
   updateCountdowns: async () => {
     const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/update-countdowns`, {
       method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// PRICING GRIDS API - Grilles tarifaires personnalisées
+// ============================================
+
+export interface PricingGridZone {
+  code: string;
+  name: string;
+  country?: string;
+  type?: 'department' | 'region' | 'province' | 'land' | 'canton' | 'county';
+}
+
+export interface PricingGridFee {
+  id: string;
+  name: string;
+  type: 'fixed' | 'percentage';
+  value: number;
+  description?: string;
+  mandatory?: boolean;
+  conditions?: string;
+}
+
+export interface PricingGridVehicle {
+  id: string;
+  name: string;
+  category?: string;
+  capacityMin?: number;
+  capacityMax?: number;
+  weightMin?: number;
+  weightMax?: number;
+  description?: string;
+}
+
+export interface PricingGridAttachedFile {
+  id: string;
+  name: string;
+  originalName: string;
+  type: 'excel' | 'pdf' | 'csv' | 'other';
+  mimeType: string;
+  size: number;
+  url?: string;
+  s3Key?: string;
+  description?: string;
+  category: 'template' | 'specifications' | 'conditions' | 'other';
+  uploadedAt: string;
+}
+
+export interface PricingGridConfigData {
+  id?: string;
+  name: string;
+  description?: string;
+  version?: number;
+  status?: 'draft' | 'active' | 'archived';
+  zonesConfig?: {
+    type?: 'department' | 'region' | 'custom';
+    selectedZonesFrance?: PricingGridZone[];
+    selectedZonesEurope?: PricingGridZone[];
+  };
+  feesConfig?: {
+    standardFees?: PricingGridFee[];
+    customFees?: PricingGridFee[];
+  };
+  vehiclesConfig?: {
+    selectedVehicles?: PricingGridVehicle[];
+    customVehicles?: PricingGridVehicle[];
+  };
+  attachedFilesData?: PricingGridAttachedFile[];
+  settings?: {
+    currency?: string;
+    taxRate?: number;
+    validityDays?: number;
+    minimumOrderValue?: number;
+    paymentTermsDays?: number;
+    notes?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PricingRequest {
+  id?: string;
+  configId?: string;
+  carrierId: string;
+  carrierCompanyName?: string;
+  carrierContactEmail?: string;
+  message?: string;
+  zones?: PricingGridZone[];
+  vehicles?: PricingGridVehicle[];
+  fees?: PricingGridFee[];
+  attachedFiles?: PricingGridAttachedFile[];
+  validUntil?: string;
+  responseDeadline?: string;
+  status?: 'pending' | 'viewed' | 'responded' | 'expired' | 'cancelled';
+}
+
+export interface PricingProposal {
+  id?: string;
+  requestId: string;
+  proposedPrices?: {
+    zoneOrigin?: PricingGridZone;
+    zoneDestination?: PricingGridZone;
+    vehicleType?: string;
+    pricePerKm?: number;
+    priceFixed?: number;
+    minPrice?: number;
+    currency?: string;
+    notes?: string;
+  }[];
+  proposedFees?: PricingGridFee[];
+  validityDays?: number;
+  validFrom?: string;
+  validUntil?: string;
+  paymentTerms?: string;
+  conditions?: string;
+  notes?: string;
+  attachedFiles?: PricingGridAttachedFile[];
+  status?: 'draft' | 'submitted' | 'under_review' | 'accepted' | 'rejected' | 'negotiating' | 'expired';
+}
+
+export const pricingGridsApi = {
+  // ===== CONFIGURATIONS =====
+
+  // Créer une nouvelle configuration
+  createConfig: async (data: PricingGridConfigData) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Liste des configurations
+  listConfigs: async (filters?: { status?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Détail d'une configuration
+  getConfig: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Modifier une configuration
+  updateConfig: async (id: string, data: Partial<PricingGridConfigData>) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Supprimer une configuration
+  deleteConfig: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Dupliquer une configuration
+  duplicateConfig: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/configs/${id}/duplicate`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== FICHIERS =====
+
+  // Upload un fichier
+  uploadFile: async (file: File, category: 'template' | 'specifications' | 'conditions' | 'other' = 'other', description?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    if (description) formData.append('description', description);
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+      },
+      body: formData
+    });
+    return res.json();
+  },
+
+  // Upload plusieurs fichiers
+  uploadMultipleFiles: async (files: File[], categories?: Record<string, string>, descriptions?: Record<string, string>) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    if (categories) formData.append('categories', JSON.stringify(categories));
+    if (descriptions) formData.append('descriptions', JSON.stringify(descriptions));
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/upload-multiple`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+      },
+      body: formData
+    });
+    return res.json();
+  },
+
+  // Liste des fichiers
+  listFiles: async (filters?: { category?: string; type?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Détail d'un fichier
+  getFile: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Supprimer un fichier
+  deleteFile: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Télécharger un fichier
+  downloadFile: (id: string) => {
+    window.location.href = `${API_CONFIG.PRICING_GRIDS_API}/files/${id}/download`;
+  },
+
+  // ===== DEMANDES DE TARIFS =====
+
+  // Créer une demande de tarif
+  createRequest: async (data: PricingRequest) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Liste des demandes envoyées
+  listSentRequests: async (filters?: { status?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests/sent?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Détail d'une demande
+  getRequest: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Annuler une demande
+  cancelRequest: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests/${id}/cancel`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // ===== PROPOSITIONS =====
+
+  // Liste des propositions reçues
+  listReceivedProposals: async (filters?: { status?: string; requestId?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.requestId) params.append('requestId', filters.requestId);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/received?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Détail d'une proposition
+  getProposal: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${id}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Accepter une proposition
+  acceptProposal: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${id}/accept`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Refuser une proposition
+  rejectProposal: async (id: string, reason?: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${id}/reject`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return res.json();
+  },
+
+  // Envoyer un message de négociation
+  negotiateProposal: async (id: string, message: string, proposedChanges?: any) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${id}/negotiate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message, proposedChanges })
+    });
+    return res.json();
+  },
+
+  // ===== STATISTIQUES =====
+
+  // Stats des configurations
+  getConfigStats: async () => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/stats/configs`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Stats des demandes
+  getRequestStats: async () => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/stats/requests`, {
       headers: getAuthHeaders()
     });
     return res.json();
