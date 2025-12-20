@@ -55,9 +55,13 @@ const scrapingJobs: Map<string, ScrapingJob> = new Map();
 // Intervals pour le scraping continu
 const continuousIntervals: Map<string, NodeJS.Timeout> = new Map();
 
-// Configuration globale
+// Configuration globale avec identifiants B2PWeb par défaut
 let scrapingConfig: ScrapingConfig = {
   b2pwebEnabled: false,
+  b2pwebCredentials: {
+    username: 'rtardy375',
+    password: 'Sett.38530'
+  },
   intervalMinutes: 30,
   maxOffersPerRun: 500
 };
@@ -294,6 +298,104 @@ export class TransportScrapingService {
     return this.isAuthenticated;
   }
 
+  // Take a screenshot for debugging
+  async takeScreenshot(name?: string): Promise<{ success: boolean; screenshot?: string; url?: string; error?: string }> {
+    if (!this.page) {
+      return { success: false, error: 'Browser not initialized' };
+    }
+
+    try {
+      const currentUrl = this.page.url();
+      console.log(`[B2PWeb] Taking screenshot at: ${currentUrl}`);
+
+      // Take screenshot as base64
+      const screenshot = await this.page.screenshot({
+        encoding: 'base64',
+        fullPage: false // Just viewport
+      });
+
+      return {
+        success: true,
+        screenshot: screenshot as string,
+        url: currentUrl
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Navigate to a specific URL
+  async navigateTo(url: string): Promise<{ success: boolean; currentUrl?: string; error?: string }> {
+    if (!this.page) {
+      return { success: false, error: 'Browser not initialized' };
+    }
+
+    try {
+      console.log(`[B2PWeb] Navigating to: ${url}`);
+      await this.page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      });
+      await delay(2000);
+
+      return {
+        success: true,
+        currentUrl: this.page.url()
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Click on element by text content
+  async clickByText(text: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.page) {
+      return { success: false, error: 'Browser not initialized' };
+    }
+
+    try {
+      console.log(`[B2PWeb] Clicking element with text: ${text}`);
+
+      const clicked = await this.page.evaluate((searchText) => {
+        const elements = Array.from(document.querySelectorAll('*'));
+        for (const el of elements) {
+          if (el.textContent?.trim().toLowerCase().includes(searchText.toLowerCase())) {
+            (el as HTMLElement).click();
+            return true;
+          }
+        }
+        return false;
+      }, text);
+
+      if (!clicked) {
+        return { success: false, error: `Element with text "${text}" not found` };
+      }
+
+      await delay(1500);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get page HTML for debugging
+  async getPageHTML(): Promise<{ success: boolean; html?: string; url?: string; error?: string }> {
+    if (!this.page) {
+      return { success: false, error: 'Browser not initialized' };
+    }
+
+    try {
+      const html = await this.page.content();
+      return {
+        success: true,
+        html: html.substring(0, 50000), // Limit to 50KB
+        url: this.page.url()
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   // ============================================
   // GESTION DES JOBS
   // ============================================
@@ -469,8 +571,7 @@ export class TransportScrapingService {
   // Scrape offers directly from B2PWeb page using Puppeteer
   // B2PWeb flow for each offer:
   // 1. Click on offer row -> right panel opens
-  // 2. Click "Activités" -> extract "Consultants" and "Demandes de contact"
-  // 3. Click "Historique" -> extract "Recherches actives" and "Utilisateurs"
+  // 2. Click "Activités" -> extract "Consultants" only
   // Each transporter is recorded with the route (departure -> delivery)
   private async scrapeOffersWithPuppeteer(): Promise<any[]> {
     if (!this.page) return [];
@@ -568,7 +669,7 @@ export class TransportScrapingService {
           await delay(1500);
 
           // ==========================================
-          // SECTION 1: ACTIVITÉS > CONSULTANTS
+          // SECTION: ACTIVITÉS > CONSULTANTS (only)
           // ==========================================
           console.log(`[B2PWeb] Extracting Activités > Consultants...`);
 
@@ -606,96 +707,6 @@ export class TransportScrapingService {
 
           for (const t of consultants) {
             results.push(this.createTransporterResult(t, routeInfo, 'consultant'));
-          }
-
-          // ==========================================
-          // SECTION 2: ACTIVITÉS > DEMANDES DE CONTACT
-          // ==========================================
-          console.log(`[B2PWeb] Extracting Activités > Demandes de contact...`);
-
-          await this.page.evaluate(() => {
-            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div'));
-            for (const item of menuItems) {
-              const text = item.textContent?.toLowerCase() || '';
-              if (text.includes('demande') && text.includes('contact')) {
-                (item as HTMLElement).click();
-                return true;
-              }
-            }
-            return false;
-          });
-          await delay(1000);
-
-          const contactRequests = await this.extractTransportersFromTable(maxTransportersPerSection);
-          console.log(`[B2PWeb] Found ${contactRequests.length} contact requests`);
-
-          for (const t of contactRequests) {
-            results.push(this.createTransporterResult(t, routeInfo, 'contact_request'));
-          }
-
-          // ==========================================
-          // SECTION 3: HISTORIQUE > RECHERCHES ACTIVES
-          // ==========================================
-          console.log(`[B2PWeb] Extracting Historique > Recherches actives...`);
-
-          // Click on "Historique" tab
-          await this.page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('button, a, [role="tab"], [class*="tab"]'));
-            for (const btn of buttons) {
-              const text = btn.textContent?.toLowerCase() || '';
-              if (text.includes('historique')) {
-                (btn as HTMLElement).click();
-                return true;
-              }
-            }
-            return false;
-          });
-          await delay(1500);
-
-          // Click on "Recherches actives"
-          await this.page.evaluate(() => {
-            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div'));
-            for (const item of menuItems) {
-              const text = item.textContent?.toLowerCase() || '';
-              if (text.includes('recherche') && text.includes('active')) {
-                (item as HTMLElement).click();
-                return true;
-              }
-            }
-            return false;
-          });
-          await delay(1000);
-
-          const activeSearches = await this.extractTransportersFromTable(maxTransportersPerSection);
-          console.log(`[B2PWeb] Found ${activeSearches.length} active searches`);
-
-          for (const t of activeSearches) {
-            results.push(this.createTransporterResult(t, routeInfo, 'active_search'));
-          }
-
-          // ==========================================
-          // SECTION 4: HISTORIQUE > UTILISATEURS
-          // ==========================================
-          console.log(`[B2PWeb] Extracting Historique > Utilisateurs...`);
-
-          await this.page.evaluate(() => {
-            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div'));
-            for (const item of menuItems) {
-              const text = item.textContent?.toLowerCase() || '';
-              if (text.includes('utilisateur') && !text.includes('recherche')) {
-                (item as HTMLElement).click();
-                return true;
-              }
-            }
-            return false;
-          });
-          await delay(1000);
-
-          const users = await this.extractTransportersFromTable(maxTransportersPerSection);
-          console.log(`[B2PWeb] Found ${users.length} users`);
-
-          for (const t of users) {
-            results.push(this.createTransporterResult(t, routeInfo, 'user'));
           }
 
           // ==========================================
@@ -741,71 +752,77 @@ export class TransportScrapingService {
   }
 
   // Helper: Extract transporters from current table view
+  // Table structure: Score | Société | Contact | E-mail | Téléphone | Date de consultation
   private async extractTransportersFromTable(maxRows: number): Promise<any[]> {
     if (!this.page) return [];
 
     return await this.page.evaluate((limit) => {
       const results: any[] = [];
-      const rows = document.querySelectorAll('tr, [role="row"]');
 
-      rows.forEach(row => {
+      // Find all table rows - use Array.from to find the target table
+      const tables = Array.from(document.querySelectorAll('table'));
+      let targetTable: HTMLTableElement | null = null;
+
+      // Find the table containing "Consultants" data (has Score, Société, etc.)
+      for (const table of tables) {
+        const headerText = table.textContent || '';
+        if (headerText.includes('Score') && headerText.includes('Société')) {
+          targetTable = table;
+          break;
+        }
+      }
+
+      // If no table found, try looking for any table rows
+      const rows: NodeListOf<Element> = targetTable !== null
+        ? targetTable.querySelectorAll('tbody tr, tr')
+        : document.querySelectorAll('table tr, tbody tr');
+
+      console.log(`Found ${rows.length} rows to process`);
+
+      rows.forEach((row: Element, index: number) => {
         if (results.length >= limit) return;
 
+        const cells = row.querySelectorAll('td');
         const text = row.textContent || '';
 
-        // Skip header rows
-        if (text.includes('Score') && text.includes('Société') && text.includes('Contact')) {
-          return;
-        }
-        if (text.includes('Date de consultation') && text.includes('E-mail')) {
-          return;
-        }
+        // Skip header rows (th or rows containing header text)
+        if (row.querySelectorAll('th').length > 0) return;
+        if (text.includes('Score') && text.includes('Société') && text.includes('Contact')) return;
 
-        // Extract email
-        const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-        // Extract phone (international format)
-        const phoneMatch = text.match(/\+\d{1,3}\s*\d[\s\d]+/);
+        // Skip if no cells or less than 4 cells (need at least: Score, Société, Contact, Email)
+        if (cells.length < 4) return;
 
-        if (emailMatch || phoneMatch) {
-          const cells = row.querySelectorAll('td, [role="cell"], div[class*="cell"]');
-          const cellTexts = Array.from(cells).map(c => c.textContent?.trim() || '');
+        // Table structure: Score | Société | Contact | E-mail | Téléphone | Date de consultation
+        // Index:              0   |    1    |    2    |    3   |     4     |         5
+        const cellTexts = Array.from(cells).map((c: Element) => c.textContent?.trim() || '');
 
-          let companyName = '';
-          let contactName = '';
+        console.log(`Row ${index}: ${JSON.stringify(cellTexts)}`);
 
-          cellTexts.forEach(cellText => {
-            // Skip email, phone, dates
-            if (cellText.includes('@')) return;
-            if (cellText.match(/^\+?\d[\d\s]+$/)) return;
-            if (cellText.match(/^\d{2}\/\d{2}\/\d{4}/)) return;
+        // Extract based on position
+        const score = cellTexts[0] || '';
+        const companyName = cellTexts[1] || '';
+        const contactName = cellTexts[2] || '';
+        const email = cellTexts[3] || '';
+        const phone = cellTexts[4] || '';
+        const consultationDate = cellTexts[5] || '';
 
-            if (cellText.length > 3 && cellText.length < 60) {
-              // Person name pattern: "Firstname LASTNAME"
-              if (cellText.match(/^[A-ZÉÈÀÙÂ][a-zéèàùâêîôû]+\s+[A-ZÉÈÀÙÂ]+$/)) {
-                contactName = cellText;
-              } else if (!companyName) {
-                companyName = cellText;
-              }
-            }
-          });
+        // Validate: must have at least company name or email
+        if (!companyName && !email) return;
 
-          // Fallback: extract name from full text
-          if (!contactName) {
-            const nameMatch = text.match(/([A-ZÉÈÀÙÂ][a-zéèàùâêîôû]+\s+[A-ZÉÈÀÙÂ]{2,})/);
-            if (nameMatch) contactName = nameMatch[1];
-          }
+        // Skip if it looks like a header row
+        if (companyName === 'Société' || email === 'E-mail') return;
 
-          if (companyName || emailMatch || phoneMatch) {
-            results.push({
-              companyName: companyName || '',
-              contactName: contactName || '',
-              email: emailMatch ? emailMatch[1] : '',
-              phone: phoneMatch ? phoneMatch[0].replace(/\s/g, '') : ''
-            });
-          }
-        }
+        results.push({
+          companyName: companyName,
+          contactName: contactName,
+          email: email,
+          phone: phone,
+          score: score,
+          consultationDate: consultationDate
+        });
       });
 
+      console.log(`Extracted ${results.length} transporters`);
       return results;
     }, maxRows);
   }
@@ -826,9 +843,11 @@ export class TransportScrapingService {
         name: transporter.companyName,
         contactName: transporter.contactName,
         phone: transporter.phone,
-        email: transporter.email
+        email: transporter.email,
+        score: transporter.score || ''
       },
       source: source, // 'consultant', 'contact_request', 'active_search', 'user'
+      consultationDate: transporter.consultationDate || '',
       scrapedAt: new Date().toISOString()
     };
   }

@@ -117,6 +117,29 @@ router.get('/b2pweb/status', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * POST /b2pweb/auth-auto - Authentification automatique avec credentials par défaut
+ */
+router.post('/b2pweb/auth-auto', async (_req: AuthRequest, res: Response) => {
+  try {
+    const config = transportScrapingService.getConfig();
+    if (!config.b2pwebCredentials) {
+      return res.status(400).json({
+        success: false,
+        error: 'Aucun identifiant B2PWeb configuré'
+      });
+    }
+
+    const result = await transportScrapingService.authenticateB2PWeb(
+      config.b2pwebCredentials.username,
+      config.b2pwebCredentials.password
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================
 // JOBS DE SCRAPING
 // ============================================
@@ -201,6 +224,66 @@ router.post('/scrape/continuous/stop', async (_req: AuthRequest, res: Response) 
     transportScrapingService.stopJob(continuousJob.id);
 
     res.json({ success: true, message: 'Scraping continu arrêté' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// SCRAPING ANNUAIRE (DIRECTORY)
+// ============================================
+
+/**
+ * POST /scrape/directory - Lancer le scraping de l'annuaire B2PWeb
+ * Récupère les fiches entreprises complètes : infos, véhicules, axes de recherche, contacts
+ */
+router.post('/scrape/directory', async (req: AuthRequest, res: Response) => {
+  try {
+    const { maxCompanies = 100 } = req.body;
+
+    // Vérifier l'authentification B2PWeb
+    if (!transportScrapingService.isB2PWebAuthenticated()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Non authentifié sur B2PWeb. Veuillez vous connecter d\'abord.'
+      });
+    }
+
+    // Créer un job pour le suivi
+    const job = transportScrapingService.createScrapingJob('b2pweb-directory', 'companies', { maxCompanies });
+    job.status = 'running';
+    job.startedAt = new Date();
+
+    // Lancer le scraping en arrière-plan
+    (async () => {
+      try {
+        const companies = await transportScrapingService.scrapeDirectory(maxCompanies);
+        job.totalFound = companies.length;
+
+        // Sauvegarder chaque entreprise
+        for (const companyData of companies) {
+          try {
+            await transportScrapingService.saveDirectoryCompany(companyData);
+            job.totalImported++;
+          } catch (err: any) {
+            job.errors.push(`Erreur sauvegarde: ${err.message}`);
+          }
+        }
+
+        job.status = 'completed';
+        job.completedAt = new Date();
+      } catch (err: any) {
+        job.status = 'failed';
+        job.errors.push(err.message);
+        job.completedAt = new Date();
+      }
+    })();
+
+    res.json({
+      success: true,
+      data: job,
+      message: `Scraping annuaire démarré (max: ${maxCompanies} entreprises)`
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -626,6 +709,69 @@ router.post('/companies', async (req: AuthRequest, res: Response) => {
     await company.save();
 
     res.status(201).json({ success: true, data: company });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// DEBUG PUPPETEER
+// ============================================
+
+/**
+ * GET /debug/screenshot - Prendre une capture d'écran
+ */
+router.get('/debug/screenshot', async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await transportScrapingService.takeScreenshot();
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /debug/navigate - Naviguer vers une URL
+ */
+router.post('/debug/navigate', async (req: AuthRequest, res: Response) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL required' });
+    }
+    const result = await transportScrapingService.navigateTo(url);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /debug/click - Cliquer sur un élément par texte
+ */
+router.post('/debug/click', async (req: AuthRequest, res: Response) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, error: 'Text required' });
+    }
+    const result = await transportScrapingService.clickByText(text);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /debug/html - Récupérer le HTML de la page
+ */
+router.get('/debug/html', async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await transportScrapingService.getPageHTML();
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
