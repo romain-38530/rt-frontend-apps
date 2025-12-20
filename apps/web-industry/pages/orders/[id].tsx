@@ -1,5 +1,5 @@
 /**
- * Page de détail d'une commande - Portail Industry
+r * Page de détail d'une commande - Portail Industry
  * Design basé sur la référence SYMPHONI.A Transport
  */
 
@@ -217,7 +217,7 @@ export default function OrderDetailPage() {
     if (!orderId || !newComment.trim()) return;
 
     try {
-      const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
+      const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1039,7 +1039,7 @@ export default function OrderDetailPage() {
                         <button
                           onClick={async () => {
                             try {
-                              const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${order.id}/send-supplier-invitation`, {
+                              const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${order.id}/send-supplier-invitation`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ email: orderAny.senderEmail, name: orderAny.senderName }),
