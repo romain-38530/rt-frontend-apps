@@ -673,33 +673,80 @@ export class TransportScrapingService {
           // ==========================================
           console.log(`[B2PWeb] Extracting Activités > Consultants...`);
 
-          // Click on "Activités" button
-          await this.page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('button, a, [role="tab"], [class*="tab"]'));
-            for (const btn of buttons) {
-              const text = btn.textContent?.toLowerCase() || '';
-              if (text.includes('activité') || text.includes('activite')) {
-                (btn as HTMLElement).click();
-                return true;
+          // Click on "Activités" button - it's a tab button in the right panel header
+          const activitesClicked = await this.page.evaluate(() => {
+            // First, try to find exact "Activités" text button
+            const allElements = Array.from(document.querySelectorAll('*'));
+
+            for (const el of allElements) {
+              const text = el.textContent?.trim() || '';
+              // Match exactly "Activités" (case-sensitive) or very close
+              if (text === 'Activités' || text === 'Activites') {
+                // Make sure it's a clickable element (not a container with lots of text)
+                if (el.children.length === 0 || text.length < 15) {
+                  console.log(`[B2PWeb] Found Activités button: ${el.tagName}.${el.className} - "${text}"`);
+                  (el as HTMLElement).click();
+                  return { found: true, tagName: el.tagName, className: el.className };
+                }
               }
             }
-            return false;
-          });
-          await delay(1500);
 
-          // Click on "Consultants" in left menu
-          await this.page.evaluate(() => {
-            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div'));
+            // Fallback: look for button/tab with activité in text
+            const buttons = Array.from(document.querySelectorAll('button, a, [role="tab"], [class*="tab"], span'));
+            for (const btn of buttons) {
+              const text = btn.textContent?.trim().toLowerCase() || '';
+              if (text.includes('activité') && text.length < 20) {
+                console.log(`[B2PWeb] Found Activités (fallback): ${btn.tagName} - "${btn.textContent?.trim()}"`);
+                (btn as HTMLElement).click();
+                return { found: true, tagName: btn.tagName, fallback: true };
+              }
+            }
+
+            console.log('[B2PWeb] Activités button NOT found');
+            return { found: false };
+          });
+          console.log(`[B2PWeb] Activités button result: ${JSON.stringify(activitesClicked)}`);
+          await delay(2000);
+
+          // Debug: log what's visible after clicking Activités
+          const pageTextAfterActivites = await this.page.evaluate(() => {
+            return document.body.innerText.substring(0, 2000);
+          });
+          console.log(`[B2PWeb] Page text after Activités click: ${pageTextAfterActivites.substring(0, 500)}...`);
+
+          // Click on "Consultants" in left menu (should be visible by default or a sub-tab)
+          const consultantsClicked = await this.page.evaluate(() => {
+            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div, span'));
             for (const item of menuItems) {
-              const text = item.textContent?.toLowerCase() || '';
-              if (text.includes('consultant') && !text.includes('demande')) {
+              const text = item.textContent?.trim().toLowerCase() || '';
+              if (text === 'consultants' || (text.includes('consultant') && !text.includes('demande'))) {
+                console.log(`[B2PWeb] Found Consultants menu: ${item.tagName} - "${item.textContent?.trim()}"`);
                 (item as HTMLElement).click();
                 return true;
               }
             }
+            console.log('[B2PWeb] Consultants menu NOT found');
             return false;
           });
-          await delay(1000);
+          console.log(`[B2PWeb] Consultants menu clicked: ${consultantsClicked}`);
+          await delay(1500);
+
+          // Debug: check if table is visible
+          const tableInfo = await this.page.evaluate(() => {
+            const tables = document.querySelectorAll('table');
+            const divRows = document.querySelectorAll('[class*="row"], [role="row"]');
+            const pageText = document.body.innerText;
+            const hasScore = pageText.includes('Score');
+            const hasSociete = pageText.includes('Société');
+            return {
+              tableCount: tables.length,
+              divRowCount: divRows.length,
+              hasScore,
+              hasSociete,
+              sample: pageText.substring(0, 1000)
+            };
+          });
+          console.log(`[B2PWeb] Table info: ${JSON.stringify(tableInfo)}`);
 
           // Extract consultants
           const consultants = await this.extractTransportersFromTable(maxTransportersPerSection);
@@ -752,7 +799,8 @@ export class TransportScrapingService {
   }
 
   // Helper: Extract transporters from current table view
-  // Table structure: Score | Société | Contact | E-mail | Téléphone | Date de consultation
+  // Table structure: Score (icon) | Société | Contact | E-mail | Téléphone | Date de consultation
+  // Note: Score column contains only an icon, no text
   private async extractTransportersFromTable(maxRows: number): Promise<any[]> {
     if (!this.page) return [];
 
@@ -763,12 +811,23 @@ export class TransportScrapingService {
       const tables = Array.from(document.querySelectorAll('table'));
       let targetTable: HTMLTableElement | null = null;
 
-      // Find the table containing "Consultants" data (has Score, Société, etc.)
+      // Find the table containing "Consultants" data (look for Société and Contact columns)
       for (const table of tables) {
         const headerText = table.textContent || '';
-        if (headerText.includes('Score') && headerText.includes('Société')) {
+        // Look for Société OR Contact OR E-mail (Score is just an icon, may not have text)
+        if (headerText.includes('Société') && (headerText.includes('Contact') || headerText.includes('E-mail'))) {
           targetTable = table;
+          console.log(`[B2PWeb] Found target table with headers`);
           break;
+        }
+      }
+
+      // If still no table, try any table with tbody
+      if (!targetTable) {
+        const tablesWithTbody = Array.from(document.querySelectorAll('table tbody'));
+        if (tablesWithTbody.length > 0) {
+          targetTable = tablesWithTbody[0].closest('table');
+          console.log(`[B2PWeb] Using first table with tbody`);
         }
       }
 
@@ -777,7 +836,7 @@ export class TransportScrapingService {
         ? targetTable.querySelectorAll('tbody tr, tr')
         : document.querySelectorAll('table tr, tbody tr');
 
-      console.log(`Found ${rows.length} rows to process`);
+      console.log(`[B2PWeb] Found ${rows.length} rows to process`);
 
       rows.forEach((row: Element, index: number) => {
         if (results.length >= limit) return;
@@ -787,42 +846,72 @@ export class TransportScrapingService {
 
         // Skip header rows (th or rows containing header text)
         if (row.querySelectorAll('th').length > 0) return;
-        if (text.includes('Score') && text.includes('Société') && text.includes('Contact')) return;
+        if (text.includes('Société') && text.includes('Contact') && text.includes('E-mail')) return;
 
-        // Skip if no cells or less than 4 cells (need at least: Score, Société, Contact, Email)
+        // Skip if no cells or less than 4 cells
         if (cells.length < 4) return;
 
-        // Table structure: Score | Société | Contact | E-mail | Téléphone | Date de consultation
-        // Index:              0   |    1    |    2    |    3   |     4     |         5
+        // Table structure: Score (icon) | Société | Contact | E-mail | Téléphone | Date de consultation
+        // Index:              0         |    1    |    2    |    3   |     4     |         5
+        // Note: Score column (index 0) contains only an icon, so we skip it
         const cellTexts = Array.from(cells).map((c: Element) => c.textContent?.trim() || '');
 
-        console.log(`Row ${index}: ${JSON.stringify(cellTexts)}`);
+        console.log(`[B2PWeb] Row ${index} (${cells.length} cells): ${JSON.stringify(cellTexts)}`);
 
-        // Extract based on position
-        const score = cellTexts[0] || '';
-        const companyName = cellTexts[1] || '';
-        const contactName = cellTexts[2] || '';
-        const email = cellTexts[3] || '';
-        const phone = cellTexts[4] || '';
-        const consultationDate = cellTexts[5] || '';
+        // Detect if first column is empty (icon only) and shift accordingly
+        let companyName: string, contactName: string, email: string, phone: string, consultationDate: string;
+
+        // If cellTexts[0] is empty or very short (icon), start from index 1
+        if (!cellTexts[0] || cellTexts[0].length < 2) {
+          // Score is icon, real data starts at index 1
+          companyName = cellTexts[1] || '';
+          contactName = cellTexts[2] || '';
+          email = cellTexts[3] || '';
+          phone = cellTexts[4] || '';
+          consultationDate = cellTexts[5] || '';
+        } else {
+          // First column has text, might be a different structure
+          // Check if first column looks like company name (not a date, not a number)
+          if (cellTexts[0].includes('@') || cellTexts[0].match(/^\+?\d/)) {
+            // Shift - first useful data is actually later
+            companyName = cellTexts[0] || '';
+            contactName = cellTexts[1] || '';
+            email = cellTexts[2] || '';
+            phone = cellTexts[3] || '';
+            consultationDate = cellTexts[4] || '';
+          } else {
+            // Standard structure with Score as icon
+            companyName = cellTexts[1] || '';
+            contactName = cellTexts[2] || '';
+            email = cellTexts[3] || '';
+            phone = cellTexts[4] || '';
+            consultationDate = cellTexts[5] || '';
+          }
+        }
 
         // Validate: must have at least company name or email
-        if (!companyName && !email) return;
+        if (!companyName && !email) {
+          console.log(`[B2PWeb] Row ${index} skipped: no company or email`);
+          return;
+        }
 
         // Skip if it looks like a header row
-        if (companyName === 'Société' || email === 'E-mail') return;
+        if (companyName === 'Société' || email === 'E-mail' || companyName === 'Contact') {
+          console.log(`[B2PWeb] Row ${index} skipped: header row`);
+          return;
+        }
 
+        console.log(`[B2PWeb] Row ${index} extracted: ${companyName} | ${contactName} | ${email}`);
         results.push({
           companyName: companyName,
           contactName: contactName,
           email: email,
           phone: phone,
-          score: score,
           consultationDate: consultationDate
         });
       });
 
-      console.log(`Extracted ${results.length} transporters`);
+      console.log(`[B2PWeb] Extracted ${results.length} transporters total`);
       return results;
     }, maxRows);
   }
