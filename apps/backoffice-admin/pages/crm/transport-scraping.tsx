@@ -151,6 +151,25 @@ export default function TransportScrapingPage() {
   // Loading
   const [loading, setLoading] = useState(false);
 
+  // Mounted state to prevent hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Helper to format dates only on client side (prevents hydration mismatch)
+  const formatDate = (dateStr: string | undefined, includeTime = false) => {
+    if (!dateStr || !mounted) return '-';
+    try {
+      const date = new Date(dateStr);
+      return includeTime
+        ? date.toLocaleString('fr-FR')
+        : date.toLocaleDateString('fr-FR');
+    } catch {
+      return '-';
+    }
+  };
+
   // Fetch data - sequential calls to avoid overwhelming the browser
   const fetchStats = useCallback(async () => {
     try {
@@ -654,7 +673,7 @@ export default function TransportScrapingPage() {
                         <div>{offer.route.destination?.city || offer.route.destination?.department || '-'}</div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {offer.loadingDate ? new Date(offer.loadingDate).toLocaleDateString('fr-FR') : '-'}
+                        {formatDate(offer.loadingDate)}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {offer.vehicle?.type || '-'}
@@ -665,7 +684,7 @@ export default function TransportScrapingPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(offer.source.lastSeenAt).toLocaleString('fr-FR')}
+                        {formatDate(offer.source.lastSeenAt, true)}
                       </td>
                     </tr>
                   ))}
@@ -731,10 +750,10 @@ export default function TransportScrapingPage() {
                       <td className="px-4 py-3 text-sm">{job.totalFound}</td>
                       <td className="px-4 py-3 text-sm">{job.totalImported}</td>
                       <td className="px-4 py-3 text-sm">
-                        {job.lastRunAt ? new Date(job.lastRunAt).toLocaleString('fr-FR') : '-'}
+                        {formatDate(job.lastRunAt, true)}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString('fr-FR') : '-'}
+                        {formatDate(job.nextRunAt, true)}
                       </td>
                     </tr>
                   ))}
