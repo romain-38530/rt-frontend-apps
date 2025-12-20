@@ -270,7 +270,7 @@ export const driverApi = {
   },
 
   callDriver: async (checkinId: string, dockId: string) => {
-    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/driver/call/${checkinId}`, {
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/driver/${checkinId}/call`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ dockId })
