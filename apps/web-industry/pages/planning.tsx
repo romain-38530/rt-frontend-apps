@@ -206,8 +206,8 @@ export default function PlanningPage() {
     try {
       const response = await planningApi.generateSlots({
         siteId,
-        startDate: date,
-        endDate: date
+        date: date,
+        duration: selectedSite?.timeSlotDuration || 30
       });
       if (response?.data) {
         setTimeSlots(response.data);
@@ -352,7 +352,7 @@ export default function PlanningPage() {
 
   const handleUnblockSlot = async (slotId: string) => {
     try {
-      await planningApi.unblockSlot({ slotId });
+      await planningApi.unblockSlot(slotId);
       toast.success('Creneau debloque');
       if (selectedSite) {
         loadSlots(selectedSite.id, selectedDate);
@@ -670,7 +670,8 @@ export default function PlanningPage() {
           right: 0,
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.6)',
-          zIndex: 0
+          zIndex: 0,
+          pointerEvents: 'none'
         }} />
 
         {/* Header */}
@@ -817,7 +818,12 @@ export default function PlanningPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>Selection du site</h3>
               <button
-                onClick={() => setShowSiteModal(true)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowSiteModal(true);
+                }}
                 style={{
                   padding: '8px 16px',
                   background: 'rgba(0,208,132,0.3)',
@@ -826,7 +832,10 @@ export default function PlanningPage() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: '600',
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  position: 'relative',
+                  zIndex: 10,
+                  pointerEvents: 'auto'
                 }}
               >
                 + Ajouter site
@@ -906,7 +915,12 @@ export default function PlanningPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>Quais</h3>
                   <button
-                    onClick={() => setShowDockModal(true)}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowDockModal(true);
+                    }}
                     style={{
                       padding: '6px 12px',
                       background: 'rgba(0,208,132,0.3)',
@@ -915,7 +929,10 @@ export default function PlanningPage() {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontWeight: '600',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      position: 'relative',
+                      zIndex: 10,
+                      pointerEvents: 'auto'
                     }}
                   >
                     + Ajouter
@@ -1129,7 +1146,12 @@ export default function PlanningPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>Gestion des sites</h3>
                 <button
-                  onClick={() => setShowSiteModal(true)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowSiteModal(true);
+                  }}
                   style={{
                     padding: '10px 20px',
                     background: 'linear-gradient(135deg, #00D084 0%, #00B073 100%)',
@@ -1138,7 +1160,10 @@ export default function PlanningPage() {
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontWeight: '700',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    position: 'relative',
+                    zIndex: 10,
+                    pointerEvents: 'auto'
                   }}
                 >
                   + Nouveau site
@@ -1185,38 +1210,48 @@ export default function PlanningPage() {
                         <span style={{ opacity: 0.7 }}>Fermeture:</span> {site.operatingHours.end}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px', position: 'relative', zIndex: 10 }}>
                       <button
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setSelectedSite(site);
                           setActiveTab('overview');
                         }}
                         style={{
                           flex: 1,
-                          padding: '8px',
+                          padding: '10px',
                           background: 'rgba(102,126,234,0.3)',
                           color: '#667eea',
                           border: '1px solid #667eea',
                           borderRadius: '6px',
                           cursor: 'pointer',
                           fontWeight: '600',
-                          fontSize: '12px'
+                          fontSize: '12px',
+                          pointerEvents: 'auto'
                         }}
                       >
-                        Voir
+                        Modifier
                       </button>
                       <button
-                        onClick={() => handleDeleteSite(site.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteSite(site.id);
+                        }}
                         style={{
                           flex: 1,
-                          padding: '8px',
+                          padding: '10px',
                           background: 'rgba(255,107,107,0.3)',
                           color: '#FF6B6B',
                           border: '1px solid #FF6B6B',
                           borderRadius: '6px',
                           cursor: 'pointer',
                           fontWeight: '600',
-                          fontSize: '12px'
+                          fontSize: '12px',
+                          pointerEvents: 'auto'
                         }}
                       >
                         Supprimer
@@ -1239,7 +1274,12 @@ export default function PlanningPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>Quais de {selectedSite.name}</h3>
                 <button
-                  onClick={() => setShowDockModal(true)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowDockModal(true);
+                  }}
                   style={{
                     padding: '10px 20px',
                     background: 'linear-gradient(135deg, #00D084 0%, #00B073 100%)',
@@ -1248,7 +1288,10 @@ export default function PlanningPage() {
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontWeight: '700',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    position: 'relative',
+                    zIndex: 10,
+                    pointerEvents: 'auto'
                   }}
                 >
                   + Nouveau quai
@@ -1284,33 +1327,45 @@ export default function PlanningPage() {
                         </span>
                       </td>
                       <td style={{ padding: '16px 12px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', position: 'relative', zIndex: 10 }}>
                           <button
-                            onClick={() => handleSetMaintenance(dock.id, dock.status !== 'maintenance')}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSetMaintenance(dock.id, dock.status !== 'maintenance');
+                            }}
                             style={{
-                              padding: '6px 12px',
+                              padding: '8px 14px',
                               background: dock.status === 'maintenance' ? 'rgba(0,208,132,0.3)' : 'rgba(255,184,0,0.3)',
                               color: dock.status === 'maintenance' ? '#00D084' : '#FFB800',
                               border: `1px solid ${dock.status === 'maintenance' ? '#00D084' : '#FFB800'}`,
                               borderRadius: '6px',
                               cursor: 'pointer',
                               fontWeight: '600',
-                              fontSize: '11px'
+                              fontSize: '12px',
+                              pointerEvents: 'auto'
                             }}
                           >
                             {dock.status === 'maintenance' ? 'Activer' : 'Maintenance'}
                           </button>
                           <button
-                            onClick={() => handleDeleteDock(dock.id)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteDock(dock.id);
+                            }}
                             style={{
-                              padding: '6px 12px',
+                              padding: '8px 14px',
                               background: 'rgba(255,107,107,0.3)',
                               color: '#FF6B6B',
                               border: '1px solid #FF6B6B',
                               borderRadius: '6px',
                               cursor: 'pointer',
                               fontWeight: '600',
-                              fontSize: '11px'
+                              fontSize: '12px',
+                              pointerEvents: 'auto'
                             }}
                           >
                             Supprimer
