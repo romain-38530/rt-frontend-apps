@@ -15,6 +15,9 @@ import CrmEmailService from '../services/email-service';
 import ScrapingServiceInstance, { ScrapingService } from '../services/scraping-service';
 import SalonDiscoveryService from '../services/salon-discovery-service';
 import LeadEnrichmentService from '../services/lead-enrichment-service';
+import OdooService from '../services/odoo-service';
+import CommercialMeeting from '../models/CommercialMeeting';
+import CommercialAvailability from '../models/CommercialAvailability';
 import { authenticateAdmin, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -22,7 +25,7 @@ const router = Router();
 // Apply auth middleware to all routes except webhook
 router.use((req: Request, res: Response, next: NextFunction) => {
   // Allow webhook without auth
-  if (req.path === '/emails/webhook' || req.path === '/migrate-to-pool' || req.path === '/enrich-existing-leads' || req.path === '/leads/sial' || req.path === '/enrich-pool' || req.path === '/cleanup-products') {
+  if (req.path === '/emails/webhook' || req.path === '/migrate-to-pool' || req.path === '/enrich-existing-leads' || req.path === '/leads/sial' || req.path === '/enrich-pool' || req.path === '/cleanup-products' || req.path.startsWith('/odoo/')) {
     return next();
   }
   return authenticateAdmin(req as AuthRequest, res, next);
@@ -2729,6 +2732,687 @@ router.post('/commissions/generate-monthly', async (req: Request, res: Response)
       periode,
       commissionsCreated: created.length,
       commissions: created
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== MANAGER - SUIVI ACTIVITE COMMERCIAUX ====================
+
+/**
+ * GET /manager/commercials/activity - Vue globale de l'activite des commerciaux
+ */
+router.get('/manager/commercials/activity', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Recuperer tous les commerciaux actifs
+    const commercials = await CrmCommercial.find({ status: 'active' });
+
+    const activityData = await Promise.all(commercials.map(async (commercial) => {
+      const [
+        leadsAssignes,
+        leadsConverts,
+        leadsEnCours,
+        leadsPerdus,
+        rdvProgrammes,
+        rdvTermines,
+        rdvAnnules,
+        interactions
+      ] = await Promise.all([
+        LeadCompany.countDocuments({
+          commercialAssigneId: commercial._id,
+          dateAssignation: { $gte: start, $lte: end }
+        }),
+        LeadCompany.countDocuments({
+          commercialAssigneId: commercial._id,
+          statutProspection: 'CONVERTED',
+          updatedAt: { $gte: start, $lte: end }
+        }),
+        LeadCompany.countDocuments({
+          commercialAssigneId: commercial._id,
+          statutProspection: { $in: ['NEW', 'CONTACTED', 'IN_PROGRESS'] }
+        }),
+        LeadCompany.countDocuments({
+          commercialAssigneId: commercial._id,
+          statutProspection: 'LOST',
+          updatedAt: { $gte: start, $lte: end }
+        }),
+        CommercialMeeting.countDocuments({
+          commercialId: commercial._id,
+          scheduledAt: { $gte: start, $lte: end }
+        }),
+        CommercialMeeting.countDocuments({
+          commercialId: commercial._id,
+          status: 'completed',
+          scheduledAt: { $gte: start, $lte: end }
+        }),
+        CommercialMeeting.countDocuments({
+          commercialId: commercial._id,
+          status: 'cancelled',
+          scheduledAt: { $gte: start, $lte: end }
+        }),
+        LeadInteraction.countDocuments({
+          createdBy: commercial._id.toString(),
+          createdAt: { $gte: start, $lte: end }
+        })
+      ]);
+
+      const tauxConversion = leadsAssignes > 0 ? Math.round((leadsConverts / leadsAssignes) * 100) : 0;
+      const progressionObjectif = commercial.objectifMensuel
+        ? Math.round((leadsConverts / commercial.objectifMensuel) * 100)
+        : 0;
+
+      return {
+        commercial: {
+          id: commercial._id,
+          firstName: commercial.firstName,
+          lastName: commercial.lastName,
+          email: commercial.email,
+          type: commercial.type,
+          region: commercial.region,
+          lastLogin: commercial.lastLogin,
+          objectifMensuel: commercial.objectifMensuel
+        },
+        stats: {
+          leadsAssignes,
+          leadsConverts,
+          leadsEnCours,
+          leadsPerdus,
+          tauxConversion,
+          progressionObjectif,
+          rdvProgrammes,
+          rdvTermines,
+          rdvAnnules,
+          interactions
+        }
+      };
+    }));
+
+    // Trier par performance (taux de conversion)
+    activityData.sort((a, b) => b.stats.tauxConversion - a.stats.tauxConversion);
+
+    // Statistiques globales
+    const globalStats = {
+      totalCommerciaux: commercials.length,
+      totalLeadsAssignes: activityData.reduce((sum, c) => sum + c.stats.leadsAssignes, 0),
+      totalLeadsConverts: activityData.reduce((sum, c) => sum + c.stats.leadsConverts, 0),
+      totalRdvProgrammes: activityData.reduce((sum, c) => sum + c.stats.rdvProgrammes, 0),
+      tauxConversionMoyen: activityData.length > 0
+        ? Math.round(activityData.reduce((sum, c) => sum + c.stats.tauxConversion, 0) / activityData.length)
+        : 0
+    };
+
+    res.json({
+      period: { start, end },
+      globalStats,
+      commercials: activityData
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /manager/commercials/:id/detail - Detail activite d'un commercial
+ */
+router.get('/manager/commercials/:id/detail', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+    const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    const commercial = await CrmCommercial.findById(id);
+    if (!commercial) {
+      return res.status(404).json({ error: 'Commercial non trouve' });
+    }
+
+    // Leads assignes dans la periode
+    const leads = await LeadCompany.find({
+      commercialAssigneId: id,
+      dateAssignation: { $gte: start, $lte: end }
+    })
+      .select('raisonSociale statutProspection dateAssignation scoreLead adresse.ville')
+      .sort({ dateAssignation: -1 });
+
+    // Rendez-vous
+    const meetings = await CommercialMeeting.find({
+      commercialId: id,
+      scheduledAt: { $gte: start, $lte: end }
+    })
+      .select('title prospectInfo scheduledAt status outcome')
+      .sort({ scheduledAt: -1 });
+
+    // Interactions recentes
+    const interactions = await LeadInteraction.find({
+      createdBy: id,
+      createdAt: { $gte: start, $lte: end }
+    })
+      .populate('entrepriseId', 'raisonSociale')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    // Commissions
+    const commissions = await CrmCommission.find({
+      commercialId: id,
+      createdAt: { $gte: start, $lte: end }
+    }).sort({ createdAt: -1 });
+
+    // Stats par jour pour graphique
+    const dailyStats: { date: string; leads: number; rdv: number; conversions: number }[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      const dayStart = new Date(current);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(current);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const [leadsDay, rdvDay, conversionsDay] = await Promise.all([
+        LeadCompany.countDocuments({
+          commercialAssigneId: id,
+          dateAssignation: { $gte: dayStart, $lte: dayEnd }
+        }),
+        CommercialMeeting.countDocuments({
+          commercialId: id,
+          scheduledAt: { $gte: dayStart, $lte: dayEnd }
+        }),
+        LeadCompany.countDocuments({
+          commercialAssigneId: id,
+          statutProspection: 'CONVERTED',
+          updatedAt: { $gte: dayStart, $lte: dayEnd }
+        })
+      ]);
+
+      dailyStats.push({
+        date: current.toISOString().split('T')[0],
+        leads: leadsDay,
+        rdv: rdvDay,
+        conversions: conversionsDay
+      });
+
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Disponibilites configurees
+    const availability = await CommercialAvailability.findOne({ commercialId: id });
+
+    res.json({
+      commercial: {
+        id: commercial._id,
+        firstName: commercial.firstName,
+        lastName: commercial.lastName,
+        email: commercial.email,
+        telephone: commercial.telephone,
+        type: commercial.type,
+        status: commercial.status,
+        region: commercial.region,
+        objectifMensuel: commercial.objectifMensuel,
+        lastLogin: commercial.lastLogin,
+        commissionConfig: commercial.commissionConfig
+      },
+      period: { start, end },
+      leads,
+      meetings,
+      interactions,
+      commissions,
+      dailyStats,
+      availability: availability ? {
+        isActive: availability.isActive,
+        meetingDuration: availability.meetingDuration,
+        weeklySlots: availability.weeklySchedule.filter(d => d.isActive).length
+      } : null
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /manager/meetings - Tous les RDV de tous les commerciaux
+ */
+router.get('/manager/meetings', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, commercialId, status, page = 1, limit = 50 } = req.query;
+    const filter: any = {};
+
+    if (startDate && endDate) {
+      filter.scheduledAt = {
+        $gte: new Date(startDate as string),
+        $lte: new Date(endDate as string)
+      };
+    }
+    if (commercialId) filter.commercialId = commercialId;
+    if (status) filter.status = status;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [meetings, total] = await Promise.all([
+      CommercialMeeting.find(filter)
+        .populate('commercialId', 'firstName lastName email')
+        .populate('leadCompanyId', 'raisonSociale')
+        .sort({ scheduledAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      CommercialMeeting.countDocuments(filter)
+    ]);
+
+    // Stats par statut
+    const statsByStatus = await CommercialMeeting.aggregate([
+      { $match: filter },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      meetings,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+      statsByStatus
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /manager/dashboard - Tableau de bord manager complet
+ */
+router.get('/manager/dashboard', async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+
+    const [
+      totalCommerciaux,
+      commerciauxActifs,
+      leadsPoolDisponibles,
+      leadsAssignesCeMois,
+      leadsConvertsCeMois,
+      rdvCetteSemaine,
+      rdvAujourdhui,
+      topPerformers,
+      rdvAVenir,
+      dernieresConversions
+    ] = await Promise.all([
+      CrmCommercial.countDocuments(),
+      CrmCommercial.countDocuments({ status: 'active' }),
+      LeadCompany.countDocuments({ inPool: true, commercialAssigneId: { $exists: false } }),
+      LeadCompany.countDocuments({ dateAssignation: { $gte: startOfMonth } }),
+      LeadCompany.countDocuments({ statutProspection: 'CONVERTED', updatedAt: { $gte: startOfMonth } }),
+      CommercialMeeting.countDocuments({
+        scheduledAt: { $gte: startOfWeek },
+        status: { $ne: 'cancelled' }
+      }),
+      CommercialMeeting.countDocuments({
+        scheduledAt: {
+          $gte: new Date(now.setHours(0, 0, 0, 0)),
+          $lte: new Date(now.setHours(23, 59, 59, 999))
+        },
+        status: { $ne: 'cancelled' }
+      }),
+      // Top 5 commerciaux par conversions ce mois
+      LeadCompany.aggregate([
+        { $match: { statutProspection: 'CONVERTED', updatedAt: { $gte: startOfMonth } } },
+        { $group: { _id: '$commercialAssigneId', conversions: { $sum: 1 } } },
+        { $sort: { conversions: -1 } },
+        { $limit: 5 },
+        {
+          $lookup: {
+            from: 'crmcommercials',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'commercial'
+          }
+        },
+        { $unwind: '$commercial' },
+        {
+          $project: {
+            conversions: 1,
+            'commercial.firstName': 1,
+            'commercial.lastName': 1
+          }
+        }
+      ]),
+      // Prochains RDV (5)
+      CommercialMeeting.find({
+        scheduledAt: { $gte: new Date() },
+        status: 'scheduled'
+      })
+        .populate('commercialId', 'firstName lastName')
+        .sort({ scheduledAt: 1 })
+        .limit(5),
+      // Dernieres conversions (5)
+      LeadCompany.find({ statutProspection: 'CONVERTED' })
+        .select('raisonSociale updatedAt commercialAssigneId')
+        .populate('commercialAssigneId', 'firstName lastName')
+        .sort({ updatedAt: -1 })
+        .limit(5)
+    ]);
+
+    // Taux de conversion global
+    const totalLeadsAssignes = await LeadCompany.countDocuments({ commercialAssigneId: { $exists: true } });
+    const totalLeadsConverts = await LeadCompany.countDocuments({ statutProspection: 'CONVERTED' });
+    const tauxConversionGlobal = totalLeadsAssignes > 0 ? Math.round((totalLeadsConverts / totalLeadsAssignes) * 100) : 0;
+
+    res.json({
+      overview: {
+        totalCommerciaux,
+        commerciauxActifs,
+        leadsPoolDisponibles,
+        tauxConversionGlobal
+      },
+      monthStats: {
+        leadsAssignes: leadsAssignesCeMois,
+        leadsConverts: leadsConvertsCeMois,
+        objectifEquipe: commerciauxActifs * 10, // Estimation
+        progression: Math.round((leadsConvertsCeMois / (commerciauxActifs * 10)) * 100)
+      },
+      meetings: {
+        cetteSemaine: rdvCetteSemaine,
+        aujourdhui: rdvAujourdhui,
+        aVenir: rdvAVenir
+      },
+      topPerformers,
+      dernieresConversions
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== ODOO INTEGRATION ====================
+
+/**
+ * GET /odoo/status - Verifier la configuration et connexion Odoo
+ */
+router.get('/odoo/status', async (_req: Request, res: Response) => {
+  try {
+    const config = OdooService.getConfig();
+
+    if (!OdooService.isConfigured()) {
+      return res.json({
+        configured: false,
+        message: 'Odoo non configure - definir ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD',
+        config
+      });
+    }
+
+    // Tester la connexion
+    try {
+      await OdooService.authenticate();
+      return res.json({
+        configured: true,
+        connected: true,
+        message: 'Connexion Odoo reussie',
+        config
+      });
+    } catch (authError: any) {
+      return res.json({
+        configured: true,
+        connected: false,
+        message: `Erreur connexion: ${authError.message}`,
+        config
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /odoo/sync - Synchroniser les clients Odoo vers la bourse de leads
+ */
+router.post('/odoo/sync', async (req: Request, res: Response) => {
+  try {
+    const { limit = 500, offset = 0, forceUpdate = false } = req.body;
+
+    if (!OdooService.isConfigured()) {
+      return res.status(400).json({
+        error: 'Odoo non configure - definir ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD'
+      });
+    }
+
+    console.log(`[Odoo Sync] Demarrage sync - limit: ${limit}, offset: ${offset}, forceUpdate: ${forceUpdate}`);
+
+    // Recuperer les clients depuis Odoo (champs standards compatibles)
+    const odooPartners = await OdooService.searchRead({
+      model: 'res.partner',
+      domain: [
+        ['is_company', '=', true],
+        ['active', '=', true]
+      ],
+      fields: [
+        'id', 'name', 'email', 'phone', 'street', 'city', 'zip',
+        'country_id', 'vat', 'website', 'ref', 'comment'
+      ],
+      limit,
+      offset,
+      order: 'create_date desc'
+    });
+
+    console.log(`[Odoo Sync] ${odooPartners.length} partenaires recuperes depuis Odoo`);
+
+    const results = {
+      total: odooPartners.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as string[]
+    };
+
+    for (const partner of odooPartners) {
+      try {
+        // Verifier si le lead existe deja (par email ou nom)
+        const existingLead = await LeadCompany.findOne({
+          $or: [
+            ...(partner.email ? [{ emailGenerique: partner.email }] : []),
+            { raisonSociale: partner.name }
+          ]
+        });
+
+        // Extraire le pays
+        let paysName = 'France';
+        if (partner.country_id && Array.isArray(partner.country_id) && partner.country_id.length > 1) {
+          paysName = partner.country_id[1]; // [id, name]
+        }
+
+        const leadData = {
+          raisonSociale: partner.name,
+          emailGenerique: partner.email || undefined,
+          telephone: partner.phone || undefined,
+          siteWeb: partner.website || undefined,
+          tvaIntracommunautaire: partner.vat || undefined,
+          adresse: {
+            ligne1: partner.street || undefined,
+            codePostal: partner.zip || undefined,
+            ville: partner.city || undefined,
+            pays: paysName
+          },
+          descriptionActivite: partner.comment || undefined,
+          // Metadata Odoo
+          lemlistData: {
+            odooId: partner.id,
+            odooRef: partner.ref,
+            syncDate: new Date().toISOString(),
+            source: 'odoo'
+          },
+          // Ajouter au pool
+          inPool: true,
+          dateAddedToPool: new Date(),
+          prioritePool: 3,
+          statutProspection: 'NEW' as const,
+          scoreLead: 50 // Score par defaut
+        };
+
+        if (existingLead) {
+          if (forceUpdate) {
+            await LeadCompany.updateOne(
+              { _id: existingLead._id },
+              { $set: { ...leadData, inPool: existingLead.inPool } }
+            );
+            results.updated++;
+          } else {
+            results.skipped++;
+          }
+        } else {
+          await LeadCompany.create(leadData);
+          results.created++;
+        }
+      } catch (partnerError: any) {
+        results.errors.push(`${partner.name}: ${partnerError.message}`);
+      }
+    }
+
+    console.log(`[Odoo Sync] Termine - created: ${results.created}, updated: ${results.updated}, skipped: ${results.skipped}`);
+
+    res.json({
+      success: true,
+      message: `Synchronisation terminee: ${results.created} crees, ${results.updated} mis a jour, ${results.skipped} ignores`,
+      results
+    });
+  } catch (error: any) {
+    console.error('[Odoo Sync] Erreur:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /odoo/sync-leads - Synchroniser les leads CRM Odoo
+ */
+router.post('/odoo/sync-leads', async (req: Request, res: Response) => {
+  try {
+    const { limit = 500, offset = 0 } = req.body;
+
+    if (!OdooService.isConfigured()) {
+      return res.status(400).json({
+        error: 'Odoo non configure'
+      });
+    }
+
+    console.log(`[Odoo Sync Leads] Demarrage sync CRM leads`);
+
+    // Recuperer les leads CRM depuis Odoo (champs standards)
+    const odooLeads = await OdooService.searchRead({
+      model: 'crm.lead',
+      domain: [['type', '=', 'opportunity']],
+      fields: [
+        'id', 'name', 'partner_name', 'email_from', 'phone',
+        'street', 'city', 'zip', 'country_id', 'website', 'description',
+        'contact_name'
+      ],
+      limit,
+      offset,
+      order: 'create_date desc'
+    });
+
+    console.log(`[Odoo Sync Leads] ${odooLeads.length} leads CRM recuperes`);
+
+    const results = {
+      total: odooLeads.length,
+      created: 0,
+      skipped: 0,
+      errors: [] as string[]
+    };
+
+    for (const lead of odooLeads) {
+      try {
+        const companyName = lead.partner_name || lead.name;
+
+        // Verifier si existe deja
+        const existing = await LeadCompany.findOne({
+          $or: [
+            ...(lead.email_from ? [{ emailGenerique: lead.email_from }] : []),
+            { raisonSociale: companyName }
+          ]
+        });
+
+        if (existing) {
+          results.skipped++;
+          continue;
+        }
+
+        let paysName = 'France';
+        if (lead.country_id && Array.isArray(lead.country_id) && lead.country_id.length > 1) {
+          paysName = lead.country_id[1];
+        }
+
+        await LeadCompany.create({
+          raisonSociale: companyName,
+          emailGenerique: lead.email_from || undefined,
+          telephone: lead.phone || undefined,
+          siteWeb: lead.website || undefined,
+          adresse: {
+            ligne1: lead.street || undefined,
+            codePostal: lead.zip || undefined,
+            ville: lead.city || undefined,
+            pays: paysName
+          },
+          descriptionActivite: lead.description || undefined,
+          lemlistData: {
+            odooLeadId: lead.id,
+            odooLeadName: lead.name,
+            contactName: lead.contact_name,
+            syncDate: new Date().toISOString(),
+            source: 'odoo-crm'
+          },
+          inPool: true,
+          dateAddedToPool: new Date(),
+          prioritePool: 4, // Priorite plus haute pour les leads CRM
+          statutProspection: 'NEW',
+          scoreLead: 60
+        });
+
+        results.created++;
+      } catch (leadError: any) {
+        results.errors.push(`${lead.name}: ${leadError.message}`);
+      }
+    }
+
+    console.log(`[Odoo Sync Leads] Termine - created: ${results.created}, skipped: ${results.skipped}`);
+
+    res.json({
+      success: true,
+      message: `Leads CRM synchronises: ${results.created} crees, ${results.skipped} ignores`,
+      results
+    });
+  } catch (error: any) {
+    console.error('[Odoo Sync Leads] Erreur:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /odoo/stats - Statistiques Odoo
+ */
+router.get('/odoo/stats', async (_req: Request, res: Response) => {
+  try {
+    if (!OdooService.isConfigured()) {
+      return res.status(400).json({ error: 'Odoo non configure' });
+    }
+
+    const [customers, leads, products, orders] = await Promise.all([
+      OdooService.count('res.partner', [['is_company', '=', true], ['customer_rank', '>', 0]]),
+      OdooService.count('crm.lead', [['type', '=', 'opportunity']]),
+      OdooService.count('product.product', [['active', '=', true]]),
+      OdooService.count('sale.order', [])
+    ]);
+
+    res.json({
+      odoo: {
+        customers,
+        leads,
+        products,
+        orders
+      },
+      pool: {
+        total: await LeadCompany.countDocuments({ inPool: true }),
+        fromOdoo: await LeadCompany.countDocuments({ 'lemlistData.source': { $in: ['odoo', 'odoo-crm'] } })
+      }
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -176,6 +176,59 @@ export const planningApi = {
       body: JSON.stringify({ slotId })
     });
     return res.json();
+  },
+
+  // =========== INTERCONNEXIONS ===========
+
+  // Interconnexion avec le module Commandes (Orders)
+  getOrdersForSite: async (siteId: string, date?: string) => {
+    const params = date ? `?date=${date}` : '';
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/interconnect/orders/${siteId}${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Interconnexion avec le module Transporteurs (Carriers)
+  getCarriersForSite: async (siteId: string) => {
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/interconnect/carriers/${siteId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Interconnexion avec le module CRM
+  getClientsForSite: async (siteId: string) => {
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/interconnect/clients/${siteId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Interconnexion avec AFFRET.IA (recommandations créneaux)
+  getAIRecommendations: async (siteId: string, date: string) => {
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/interconnect/ai-recommendations?siteId=${siteId}&date=${date}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Statistiques consolidées du site
+  getSiteStats: async (siteId: string, period?: 'day' | 'week' | 'month') => {
+    const params = period ? `?period=${period}` : '';
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/sites/${siteId}/stats${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Notifications temps réel
+  subscribeToUpdates: async (siteId: string) => {
+    const res = await fetch(`${API_CONFIG.PLANNING_API}/api/v1/planning/sites/${siteId}/subscribe`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
   }
 };
 

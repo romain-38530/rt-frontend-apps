@@ -20,6 +20,8 @@ import dashboardRoutes from './routes/dashboard';
 import crmRoutes from './routes/crm';
 import authRoutes from './routes/auth';
 import commercialPortalRoutes from './routes/commercial-portal';
+import managerRoutes, { publicInstallationRoutes } from './routes/manager';
+import transportScrapingRoutes from './routes/transport-scraping';
 
 // Middleware
 import { authenticateAdmin } from './middleware/auth';
@@ -35,9 +37,10 @@ const app = express();
 const PORT = process.env.PORT || 3020;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-admin';
 
-// Middleware
+// Middleware - CORS configuration
+const corsOrigin = process.env.CORS_ORIGIN;
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  origin: corsOrigin === '*' || !corsOrigin ? true : corsOrigin.split(','),
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -198,6 +201,43 @@ app.get('/health', (req, res) => {
 // Auth routes (public)
 app.use('/auth', authRoutes);
 
+// Public debug endpoint for Chrome check
+app.get('/debug/chrome', (req, res) => {
+  try {
+    const { execSync } = require('child_process');
+    const checks: Record<string, string> = {};
+
+    // Check Chrome paths
+    const paths = ['/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
+    for (const p of paths) {
+      try {
+        execSync(`ls -la ${p}`, { encoding: 'utf-8' });
+        checks[p] = 'EXISTS';
+      } catch {
+        checks[p] = 'NOT FOUND';
+      }
+    }
+
+    try {
+      checks['which google-chrome-stable'] = execSync('which google-chrome-stable 2>/dev/null', { encoding: 'utf-8' }).trim() || 'NOT IN PATH';
+    } catch { checks['which google-chrome-stable'] = 'NOT IN PATH'; }
+
+    try {
+      checks['chrome version'] = execSync('google-chrome-stable --version 2>/dev/null', { encoding: 'utf-8' }).trim();
+    } catch (e: any) { checks['chrome version'] = `ERROR: ${e.message}`; }
+
+    try {
+      checks['dnf list'] = execSync('dnf list installed google-chrome-stable 2>/dev/null | head -3', { encoding: 'utf-8' }).trim() || 'NOT INSTALLED';
+    } catch { checks['dnf list'] = 'NOT INSTALLED'; }
+
+    checks['CHROME_PATH env'] = process.env.CHROME_PATH || 'NOT SET';
+
+    res.json({ success: true, data: checks });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Protected admin routes
 app.use('/api/v1/admin/users', authenticateAdmin, usersRoutes);
 app.use('/api/v1/admin/companies', authenticateAdmin, companiesRoutes);
@@ -208,6 +248,9 @@ app.use('/api/v1/admin/audit', authenticateAdmin, auditRoutes);
 app.use('/api/v1/admin/announcements', authenticateAdmin, announcementsRoutes);
 app.use('/api/v1/admin/crm', crmRoutes); // CRM routes (auth handled internally, webhook needs to be public)
 app.use('/api/v1/commercial', commercialPortalRoutes); // Commercial portal (auth handled internally)
+app.use('/api/v1/admin/manager', managerRoutes); // Manager routes (pricing, packs, promos, contracts, installations)
+app.use('/api/v1/installation', publicInstallationRoutes); // Public installation validation routes
+app.use('/api/v1/admin/transport-scraping', authenticateAdmin, transportScrapingRoutes); // Transport scraping for Affret IA
 app.use('/api/v1/admin', authenticateAdmin, dashboardRoutes);
 
 // Error handling

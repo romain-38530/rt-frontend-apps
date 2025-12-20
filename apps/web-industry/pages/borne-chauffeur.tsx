@@ -48,8 +48,8 @@ export default function BorneChauffeurPage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
-  }, [mounted]);
+    loadDrivers();
+  }, [mounted, selectedSite]);
 
   const loadDrivers = async () => {
     setLoading(true);
@@ -248,11 +248,11 @@ export default function BorneChauffeurPage() {
         setCheckinCode('');
         loadDrivers();
       } else {
-        toast.success('Check-in reussi! (demo)');
+        toast.error(result.message || 'Erreur lors du check-in');
         setCheckinCode('');
       }
-    } catch (error) {
-      toast.success('Check-in reussi! (demo)');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur de connexion au serveur');
       setCheckinCode('');
     }
   };

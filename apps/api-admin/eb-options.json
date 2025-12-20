@@ -65,6 +65,26 @@
     "Value": "Equipe Commerciale SYMPHONI.A"
   },
   {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "ODOO_URL",
+    "Value": "https://rt-technologie-ia.odoo.com"
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "ODOO_DB",
+    "Value": "rt-technologie-ia"
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "ODOO_USERNAME",
+    "Value": "f.brun@rt-groupe.com"
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "ODOO_PASSWORD",
+    "Value": "f27066082805340084a47fa235bcd5ecc1628d47"
+  },
+  {
     "Namespace": "aws:autoscaling:launchconfiguration",
     "OptionName": "IamInstanceProfile",
     "Value": "aws-elasticbeanstalk-ec2-role"

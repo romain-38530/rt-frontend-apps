@@ -151,21 +151,23 @@ export default function TransportScrapingPage() {
   // Loading
   const [loading, setLoading] = useState(false);
 
-  // Fetch data
+  // Fetch data - sequential calls to avoid overwhelming the browser
   const fetchStats = useCallback(async () => {
     try {
-      const [compStats, offStats, configData] = await Promise.all([
-        api.get('/admin/transport-scraping/stats'),
-        api.get('/admin/transport-scraping/stats/offers'),
-        api.get('/admin/transport-scraping/config')
-      ]);
+      // Sequential calls instead of parallel to reduce load
+      const compStats = await api.get('/admin/transport-scraping/stats');
       setCompanyStats(compStats.data);
+
+      const offStats = await api.get('/admin/transport-scraping/stats/offers');
       setOfferStats(offStats.data);
+
+      const configData = await api.get('/admin/transport-scraping/config');
       setConfig(configData.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  }, [api]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -174,7 +176,8 @@ export default function TransportScrapingPage() {
     } catch (error) {
       console.error('Error fetching jobs:', error);
     }
-  }, [api]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -191,7 +194,8 @@ export default function TransportScrapingPage() {
     } catch (error) {
       console.error('Error fetching companies:', error);
     }
-  }, [api, companiesPage, companySearch, companyStatus, companyDepartment]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companiesPage, companySearch, companyStatus, companyDepartment]);
 
   const fetchOffers = useCallback(async () => {
     try {
@@ -206,18 +210,23 @@ export default function TransportScrapingPage() {
     } catch (error) {
       console.error('Error fetching offers:', error);
     }
-  }, [api, offersPage, offerSearch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offersPage, offerSearch]);
 
+  // Initial fetch - only once on mount
   useEffect(() => {
     fetchStats();
     fetchJobs();
-  }, [fetchStats, fetchJobs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Tab change effect
   useEffect(() => {
     if (activeTab === 'companies') fetchCompanies();
     if (activeTab === 'offers') fetchOffers();
     if (activeTab === 'jobs') fetchJobs();
-  }, [activeTab, fetchCompanies, fetchOffers, fetchJobs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Actions
   const handleB2PWebAuth = async () => {

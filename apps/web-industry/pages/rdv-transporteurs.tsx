@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
+import { appointmentsApi } from '../lib/api';
+import { useToast } from '@rt/ui-components';
 
 interface Appointment {
   id: string;
@@ -28,7 +30,7 @@ interface Appointment {
 export default function RdvTransporteursPage() {
   const router = useSafeRouter();
   const [mounted, setMounted] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'https://dpw23bg2dclr1.cloudfront.net';
+  const { toast } = useToast();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,39 +38,56 @@ export default function RdvTransporteursPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [proposeDate, setProposeDate] = useState('');
+  const [proposeTime, setProposeTime] = useState('');
+  const [proposeMessage, setProposeMessage] = useState('');
 
-  // Stats
+  // Stats calculées dynamiquement
   const [stats, setStats] = useState({
-    pending: 5,
-    confirmed: 12,
-    today: 8,
-    refused: 2
+    pending: 0,
+    confirmed: 0,
+    today: 0,
+    refused: 0
   });
+
+  // Calculer les stats dynamiquement
+  const updateStats = useCallback((appointmentsList: Appointment[]) => {
+    const todayDate = new Date().toISOString().split('T')[0];
+    const pending = appointmentsList.filter(a => ['requested', 'proposed'].includes(a.status)).length;
+    const confirmed = appointmentsList.filter(a => a.status === 'confirmed').length;
+    const today = appointmentsList.filter(a => a.date === todayDate).length;
+    const refused = appointmentsList.filter(a => a.status === 'refused').length;
+    setStats({ pending, confirmed, today, refused });
+  }, []);
 
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+    loadAppointments();
   }, [mounted]);
 
   const loadAppointments = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/v1/rdv/list`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await appointmentsApi.list();
 
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data.data || mockAppointments);
+      if (response?.data && Array.isArray(response.data)) {
+        const formattedAppointments = response.data.map((apt: any) => ({
+          ...apt,
+          id: apt._id || apt.id
+        }));
+        setAppointments(formattedAppointments);
+        updateStats(formattedAppointments);
       } else {
         setAppointments(mockAppointments);
+        updateStats(mockAppointments);
       }
     } catch (error) {
-      console.log('Using mock data');
+      console.log('API indisponible, utilisation des données de démonstration');
       setAppointments(mockAppointments);
+      updateStats(mockAppointments);
     }
     setLoading(false);
   };
@@ -215,56 +234,94 @@ export default function RdvTransporteursPage() {
 
   const handleConfirm = async (appointment: Appointment) => {
     try {
-      await fetch(`${apiUrl}/api/v1/rdv/${appointment.id}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const result = await appointmentsApi.confirm(appointment.id);
 
-      setAppointments(prev =>
-        prev.map(apt =>
-          apt.id === appointment.id ? { ...apt, status: 'confirmed' } : apt
-        )
+      if (result.success) {
+        toast.success('Rendez-vous confirmé');
+      }
+
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === appointment.id ? { ...apt, status: 'confirmed' as const } : apt
       );
-    } catch (error) {
-      // Mock update
-      setAppointments(prev =>
-        prev.map(apt =>
-          apt.id === appointment.id ? { ...apt, status: 'confirmed' } : apt
-        )
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de la confirmation');
+      // Mise à jour locale en mode démo
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === appointment.id ? { ...apt, status: 'confirmed' as const } : apt
       );
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
     }
   };
 
   const handleRefuse = async (appointment: Appointment) => {
     try {
-      await fetch(`${apiUrl}/api/v1/rdv/${appointment.id}/refuse`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const result = await appointmentsApi.cancel(appointment.id, 'Refusé par l\'opérateur');
 
-      setAppointments(prev =>
-        prev.map(apt =>
-          apt.id === appointment.id ? { ...apt, status: 'refused' } : apt
-        )
+      if (result.success) {
+        toast.success('Rendez-vous refusé');
+      }
+
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === appointment.id ? { ...apt, status: 'refused' as const } : apt
       );
-    } catch (error) {
-      setAppointments(prev =>
-        prev.map(apt =>
-          apt.id === appointment.id ? { ...apt, status: 'refused' } : apt
-        )
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors du refus');
+      // Mise à jour locale en mode démo
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === appointment.id ? { ...apt, status: 'refused' as const } : apt
       );
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
     }
   };
 
   const handlePropose = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
+    setProposeDate(appointment.date);
+    setProposeTime(appointment.timeSlot.split(' - ')[0]);
+    setProposeMessage('');
     setShowProposeModal(true);
+  };
+
+  const handleSubmitPropose = async () => {
+    if (!selectedAppointment || !proposeDate || !proposeTime) return;
+
+    try {
+      const result = await appointmentsApi.reschedule(selectedAppointment.id, {
+        proposedDate: proposeDate,
+        proposedTime: proposeTime
+      });
+
+      if (result.success) {
+        toast.success('Proposition de nouveau créneau envoyée');
+      }
+
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === selectedAppointment.id ? {
+          ...apt,
+          status: 'proposed' as const,
+          date: proposeDate,
+          timeSlot: `${proposeTime} - ${proposeTime.split(':').map((p, i) => i === 0 ? String(parseInt(p) + 1).padStart(2, '0') : p).join(':')}`
+        } : apt
+      );
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
+      setShowProposeModal(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de l\'envoi de la proposition');
+      // Mise à jour locale en mode démo
+      const updatedAppointments = appointments.map(apt =>
+        apt.id === selectedAppointment.id ? { ...apt, status: 'proposed' as const } : apt
+      );
+      setAppointments(updatedAppointments);
+      updateStats(updatedAppointments);
+      setShowProposeModal(false);
+    }
   };
 
   if (loading) {
@@ -608,7 +665,8 @@ export default function RdvTransporteursPage() {
                 </label>
                 <input
                   type="date"
-                  defaultValue={selectedAppointment.date}
+                  value={proposeDate}
+                  onChange={(e) => setProposeDate(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -626,6 +684,8 @@ export default function RdvTransporteursPage() {
                   Nouveau creneau
                 </label>
                 <select
+                  value={proposeTime}
+                  onChange={(e) => setProposeTime(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -636,12 +696,15 @@ export default function RdvTransporteursPage() {
                     fontSize: '14px'
                   }}
                 >
-                  <option value="06:00-07:00">06:00 - 07:00</option>
-                  <option value="07:00-08:00">07:00 - 08:00</option>
-                  <option value="09:00-10:00">09:00 - 10:00</option>
-                  <option value="11:00-12:00">11:00 - 12:00</option>
-                  <option value="14:00-15:00">14:00 - 15:00</option>
-                  <option value="15:00-16:00">15:00 - 16:00</option>
+                  <option value="06:00">06:00 - 07:00</option>
+                  <option value="07:00">07:00 - 08:00</option>
+                  <option value="08:00">08:00 - 09:00</option>
+                  <option value="09:00">09:00 - 10:00</option>
+                  <option value="10:00">10:00 - 11:00</option>
+                  <option value="11:00">11:00 - 12:00</option>
+                  <option value="14:00">14:00 - 15:00</option>
+                  <option value="15:00">15:00 - 16:00</option>
+                  <option value="16:00">16:00 - 17:00</option>
                 </select>
               </div>
 
@@ -651,6 +714,8 @@ export default function RdvTransporteursPage() {
                 </label>
                 <textarea
                   placeholder="Raison du changement..."
+                  value={proposeMessage}
+                  onChange={(e) => setProposeMessage(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -682,21 +747,17 @@ export default function RdvTransporteursPage() {
                   Annuler
                 </button>
                 <button
-                  onClick={() => {
-                    setShowProposeModal(false);
-                    setAppointments(prev =>
-                      prev.map(apt =>
-                        apt.id === selectedAppointment.id ? { ...apt, status: 'proposed' } : apt
-                      )
-                    );
-                  }}
+                  onClick={handleSubmitPropose}
+                  disabled={!proposeDate || !proposeTime}
                   style={{
                     padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: proposeDate && proposeTime
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      : 'rgba(255,255,255,0.1)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    cursor: proposeDate && proposeTime ? 'pointer' : 'not-allowed',
                     fontWeight: '700',
                     fontSize: '14px'
                   }}

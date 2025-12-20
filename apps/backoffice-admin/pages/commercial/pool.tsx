@@ -184,6 +184,9 @@ export default function CommercialPool() {
             <Link href="/commercial/my-leads" className="py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
               Mes Leads
             </Link>
+            <Link href="/commercial/calendar" className="py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+              Calendrier
+            </Link>
           </div>
         </div>
       </nav>
