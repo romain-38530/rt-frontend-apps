@@ -197,7 +197,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
 
 // Clients API par défaut pour chaque service
 export const ordersApi = createApiClient({
-  baseURL: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api',
+  baseURL: process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1',
   timeout: 30000,
   retries: 3,
 });
