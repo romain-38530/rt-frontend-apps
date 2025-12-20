@@ -11,6 +11,9 @@ export const getUser = () => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
+// Alias pour compatibilité
+export const getCurrentUser = getUser;
+
 export const logout = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('authToken');
