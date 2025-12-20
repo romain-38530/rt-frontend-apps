@@ -288,6 +288,32 @@ export const ordersApi = {
     return res.json();
   },
 
+  // Mise à jour des informations chauffeur pour la borne
+  updateDriverInfo: async (id: string, driverInfo: {
+    driverFirstName: string;
+    driverLastName: string;
+    driverPhone?: string;
+    tractorPlate: string;
+    trailerPlate?: string;
+    vehicleType?: 'semi' | 'porteur' | 'fourgon' | 'VUL' | 'autre';
+  }) => {
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        assignedCarrier: {
+          ...driverInfo,
+          driverName: `${driverInfo.driverFirstName} ${driverInfo.driverLastName}`.trim(),
+          vehiclePlate: driverInfo.tractorPlate,
+          driverInfoUpdatedAt: new Date().toISOString(),
+          driverInfoUpdatedBy: user.id || getCarrierId()
+        }
+      })
+    });
+    return res.json();
+  },
+
   getTracking: async (id: string) => {
     const res = await fetch(`${API_CONFIG.TRACKING_API}/api/v1/tracking/${id}`, {
       headers: getAuthHeaders()

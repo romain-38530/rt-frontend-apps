@@ -55,6 +55,16 @@ export default function OrderDetailPage() {
   const [showLoadingRdv, setShowLoadingRdv] = useState(false);
   const [showDeliveryRdv, setShowDeliveryRdv] = useState(false);
   const [rdvSuccess, setRdvSuccess] = useState<string | null>(null);
+  const [showDriverInfoForm, setShowDriverInfoForm] = useState(false);
+  const [driverInfo, setDriverInfo] = useState({
+    driverFirstName: '',
+    driverLastName: '',
+    driverPhone: '',
+    tractorPlate: '',
+    trailerPlate: '',
+    vehicleType: 'semi' as 'semi' | 'porteur' | 'fourgon' | 'VUL' | 'autre'
+  });
+  const [savingDriverInfo, setSavingDriverInfo] = useState(false);
 
   // Charger la commande et ses événements
   const loadOrder = async () => {
@@ -141,6 +151,47 @@ export default function OrderDetailPage() {
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'envoi de la demande');
     }
+  };
+
+  // Sauvegarder les informations chauffeur
+  const handleSaveDriverInfo = async () => {
+    if (!id || typeof id !== 'string') return;
+    if (!driverInfo.driverFirstName || !driverInfo.driverLastName || !driverInfo.tractorPlate) {
+      alert('Veuillez remplir le nom, prénom et la plaque tracteur');
+      return;
+    }
+
+    setSavingDriverInfo(true);
+    try {
+      const response = await ordersApi.updateDriverInfo(id, driverInfo);
+      if (response.success) {
+        setShowDriverInfoForm(false);
+        loadOrder();
+        alert('Informations chauffeur enregistrées !');
+      } else {
+        throw new Error(response.error || 'Erreur lors de la sauvegarde');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la sauvegarde des informations');
+    } finally {
+      setSavingDriverInfo(false);
+    }
+  };
+
+  // Initialiser le formulaire avec les données existantes
+  const openDriverInfoForm = () => {
+    const carrier = (order as any)?.assignedCarrier;
+    if (carrier) {
+      setDriverInfo({
+        driverFirstName: carrier.driverFirstName || '',
+        driverLastName: carrier.driverLastName || '',
+        driverPhone: carrier.driverPhone || '',
+        tractorPlate: carrier.tractorPlate || carrier.vehiclePlate || '',
+        trailerPlate: carrier.trailerPlate || '',
+        vehicleType: carrier.vehicleType || 'semi'
+      });
+    }
+    setShowDriverInfoForm(true);
   };
 
   useEffect(() => {
@@ -331,13 +382,72 @@ export default function OrderDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
             {/* Colonne principale */}
             <div>
-              {/* Transporteur assigne */}
-              <CarrierInfoCard
-                carrierName={(order as any).carrierName || (order as any).assignedCarrier?.carrierName}
-                driverName={(order as any).driverName}
-                vehiclePlate={(order as any).vehiclePlate}
-                driverPhone={(order as any).driverPhone}
-              />
+              {/* Informations Chauffeur & Véhicule - Editable */}
+              <div style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ ...sectionTitleStyle, marginBottom: 0 }}>🚛 Chauffeur & Véhicule</h2>
+                  {['carrier_accepted', 'accepted', 'sent_to_carrier'].includes(order.status) && (
+                    <button
+                      onClick={openDriverInfoForm}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                      }}
+                    >
+                      ✏️ Modifier
+                    </button>
+                  )}
+                </div>
+
+                {(order as any).assignedCarrier?.driverFirstName || (order as any).assignedCarrier?.tractorPlate ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <div style={labelStyle}>Chauffeur</div>
+                      <div style={valueStyle}>
+                        {(order as any).assignedCarrier?.driverFirstName} {(order as any).assignedCarrier?.driverLastName}
+                      </div>
+                      {(order as any).assignedCarrier?.driverPhone && (
+                        <div style={{ ...valueStyle, fontSize: '13px', color: '#6b7280' }}>
+                          📞 {(order as any).assignedCarrier?.driverPhone}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div style={labelStyle}>Véhicule</div>
+                      <div style={valueStyle}>
+                        <span style={{ fontWeight: '700' }}>Tracteur:</span> {(order as any).assignedCarrier?.tractorPlate || (order as any).assignedCarrier?.vehiclePlate || '-'}
+                      </div>
+                      {(order as any).assignedCarrier?.trailerPlate && (
+                        <div style={valueStyle}>
+                          <span style={{ fontWeight: '700' }}>Remorque:</span> {(order as any).assignedCarrier?.trailerPlate}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '8px',
+                    border: '1px solid #fcd34d',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
+                    <div style={{ color: '#92400e', fontWeight: '600' }}>
+                      Informations chauffeur non renseignées
+                    </div>
+                    <div style={{ color: '#a16207', fontSize: '13px', marginTop: '4px' }}>
+                      Cliquez sur "Modifier" pour ajouter le chauffeur et les plaques du véhicule
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Itinéraire */}
               <div style={cardStyle}>
@@ -759,6 +869,199 @@ export default function OrderDetailPage() {
           gap: '8px',
         }}>
           ✅ {rdvSuccess}
+        </div>
+      )}
+
+      {/* Modal Informations Chauffeur */}
+      {showDriverInfoForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '700' }}>
+              🚛 Informations Chauffeur & Véhicule
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
+              Ces informations seront utilisées à la borne chauffeur pour l'identification lors du chargement.
+            </p>
+
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    value={driverInfo.driverFirstName}
+                    onChange={(e) => setDriverInfo({ ...driverInfo, driverFirstName: e.target.value })}
+                    placeholder="Jean"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    value={driverInfo.driverLastName}
+                    onChange={(e) => setDriverInfo({ ...driverInfo, driverLastName: e.target.value })}
+                    placeholder="DUPONT"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                  Téléphone chauffeur
+                </label>
+                <input
+                  type="tel"
+                  value={driverInfo.driverPhone}
+                  onChange={(e) => setDriverInfo({ ...driverInfo, driverPhone: e.target.value })}
+                  placeholder="06 12 34 56 78"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                    Plaque Tracteur *
+                  </label>
+                  <input
+                    type="text"
+                    value={driverInfo.tractorPlate}
+                    onChange={(e) => setDriverInfo({ ...driverInfo, tractorPlate: e.target.value.toUpperCase() })}
+                    placeholder="AB-123-CD"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      textTransform: 'uppercase',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                    Plaque Remorque
+                  </label>
+                  <input
+                    type="text"
+                    value={driverInfo.trailerPlate}
+                    onChange={(e) => setDriverInfo({ ...driverInfo, trailerPlate: e.target.value.toUpperCase() })}
+                    placeholder="EF-456-GH"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      textTransform: 'uppercase',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                  Type de véhicule
+                </label>
+                <select
+                  value={driverInfo.vehicleType}
+                  onChange={(e) => setDriverInfo({ ...driverInfo, vehicleType: e.target.value as any })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  <option value="semi">Semi-remorque</option>
+                  <option value="porteur">Porteur</option>
+                  <option value="fourgon">Fourgon</option>
+                  <option value="VUL">VUL</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={() => setShowDriverInfoForm(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveDriverInfo}
+                disabled={savingDriverInfo}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  cursor: savingDriverInfo ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  opacity: savingDriverInfo ? 0.7 : 1,
+                }}
+              >
+                {savingDriverInfo ? 'Enregistrement...' : '✓ Enregistrer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
