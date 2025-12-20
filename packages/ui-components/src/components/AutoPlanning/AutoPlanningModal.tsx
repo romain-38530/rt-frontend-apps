@@ -43,7 +43,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
   onClose,
   onValidate,
   onEscalateToAffretIA,
-  ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api',
+  ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1',
 }) => {
   const [step, setStep] = useState<PlanningStep>('starting');
   const [dispatchChain, setDispatchChain] = useState<DispatchCarrier[]>([]);

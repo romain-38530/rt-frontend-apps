@@ -42,7 +42,7 @@ applications:
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_VAT_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -103,7 +103,7 @@ applications:
         NEXT_PUBLIC_PORTAL_TYPE: 'industry'
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -162,7 +162,7 @@ applications:
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -227,7 +227,7 @@ applications:
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -286,7 +286,7 @@ applications:
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -337,7 +337,7 @@ applications:
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -388,7 +388,7 @@ applications:
         # Core APIs (CloudFront HTTPS)
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
@@ -442,7 +442,7 @@ applications:
         NEXT_PUBLIC_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_AUTH_API_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
-        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api'
+        NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
         NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
         NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
         NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
