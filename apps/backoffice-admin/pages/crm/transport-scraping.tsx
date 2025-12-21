@@ -334,6 +334,23 @@ export default function TransportScrapingPage() {
 
   const continuousJob = jobs.find(j => j.type === 'continuous' && j.isActive);
 
+  // Prevent hydration mismatch by not rendering dynamic content until mounted
+  if (!mounted) {
+    return (
+      <>
+        <Head>
+          <title>Scraping Transport - Affret IA | SYMPHONI.A</title>
+        </Head>
+        <div className="p-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Scraping Transport - Affret IA</h1>
+            <p className="text-gray-600">Chargement...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Head>
