@@ -66,7 +66,7 @@ export const API_CONFIG = {
 
 // Helper to get auth headers
 const getAuthHeaders = () => ({
-  'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
+  'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`,
   'Content-Type': 'application/json'
 });
 
@@ -356,7 +356,7 @@ export const ecmrApi = {
   downloadPdf: async (id: string): Promise<Blob> => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/pdf`, {
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`
       }
     });
     if (!res.ok) {
@@ -1532,7 +1532,7 @@ export const pricingGridsApi = {
     const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/upload`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`
       },
       body: formData
     });
@@ -1549,7 +1549,7 @@ export const pricingGridsApi = {
     const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/upload-multiple`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`
       },
       body: formData
     });
