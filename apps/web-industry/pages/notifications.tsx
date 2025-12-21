@@ -46,25 +46,57 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const data = await notificationsApi.list();
-      if (data.notifications) {
-        setNotifications(data.notifications);
-      } else if (Array.isArray(data)) {
-        setNotifications(data);
+      const response = await notificationsApi.list();
+      // Backend returns { success: true, data: [...], pagination: {...}, unreadCount: N }
+      if (response.success && response.data) {
+        // Map backend notification format to frontend format
+        const mapped = response.data.map((n: any) => ({
+          id: n._id || n.id,
+          type: mapNotificationType(n.type),
+          message: n.message || n.title,
+          createdAt: n.createdAt,
+          read: n.read
+        }));
+        setNotifications(mapped);
+      } else if (response.notifications) {
+        setNotifications(response.notifications);
+      } else if (Array.isArray(response)) {
+        setNotifications(response);
       }
       setError(null);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Impossible de charger les notifications');
-      // Fallback data for demo
-      setNotifications([
-        { id: '1', type: 'info', message: 'Nouvelle commande CMD-004 recue', createdAt: new Date(Date.now() - 5*60000).toISOString(), read: false },
-        { id: '2', type: 'warning', message: 'Retard prevu sur livraison TRK-002', createdAt: new Date(Date.now() - 15*60000).toISOString(), read: false },
-        { id: '3', type: 'success', message: 'Livraison TRK-003 completee', createdAt: new Date(Date.now() - 60*60000).toISOString(), read: true },
-      ]);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Map backend notification types to frontend display types
+  const mapNotificationType = (type: string): 'info' | 'warning' | 'success' | 'error' => {
+    const typeMap: Record<string, 'info' | 'warning' | 'success' | 'error'> = {
+      'order_created': 'info',
+      'order_updated': 'info',
+      'order_cancelled': 'error',
+      'carrier_accepted': 'success',
+      'carrier_refused': 'error',
+      'carrier_timeout': 'warning',
+      'tracking_update': 'info',
+      'eta_update': 'info',
+      'geofence_alert': 'warning',
+      'rdv_proposed': 'info',
+      'rdv_confirmed': 'success',
+      'rdv_cancelled': 'warning',
+      'document_uploaded': 'info',
+      'document_validated': 'success',
+      'incident_reported': 'error',
+      'delay_reported': 'warning',
+      'score_updated': 'info',
+      'system': 'info',
+      'other': 'info'
+    };
+    return typeMap[type] || 'info';
   };
 
   const handleMarkAsRead = async (id: string) => {
@@ -90,7 +122,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+    fetchNotifications();
   }, [mounted]);
 
   const unreadCount = notifications.filter(n => !n.read).length;

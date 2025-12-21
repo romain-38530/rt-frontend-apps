@@ -78,22 +78,29 @@ export const trackingApi = {
 export const notificationsApi = {
   list: async () => {
     const recipientId = getRecipientId();
-    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/notifications?userId=${recipientId}`, {
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications?userId=${recipientId}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  getUnreadCount: async () => {
+    const recipientId = getRecipientId();
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/unread-count?userId=${recipientId}`, {
       headers: getAuthHeaders(),
     });
     return res.json();
   },
   markAsRead: async (id: string) => {
-    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/notifications/${id}/read`, {
-      method: 'POST',
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/${id}/read`, {
+      method: 'PUT',
       headers: getAuthHeaders(),
     });
     return res.json();
   },
   markAllAsRead: async () => {
     const recipientId = getRecipientId();
-    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/notifications/mark-all-read`, {
-      method: 'POST',
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/mark-all-read`, {
+      method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ userId: recipientId }),
     });

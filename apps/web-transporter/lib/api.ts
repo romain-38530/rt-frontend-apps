@@ -536,8 +536,17 @@ export const ecmrApi = {
 
 export const notificationsApi = {
   list: async (filters?: { read?: boolean; type?: string }) => {
-    const params = new URLSearchParams(filters as any);
+    const carrierId = getCarrierId();
+    const params = new URLSearchParams({ userId: carrierId, ...filters as any });
     const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getUnreadCount: async () => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/unread-count?userId=${carrierId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -552,9 +561,11 @@ export const notificationsApi = {
   },
 
   markAllAsRead: async () => {
-    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/read-all`, {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/mark-all-read`, {
       method: 'PUT',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId: carrierId })
     });
     return res.json();
   },

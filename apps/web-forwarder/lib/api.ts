@@ -104,15 +104,31 @@ export const trackingApi = {
 export const notificationsApi = {
   list: async () => {
     const forwarderId = getForwarderId();
-    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/notifications?userId=${forwarderId}`, {
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications?userId=${forwarderId}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  getUnreadCount: async () => {
+    const forwarderId = getForwarderId();
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/unread-count?userId=${forwarderId}`, {
       headers: getAuthHeaders(),
     });
     return res.json();
   },
   markAsRead: async (id: string) => {
-    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/notifications/${id}/read`, {
-      method: 'POST',
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/${id}/read`, {
+      method: 'PUT',
       headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+  markAllAsRead: async () => {
+    const forwarderId = getForwarderId();
+    const res = await fetch(`${NOTIFICATIONS_API_URL}/api/v1/notifications/mark-all-read`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId: forwarderId }),
     });
     return res.json();
   },

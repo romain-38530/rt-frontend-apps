@@ -70,6 +70,19 @@ const getAuthHeaders = () => ({
   'Content-Type': 'application/json'
 });
 
+// Helper to get current user ID from localStorage
+const getUserId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  try {
+    const user = JSON.parse(userStr);
+    return user?.id || user?._id || null;
+  } catch {
+    return null;
+  }
+};
+
 // ============================================
 // PLANNING API - Sites, Docks, Slots
 // ============================================
@@ -689,8 +702,17 @@ export const ordersApi = {
 
 export const notificationsApi = {
   list: async (filters?: { read?: boolean; type?: string }) => {
-    const params = new URLSearchParams(filters as any);
+    const userId = getUserId();
+    const params = new URLSearchParams({ userId: userId || '', ...filters } as any);
     const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  getUnreadCount: async () => {
+    const userId = getUserId();
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/unread-count?userId=${userId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -705,9 +727,11 @@ export const notificationsApi = {
   },
 
   markAllAsRead: async () => {
-    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/read-all`, {
+    const userId = getUserId();
+    const res = await fetch(`${API_CONFIG.NOTIFICATIONS_API}/api/v1/notifications/mark-all-read`, {
       method: 'PUT',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId })
     });
     return res.json();
   },
