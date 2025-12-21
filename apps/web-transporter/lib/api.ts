@@ -486,11 +486,11 @@ export const ecmrApi = {
     return res.json();
   },
 
-  sign: async (id: string, signature: { type: 'driver' | 'sender' | 'recipient'; signatureData: string; name: string; location?: { lat: number; lng: number } }) => {
+  sign: async (id: string, data: { party: 'shipper' | 'carrier' | 'consignee'; signatureData: string; signerName: string; reservations?: string }) => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/sign`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(signature)
+      body: JSON.stringify(data)
     });
     return res.json();
   },
@@ -504,16 +504,26 @@ export const ecmrApi = {
     return res.json();
   },
 
-  downloadPdf: async (id: string) => {
+  downloadPdf: async (id: string): Promise<Blob> => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/pdf`, {
       headers: getAuthHeaders()
     });
+    if (!res.ok) {
+      throw new Error(`Failed to download PDF: ${res.status}`);
+    }
     return res.blob();
   },
 
   getPendingSignatures: async () => {
     const carrierId = getCarrierId();
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/pending?carrierId=${carrierId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  history: async (id: string) => {
+    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/history`, {
       headers: getAuthHeaders()
     });
     return res.json();

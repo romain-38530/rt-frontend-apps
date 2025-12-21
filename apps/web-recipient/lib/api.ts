@@ -105,30 +105,39 @@ export const notificationsApi = {
 export const ecmrApi = {
   list: async () => {
     const recipientId = getRecipientId();
-    const res = await fetch(`${ECMR_API_URL}/api/ecmr?recipientId=${recipientId}`, {
+    const res = await fetch(`${ECMR_API_URL}/api/v1/ecmr?recipientId=${recipientId}`, {
       headers: getAuthHeaders(),
     });
     return res.json();
   },
   getById: async (id: string) => {
-    const res = await fetch(`${ECMR_API_URL}/api/ecmr/${id}`, {
+    const res = await fetch(`${ECMR_API_URL}/api/v1/ecmr/${id}`, {
       headers: getAuthHeaders(),
     });
     return res.json();
   },
-  sign: async (id: string, signature: string) => {
-    const res = await fetch(`${ECMR_API_URL}/api/ecmr/${id}/sign`, {
+  sign: async (id: string, data: { party: 'consignee'; signatureData: string; signerName: string; reservations?: string }) => {
+    const res = await fetch(`${ECMR_API_URL}/api/v1/ecmr/${id}/sign`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ signature, role: 'recipient' }),
+      body: JSON.stringify(data),
     });
     return res.json();
   },
-  download: async (id: string) => {
-    const res = await fetch(`${ECMR_API_URL}/api/ecmr/${id}/download`, {
+  downloadPdf: async (id: string): Promise<Blob> => {
+    const res = await fetch(`${ECMR_API_URL}/api/v1/ecmr/${id}/pdf`, {
       headers: getAuthHeaders(),
     });
+    if (!res.ok) {
+      throw new Error(`Failed to download PDF: ${res.status}`);
+    }
     return res.blob();
+  },
+  history: async (id: string) => {
+    const res = await fetch(`${ECMR_API_URL}/api/v1/ecmr/${id}/history`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
   },
 };
 

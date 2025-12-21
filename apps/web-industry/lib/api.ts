@@ -341,7 +341,7 @@ export const ecmrApi = {
   },
 
   downloadPdf: async (id: string): Promise<Blob> => {
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/ecmr/${id}/pdf`, {
+    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/pdf`, {
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
       }
