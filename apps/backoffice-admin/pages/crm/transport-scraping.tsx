@@ -170,6 +170,16 @@ export default function TransportScrapingPage() {
     }
   };
 
+  // Helper to handle 401 errors
+  const handleAuthError = useCallback((error: any) => {
+    if (error.message?.includes('401') || error.message?.includes('Authorization')) {
+      localStorage.removeItem('admin_jwt');
+      router.push('/login');
+      return true;
+    }
+    return false;
+  }, [router]);
+
   // Fetch data - sequential calls to avoid overwhelming the browser
   const fetchStats = useCallback(async () => {
     try {
@@ -182,11 +192,13 @@ export default function TransportScrapingPage() {
 
       const configData = await api.get('/admin/transport-scraping/config');
       setConfig(configData.data);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+    } catch (error: any) {
+      if (!handleAuthError(error)) {
+        console.error('Error fetching stats:', error);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleAuthError]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -232,12 +244,17 @@ export default function TransportScrapingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offersPage, offerSearch]);
 
-  // Initial fetch - only once on mount
+  // Auth check and initial fetch - only once on mount
   useEffect(() => {
+    const token = localStorage.getItem('admin_jwt');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchStats();
     fetchJobs();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   // Tab change effect
   useEffect(() => {
