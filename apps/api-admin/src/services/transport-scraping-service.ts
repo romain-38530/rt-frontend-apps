@@ -648,64 +648,189 @@ export class TransportScrapingService {
           console.log(`[B2PWeb] Route: ${routeInfo.departure} -> ${routeInfo.delivery}`);
 
           // Click on the offer row to open the detail panel
-          const clicked = await this.page.evaluate((rowIndex) => {
+          // The row click should open a side panel with offer details
+          const clickResult = await this.page.evaluate((rowIndex) => {
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             const checkbox = checkboxes[rowIndex];
-            if (!checkbox) return false;
+            if (!checkbox) return { success: false, error: 'No checkbox found' };
 
             const row = checkbox.closest('tr, [class*="row"], div[role="row"]');
-            if (row) {
-              (row as HTMLElement).click();
-              return true;
+            if (!row) return { success: false, error: 'No row found' };
+
+            // Try clicking on the row itself
+            (row as HTMLElement).click();
+
+            // Also try clicking on the first cell that's not the checkbox cell
+            const cells = row.querySelectorAll('td, [class*="cell"]');
+            for (const cell of Array.from(cells)) {
+              if (!cell.querySelector('input[type="checkbox"]')) {
+                (cell as HTMLElement).click();
+                break;
+              }
             }
-            return false;
+
+            return {
+              success: true,
+              rowClass: row.className,
+              rowTag: row.tagName,
+              rowText: (row.textContent || '').substring(0, 100)
+            };
           }, i);
 
-          if (!clicked) {
-            console.log(`[B2PWeb] Could not click offer row ${i + 1}`);
+          console.log(`[B2PWeb] Click result: ${JSON.stringify(clickResult)}`);
+
+          if (!clickResult.success) {
+            console.log(`[B2PWeb] Could not click offer row ${i + 1}: ${clickResult.error}`);
             continue;
           }
 
-          await delay(1500);
+          // Wait longer for the panel to open - B2PWeb can be slow
+          await delay(2500);
 
           // ==========================================
-          // SECTION: ACTIVITÉS > CONSULTANTS (only)
+          // SECTION: ACTIVITY > CONSULTANTS (only)
           // ==========================================
-          console.log(`[B2PWeb] Extracting Activités > Consultants...`);
+          console.log(`[B2PWeb] Extracting Activity > Consultants...`);
 
-          // Click on "Activités" button - it's a tab button in the right panel header
+          // First, check if the detail panel is actually open
+          const panelCheck = await this.page.evaluate(() => {
+            // Look for typical detail panel indicators
+            const body = document.body.innerText;
+            const hasDetailPanel = body.includes('Départ') || body.includes('Arrivée') ||
+                                   body.includes('Departure') || body.includes('Arrival') ||
+                                   body.includes('Proposer') || body.includes('Propose') ||
+                                   body.includes('Historique') || body.includes('History');
+
+            // Count buttons/icons in the page
+            const buttons = document.querySelectorAll('button');
+            const svgs = document.querySelectorAll('svg');
+
+            // Look for any sidebar/drawer/panel
+            const panels = document.querySelectorAll('[class*="drawer"], [class*="panel"], [class*="sidebar"], [class*="detail"], [class*="aside"]');
+
+            return {
+              hasDetailPanel,
+              buttonCount: buttons.length,
+              svgCount: svgs.length,
+              panelCount: panels.length,
+              pageTextSample: body.substring(0, 500)
+            };
+          });
+          console.log(`[B2PWeb] Panel check: ${JSON.stringify(panelCheck)}`);
+
+          // Click on "Activity" button - it's an ICON BUTTON in the right panel toolbar
+          // B2PWeb UI can be in French (Activités) or English (Activity)
+          // The button has NO text, only an SVG icon
           const activitesClicked = await this.page.evaluate(() => {
-            // First, try to find exact "Activités" text button
-            const allElements = Array.from(document.querySelectorAll('*'));
+            const results: string[] = [];
 
-            for (const el of allElements) {
-              const text = el.textContent?.trim() || '';
-              // Match exactly "Activités" (case-sensitive) or very close
-              if (text === 'Activités' || text === 'Activites') {
-                // Make sure it's a clickable element (not a container with lots of text)
-                if (el.children.length === 0 || text.length < 15) {
-                  console.log(`[B2PWeb] Found Activités button: ${el.tagName}.${el.className} - "${text}"`);
-                  (el as HTMLElement).click();
-                  return { found: true, tagName: el.tagName, className: el.className };
+            // 1. Find by SVG icon path (primary method - the button is icon-only)
+            // Activity icon path from B2PWeb (mdi-clipboard-text-clock or similar)
+            const activityIconPaths = [
+              'M4 2V8H2V2H4M2 22H4V16H2V22M5 12C5 10.9 4.11 10 3 10C1.9 10 1 10.9 1 12C1 13.11 1.9 14 3 14C4.11 14 5 13.11 5 12M24 6V18C24 19.11 23.11 20 22 20H10C8.9 20 8 19.11 8 18V14L6 12L8 10V6C8 4.89 8.9 4 10 4H22C23.11 4 24 4.89 24 6M19 13H11V15H19V13M21 9H11V11H21V9Z',
+              // Try partial matches too
+              'M4 2V8H2V2H4', // Start of the path
+              'M24 6V18C24 19.11' // Another part
+            ];
+
+            const svgs = Array.from(document.querySelectorAll('svg'));
+            results.push(`Found ${svgs.length} SVG elements`);
+
+            for (const svg of svgs) {
+              const paths = svg.querySelectorAll('path');
+              for (const path of Array.from(paths)) {
+                const d = path.getAttribute('d') || '';
+                // Check for exact match or partial match
+                for (const iconPath of activityIconPaths) {
+                  if (d === iconPath || d.includes('M4 2V8H2V2H4') || d.includes('M24 6V18')) {
+                    const clickable = svg.closest('button, a, [role="button"], div[class*="btn"], span[class*="btn"]') as HTMLElement;
+                    if (clickable) {
+                      results.push(`Found Activity by SVG path in ${clickable.tagName}.${clickable.className}`);
+                      clickable.click();
+                      return { found: true, byIcon: true, method: 'svg-path', logs: results };
+                    } else {
+                      // Click the SVG itself or its parent
+                      const parent = svg.parentElement as HTMLElement;
+                      if (parent) {
+                        results.push(`Clicking SVG parent: ${parent.tagName}.${parent.className}`);
+                        parent.click();
+                        return { found: true, byIcon: true, method: 'svg-parent', logs: results };
+                      }
+                    }
+                  }
                 }
               }
             }
 
-            // Fallback: look for button/tab with activité in text
-            const buttons = Array.from(document.querySelectorAll('button, a, [role="tab"], [class*="tab"], span'));
-            for (const btn of buttons) {
-              const text = btn.textContent?.trim().toLowerCase() || '';
-              if (text.includes('activité') && text.length < 20) {
-                console.log(`[B2PWeb] Found Activités (fallback): ${btn.tagName} - "${btn.textContent?.trim()}"`);
-                (btn as HTMLElement).click();
-                return { found: true, tagName: btn.tagName, fallback: true };
+            // 2. Look for buttons in the detail panel header/toolbar area
+            // These are usually in a row at the top of the detail panel
+            const toolbarSelectors = [
+              '[class*="toolbar"] button',
+              '[class*="header"] button',
+              '[class*="actions"] button',
+              '[class*="drawer"] button',
+              '[class*="panel"] button',
+              'aside button',
+              '[class*="detail"] button'
+            ];
+
+            for (const selector of toolbarSelectors) {
+              const btns = document.querySelectorAll(selector);
+              results.push(`Selector "${selector}": ${btns.length} buttons`);
+
+              // Look for the button with activity icon (usually 2nd or 3rd button)
+              for (const btn of Array.from(btns)) {
+                const svg = btn.querySelector('svg');
+                if (svg) {
+                  const path = svg.querySelector('path');
+                  const d = path?.getAttribute('d') || '';
+                  // Check if this SVG path looks like the activity icon
+                  if (d.includes('V8H2V2') || d.includes('12C5 10.9')) {
+                    results.push(`Found likely Activity button by SVG in ${selector}`);
+                    (btn as HTMLElement).click();
+                    return { found: true, method: 'toolbar-svg', selector, logs: results };
+                  }
+                }
               }
             }
 
-            console.log('[B2PWeb] Activités button NOT found');
-            return { found: false };
+            // 3. Try finding by aria-label or title attribute
+            const ariaButtons = document.querySelectorAll('[aria-label*="ctivit"], [title*="ctivit"], [aria-label*="ctivity"], [title*="ctivity"]');
+            results.push(`Found ${ariaButtons.length} buttons with aria/title containing activity`);
+            if (ariaButtons.length > 0) {
+              (ariaButtons[0] as HTMLElement).click();
+              return { found: true, method: 'aria-label', logs: results };
+            }
+
+            // 4. Fallback: look for text button (unlikely but try)
+            const allElements = Array.from(document.querySelectorAll('button, a, [role="tab"], span'));
+            const matchTexts = ['Activity', 'Activities', 'Activités', 'Activites', 'Activité'];
+
+            for (const el of allElements) {
+              const text = el.textContent?.trim() || '';
+              if (matchTexts.includes(text)) {
+                results.push(`Found Activity text: ${el.tagName}.${el.className}`);
+                (el as HTMLElement).click();
+                return { found: true, method: 'text', text, logs: results };
+              }
+            }
+
+            // 5. Log all SVG paths for debugging
+            const allPaths: string[] = [];
+            for (const svg of svgs) {
+              const paths = svg.querySelectorAll('path');
+              for (const path of Array.from(paths)) {
+                const d = path.getAttribute('d') || '';
+                if (d.length > 10 && d.length < 500) {
+                  allPaths.push(d.substring(0, 80) + '...');
+                }
+              }
+            }
+            results.push(`All SVG paths (${allPaths.length}): ${allPaths.slice(0, 5).join(' | ')}`);
+
+            return { found: false, logs: results };
           });
-          console.log(`[B2PWeb] Activités button result: ${JSON.stringify(activitesClicked)}`);
+          console.log(`[B2PWeb] Activity button result: ${JSON.stringify(activitesClicked)}`);
           await delay(2000);
 
           // Debug: log what's visible after clicking Activités
@@ -737,7 +862,7 @@ export class TransportScrapingService {
             const divRows = document.querySelectorAll('[class*="row"], [role="row"]');
             const pageText = document.body.innerText;
             const hasScore = pageText.includes('Score');
-            const hasSociete = pageText.includes('Société');
+            const hasSociete = pageText.includes('Société') || pageText.includes('Company');
             return {
               tableCount: tables.length,
               divRowCount: divRows.length,
@@ -811,11 +936,14 @@ export class TransportScrapingService {
       const tables = Array.from(document.querySelectorAll('table'));
       let targetTable: HTMLTableElement | null = null;
 
-      // Find the table containing "Consultants" data (look for Société and Contact columns)
+      // Find the table containing "Consultants" data (look for Company/Société and Contact columns)
       for (const table of tables) {
         const headerText = table.textContent || '';
-        // Look for Société OR Contact OR E-mail (Score is just an icon, may not have text)
-        if (headerText.includes('Société') && (headerText.includes('Contact') || headerText.includes('E-mail'))) {
+        // Look for Company/Société AND Contact OR E-mail (Score is just an icon, may not have text)
+        // Support both French (Société) and English (Company) UI
+        const hasCompanyCol = headerText.includes('Société') || headerText.includes('Company');
+        const hasContactCol = headerText.includes('Contact') || headerText.includes('E-mail') || headerText.includes('Email');
+        if (hasCompanyCol && hasContactCol) {
           targetTable = table;
           console.log(`[B2PWeb] Found target table with headers`);
           break;
@@ -846,7 +974,8 @@ export class TransportScrapingService {
 
         // Skip header rows (th or rows containing header text)
         if (row.querySelectorAll('th').length > 0) return;
-        if (text.includes('Société') && text.includes('Contact') && text.includes('E-mail')) return;
+        // Skip header rows in both French and English
+        if ((text.includes('Société') || text.includes('Company')) && text.includes('Contact') && (text.includes('E-mail') || text.includes('Email'))) return;
 
         // Skip if no cells or less than 4 cells
         if (cells.length < 4) return;

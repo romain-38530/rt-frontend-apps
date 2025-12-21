@@ -777,6 +777,41 @@ router.get('/debug/html', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * GET /debug/html-search - Rechercher dans le HTML
+ */
+router.get('/debug/html-search', async (req: AuthRequest, res: Response) => {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Query parameter required' });
+    }
+
+    const result = await transportScrapingService.getPageHTML();
+    if (!result.success || !result.html) {
+      return res.status(400).json(result);
+    }
+
+    // Find occurrences of the query in the HTML
+    const matches: string[] = [];
+    const regex = new RegExp(`.{0,50}${query}.{0,50}`, 'gi');
+    let match;
+    while ((match = regex.exec(result.html)) !== null && matches.length < 20) {
+      matches.push(match[0]);
+    }
+
+    res.json({
+      success: true,
+      query,
+      matchCount: matches.length,
+      matches,
+      url: result.url
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================
 // DIAGNOSTIC
 // ============================================
