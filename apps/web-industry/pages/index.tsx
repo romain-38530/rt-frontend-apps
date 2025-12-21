@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getUser, logout } from '../lib/auth';
+import { notificationsApi } from '../lib/api';
 
 export default function HomePage() {
   const router = useSafeRouter();
@@ -9,6 +10,7 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -22,6 +24,17 @@ export default function HomePage() {
 
     // Load subscription data (mock for now, would come from API)
     setSubscription({ tier: 'pro' });
+
+    // Load unread notifications count
+    notificationsApi.getUnreadCount()
+      .then(res => {
+        if (res.success && typeof res.count === 'number') {
+          setUnreadNotifications(res.count);
+        } else if (typeof res.count === 'number') {
+          setUnreadNotifications(res.count);
+        }
+      })
+      .catch(err => console.error('Failed to load notification count:', err));
 
     // Done loading
     setLoading(false);
@@ -100,7 +113,8 @@ export default function HomePage() {
       title: 'Notifications temps réel',
       desc: 'Alertes instantanées sur vos opérations critiques',
       locked: false,
-      route: '/notifications'
+      route: '/notifications',
+      badge: unreadNotifications
     },
     {
       icon: '🤖',
@@ -171,6 +185,12 @@ export default function HomePage() {
     <>
       <Head>
         <title>SYMPHONI.A - Industry Portal</title>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+        `}</style>
       </Head>
 
       <div style={{
@@ -338,6 +358,25 @@ export default function HomePage() {
                     fontSize: '24px'
                   }}>
                     🔒
+                  </div>
+                )}
+                {(item as any).badge > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    background: '#FF4444',
+                    color: 'white',
+                    borderRadius: '12px',
+                    padding: '4px 10px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    minWidth: '24px',
+                    textAlign: 'center',
+                    boxShadow: '0 2px 8px rgba(255, 68, 68, 0.4)',
+                    animation: 'pulse 2s infinite'
+                  }}>
+                    {(item as any).badge > 99 ? '99+' : (item as any).badge}
                   </div>
                 )}
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>{item.icon}</div>
