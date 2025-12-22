@@ -18,6 +18,33 @@ interface TopCarrier {
   trend: string;
 }
 
+interface TransportDetail {
+  transportId: string;
+  orderRef: string;
+  carrier: { id: string; name: string; region: string };
+  destination: string;
+  delayMinutes: number;
+  reason: string;
+  etaOriginal: string;
+  etaUpdated: string;
+}
+
+interface CarrierDetail {
+  carrierId: string;
+  carrierName: string;
+  region: string;
+  blockReason: string;
+  blockedSince: string;
+  affectedOrders: number;
+  contact: string;
+}
+
+interface AlertData {
+  transports?: TransportDetail[];
+  carriers?: CarrierDetail[];
+  [key: string]: any;
+}
+
 interface Alert {
   id: string;
   type: string;
@@ -25,6 +52,7 @@ interface Alert {
   title: string;
   message: string;
   createdAt: string;
+  data?: AlertData;
 }
 
 interface ChartData {
@@ -49,6 +77,7 @@ export default function DashboardPage() {
   const [ordersChart, setOrdersChart] = useState<ChartData[]>([]);
   const [operational, setOperational] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   // Calculer la periode affichee (mois en cours)
   const getCurrentPeriod = () => {
@@ -137,6 +166,39 @@ export default function DashboardPage() {
     if (diffMins < 60) return `Il y a ${diffMins} min`;
     if (diffHours < 24) return `Il y a ${diffHours}h`;
     return `Il y a ${Math.floor(diffHours / 24)}j`;
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getAlertIcon = (type: string) => {
+    switch (type) {
+      case 'delay_detected': return '&#9200;';
+      case 'vigilance_issue': return '&#128683;';
+      case 'capacity_warning': return '&#128200;';
+      case 'no_show': return '&#128683;';
+      case 'cost_anomaly': return '&#128176;';
+      default: return '&#9888;';
+    }
+  };
+
+  const getAlertTypeLabel = (type: string) => {
+    switch (type) {
+      case 'delay_detected': return 'Retards';
+      case 'vigilance_issue': return 'Vigilance';
+      case 'capacity_warning': return 'Capacite';
+      case 'no_show': return 'No-show';
+      case 'cost_anomaly': return 'Cout';
+      default: return 'Alerte';
+    }
   };
 
   const kpiCards = [
@@ -361,20 +423,52 @@ export default function DashboardPage() {
                   {alerts.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {alerts.map((alert) => (
-                        <div key={alert.id} style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: '8px',
-                          borderLeft: `4px solid ${getSeverityColor(alert.severity)}`
-                        }}>
+                        <div
+                          key={alert.id}
+                          onClick={() => setSelectedAlert(alert)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: '8px',
+                            borderLeft: `4px solid ${getSeverityColor(alert.severity)}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        >
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>{alert.title}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span dangerouslySetInnerHTML={{ __html: getAlertIcon(alert.type) }} />
+                              <span style={{ fontWeight: '600' }}>{alert.title}</span>
+                              <span style={{
+                                fontSize: '10px',
+                                padding: '2px 8px',
+                                background: getSeverityColor(alert.severity),
+                                borderRadius: '10px',
+                                color: 'white',
+                                fontWeight: '600'
+                              }}>{getAlertTypeLabel(alert.type)}</span>
+                            </div>
                             <div style={{ fontSize: '13px', opacity: 0.7 }}>{alert.message}</div>
-                            <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '6px' }}>
-                              {alert.createdAt ? formatTimeAgo(alert.createdAt) : ''}
+                            {alert.data?.transports && (
+                              <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
+                                {alert.data.transports.slice(0, 2).map(t => t.carrier.name).join(', ')}
+                                {alert.data.transports.length > 2 && ` +${alert.data.transports.length - 2} autres`}
+                              </div>
+                            )}
+                            {alert.data?.carriers && (
+                              <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
+                                {alert.data.carriers.slice(0, 2).map(c => c.carrierName).join(', ')}
+                                {alert.data.carriers.length > 2 && ` +${alert.data.carriers.length - 2} autres`}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{alert.createdAt ? formatTimeAgo(alert.createdAt) : ''}</span>
+                              <span style={{ color: '#667eea' }}>Voir details &#8594;</span>
                             </div>
                           </div>
                         </div>
@@ -464,6 +558,255 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Alert Detail Modal */}
+      {selectedAlert && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(5px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setSelectedAlert(null)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+              borderRadius: '20px',
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  <span
+                    style={{ fontSize: '28px' }}
+                    dangerouslySetInnerHTML={{ __html: getAlertIcon(selectedAlert.type) }}
+                  />
+                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700' }}>{selectedAlert.title}</h2>
+                  <span style={{
+                    padding: '4px 12px',
+                    background: getSeverityColor(selectedAlert.severity),
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    {selectedAlert.severity.toUpperCase()}
+                  </span>
+                </div>
+                <p style={{ margin: 0, opacity: 0.7, fontSize: '14px' }}>{selectedAlert.message}</p>
+                <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.5 }}>
+                  Cree le: {formatDateTime(selectedAlert.createdAt)}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAlert(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  color: 'white',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                &#10005;
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '24px' }}>
+              {/* Delayed Transports Details */}
+              {selectedAlert.type === 'delay_detected' && selectedAlert.data?.transports && (
+                <div>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
+                    &#128666; Transports en retard ({selectedAlert.data.transports.length})
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedAlert.data.transports.map((transport, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          border: '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: '600', fontSize: '15px' }}>{transport.carrier.name}</div>
+                            <div style={{ fontSize: '12px', opacity: 0.6 }}>{transport.carrier.region}</div>
+                          </div>
+                          <div style={{
+                            background: 'rgba(255,68,68,0.2)',
+                            color: '#FF6B6B',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600'
+                          }}>
+                            +{transport.delayMinutes} min
+                          </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Reference</div>
+                            <div style={{ fontWeight: '500' }}>{transport.orderRef}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Destination</div>
+                            <div style={{ fontWeight: '500' }}>{transport.destination}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Raison</div>
+                            <div style={{ fontWeight: '500', color: '#FFD700' }}>{transport.reason}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Nouvelle ETA</div>
+                            <div style={{ fontWeight: '500' }}>{formatDateTime(transport.etaUpdated)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Blocked Carriers Details */}
+              {selectedAlert.type === 'vigilance_issue' && selectedAlert.data?.carriers && (
+                <div>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
+                    &#128683; Transporteurs bloques ({selectedAlert.data.carriers.length})
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedAlert.data.carriers.map((carrier, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          border: '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: '600', fontSize: '15px' }}>{carrier.carrierName}</div>
+                            <div style={{ fontSize: '12px', opacity: 0.6 }}>{carrier.region}</div>
+                          </div>
+                          <div style={{
+                            background: 'rgba(255,140,0,0.2)',
+                            color: '#FF8C00',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600'
+                          }}>
+                            {carrier.affectedOrders} commande{carrier.affectedOrders > 1 ? 's' : ''} affectee{carrier.affectedOrders > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Raison du blocage</div>
+                            <div style={{ fontWeight: '500', color: '#FF6B6B' }}>{carrier.blockReason}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Bloque depuis</div>
+                            <div style={{ fontWeight: '500' }}>{formatDateTime(carrier.blockedSince)}</div>
+                          </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ opacity: 0.5, marginBottom: '2px' }}>Contact</div>
+                            <div style={{ fontWeight: '500', color: '#667eea' }}>{carrier.contact}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Generic alert without specific details */}
+              {!selectedAlert.data?.transports && !selectedAlert.data?.carriers && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px',
+                  opacity: 0.7
+                }}>
+                  <span style={{ fontSize: '48px' }}>&#128269;</span>
+                  <p>Aucun detail supplementaire disponible pour cette alerte.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                onClick={() => setSelectedAlert(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Fermer
+              </button>
+              <button
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Marquer comme traite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
