@@ -77,7 +77,7 @@ export default function ECMRPage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+    loadECMRs();
   }, [mounted]);
 
   const loadECMRs = async () => {
