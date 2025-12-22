@@ -48,6 +48,15 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [ordersChart, setOrdersChart] = useState<ChartData[]>([]);
   const [operational, setOperational] = useState<any>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Calculer la periode affichee (mois en cours)
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const monthNames = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+                        'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+  };
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -96,6 +105,9 @@ export default function DashboardPage() {
         if (data.operational) {
           setOperational(data.operational);
         }
+
+        // Update timestamp
+        setLastUpdate(new Date());
       }
     } catch (err) {
       console.error('Error loading dashboard:', err);
@@ -187,7 +199,12 @@ export default function DashboardPage() {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '32px' }}>&#128202;</span>
-              <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Tableau de bord KPI</h1>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>Tableau de bord KPI</h1>
+                <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '2px' }}>
+                  Periode: {getCurrentPeriod()} {lastUpdate && `• Mis a jour: ${lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+                </div>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
