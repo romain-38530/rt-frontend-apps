@@ -45,7 +45,7 @@ export default function Login() {
 
   const handleTestLogin = () => {
     localStorage.setItem('authToken', 'demo-token');
-    localStorage.setItem('user', JSON.stringify({ email: 'test@symphoni-a.com', role: 'admin' }));
+    localStorage.setItem('user', JSON.stringify({ id: 'demo-user-001', email: 'test@symphoni-a.com', role: 'admin', name: 'Utilisateur Test' }));
     router.push('/');
   };
 
