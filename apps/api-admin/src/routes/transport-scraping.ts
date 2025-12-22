@@ -118,6 +118,22 @@ router.get('/b2pweb/status', async (_req: AuthRequest, res: Response) => {
 });
 
 /**
+ * POST /b2pweb/logout - Fermer le browser et déconnecter
+ * Cela force une nouvelle session avec le nouveau code après redéploiement
+ */
+router.post('/b2pweb/logout', async (_req: AuthRequest, res: Response) => {
+  try {
+    await transportScrapingService.closeBrowser();
+    res.json({
+      success: true,
+      message: 'Browser closed. Please re-authenticate to start a new session.'
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /b2pweb/auth-auto - Authentification automatique avec credentials par défaut
  */
 router.post('/b2pweb/auth-auto', async (_req: AuthRequest, res: Response) => {

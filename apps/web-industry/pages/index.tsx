@@ -25,19 +25,21 @@ export default function HomePage() {
     // Load subscription data (mock for now, would come from API)
     setSubscription({ tier: 'pro' });
 
-    // Load unread notifications count
-    notificationsApi.getUnreadCount()
-      .then(res => {
-        if (res.success && typeof res.count === 'number') {
-          setUnreadNotifications(res.count);
-        } else if (typeof res.count === 'number') {
-          setUnreadNotifications(res.count);
-        }
-      })
-      .catch(err => console.error('Failed to load notification count:', err));
-
     // Done loading
     setLoading(false);
+
+    // Load unread notifications count (non-blocking)
+    if (userData?.id || userData?._id) {
+      notificationsApi.getUnreadCount()
+        .then(res => {
+          if (res.success && typeof res.count === 'number') {
+            setUnreadNotifications(res.count);
+          } else if (typeof res.count === 'number') {
+            setUnreadNotifications(res.count);
+          }
+        })
+        .catch(err => console.error('Failed to load notification count:', err));
+    }
   }, [mounted]);
 
   if (loading) {
