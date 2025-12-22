@@ -766,9 +766,13 @@ export const notificationsApi = {
 // ============================================
 
 export const kpiApi = {
-  getDashboard: async (period?: string) => {
-    const params = period ? `?period=${period}` : '';
-    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/dashboard${params}`, {
+  getDashboard: async (options?: { universe?: string; companyId?: string; period?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.universe) params.append('universe', options.universe);
+    if (options?.companyId) params.append('companyId', options.companyId);
+    if (options?.period) params.append('period', options.period);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_CONFIG.KPI_API}/api/v1/kpi/dashboard${queryString}`, {
       headers: getAuthHeaders()
     });
     return res.json();
