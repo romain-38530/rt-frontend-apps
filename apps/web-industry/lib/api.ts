@@ -365,6 +365,21 @@ export const ecmrApi = {
     return res.blob();
   },
 
+  generatePdf: async (ecmrData: any): Promise<Blob> => {
+    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/generate-pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`
+      },
+      body: JSON.stringify(ecmrData)
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to generate PDF: ${res.status}`);
+    }
+    return res.blob();
+  },
+
   history: async (id: string) => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/history`, {
       headers: getAuthHeaders()

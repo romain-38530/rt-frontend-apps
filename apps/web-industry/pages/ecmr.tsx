@@ -391,8 +391,8 @@ export default function ECMRPage() {
 
   const handleDownload = async (ecmr: ECMR) => {
     try {
-      // Télécharger le PDF directement
-      const blob = await ecmrApi.downloadPdf(ecmr.id);
+      // Envoyer les donnees de l'eCMR pour generer le PDF
+      const blob = await ecmrApi.generatePdf(ecmr);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -401,6 +401,7 @@ export default function ECMRPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success(`PDF telecharge pour eCMR ${ecmr.id}`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast.error(`Erreur lors du telechargement du PDF pour eCMR ${ecmr.id}`);
