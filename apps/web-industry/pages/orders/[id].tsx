@@ -78,7 +78,56 @@ export default function OrderDetailPage() {
   const [appointmentRequests, setAppointmentRequests] = useState<AppointmentRequest[]>([]);
   const [loadingRdv, setLoadingRdv] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
+  const [ecmrData, setEcmrData] = useState<any>(null);
+  const [ecmrLoading, setEcmrLoading] = useState(false);
   const { toast } = useToast();
+
+  // eCMR functions
+  const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+
+  const loadEcmrData = async () => {
+    if (!orderId) return;
+    try {
+      const response = await fetch(`${ORDERS_API_URL}/orders/${orderId}/ecmr`);
+      const result = await response.json();
+      if (result.success) {
+        setEcmrData(result.data);
+      } else {
+        setEcmrData(null);
+      }
+    } catch (err) {
+      console.error('Error loading eCMR:', err);
+      setEcmrData(null);
+    }
+  };
+
+  const handleCreateEcmr = async () => {
+    if (!orderId) return;
+    setEcmrLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API_URL}/orders/${orderId}/ecmr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('eCMR créée avec succès');
+        setEcmrData(result.data);
+        await loadEcmrData();
+      } else {
+        toast.error(result.error || "Erreur lors de la création de l'eCMR");
+      }
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    } finally {
+      setEcmrLoading(false);
+    }
+  };
+
+  const handleDownloadEcmrPdf = () => {
+    if (!orderId) return;
+    window.open(`${ORDERS_API_URL}/orders/${orderId}/ecmr/pdf`, '_blank');
+  };
 
   // Extract order ID from URL path
   useEffect(() => {
@@ -250,6 +299,7 @@ export default function OrderDetailPage() {
     }
     loadOrder();
     loadAppointmentRequests();
+    loadEcmrData();
   }, [orderId]);
 
   const formatDate = (dateString: string) => {
@@ -774,6 +824,22 @@ export default function OrderDetailPage() {
                     style={{ padding: '10px 16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                   >
                     📍 Suivi GPS
+                  </button>
+                )}
+                {ecmrData ? (
+                  <button
+                    onClick={handleDownloadEcmrPdf}
+                    style={{ padding: '10px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    📄 Télécharger eCMR
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCreateEcmr}
+                    disabled={ecmrLoading}
+                    style={{ padding: '10px 16px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: ecmrLoading ? 'not-allowed' : 'pointer', fontWeight: '600', opacity: ecmrLoading ? 0.7 : 1 }}
+                  >
+                    {ecmrLoading ? '⏳ Création...' : '➕ Créer eCMR'}
                   </button>
                 )}
                 <button
