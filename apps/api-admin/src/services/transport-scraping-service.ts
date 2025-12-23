@@ -672,6 +672,10 @@ export class TransportScrapingService {
       console.log('[B2PWeb] hasPage:', !!this.page);
       console.log('[B2PWeb] hasB2pwebClient:', !!this.b2pwebClient);
 
+      // Handle any popups that may have appeared (version updates, notifications)
+      console.log('[B2PWeb] Checking for popups before scraping...');
+      await this.handlePostLoginPopups();
+
       let rawOffers: any[] = [];
 
       // Skip API endpoints - go directly to Puppeteer scraping
@@ -874,9 +878,12 @@ export class TransportScrapingService {
 
           console.log(`[B2PWeb] Route: ${routeInfo.departure} -> ${routeInfo.delivery}`);
 
-          // Click on the offer row to open the detail panel
-          // B2PWeb uses a virtual scroller - need double-click on the row content (not checkbox)
-          const clickResult = await this.page.evaluate((rowIndex) => {
+          // ==========================================
+          // STEP 1: CLICK ON THE OFFER ROW TO OPEN "OFFER INFORMATIONS" PANEL
+          // ==========================================
+          console.log(`[B2PWeb] Clicking on offer row ${i} to open Offer informations panel...`);
+
+          const rowClicked = await this.page.evaluate((rowIndex) => {
             const logs: string[] = [];
 
             // Find items in virtual scroller
@@ -887,207 +894,192 @@ export class TransportScrapingService {
               return { success: false, error: 'Row index out of bounds', logs };
             }
 
-            const item = scrollerItems[rowIndex] as HTMLElement;
-            const itemText = (item.textContent || '').substring(0, 100);
-            const rect = item.getBoundingClientRect();
-            logs.push(`Target item ${rowIndex}: ${item.className}, size: ${rect.width}x${rect.height}`);
+            const row = scrollerItems[rowIndex] as HTMLElement;
+            const rowText = (row.textContent || '').substring(0, 80);
+            logs.push(`Row ${rowIndex} text: ${rowText}`);
 
-            // DOUBLE-CLICK directly on the row content area (middle of the row, avoiding left side where checkbox is)
-            // Click at 60% from left to avoid the checkbox area
-            const clickX = rect.left + (rect.width * 0.6);
-            const clickY = rect.top + (rect.height / 2);
-            logs.push(`Double-clicking at (${Math.round(clickX)}, ${Math.round(clickY)})`);
+            // Click on the middle of the row (avoid checkbox on left)
+            const rect = row.getBoundingClientRect();
+            const clickX = rect.left + rect.width * 0.5;
+            const clickY = rect.top + rect.height / 2;
 
-            // Create and dispatch mouse events at specific coordinates
-            const mouseDownEvent = new MouseEvent('mousedown', {
-              bubbles: true, cancelable: true, view: window,
-              clientX: clickX, clientY: clickY, button: 0
-            });
-            const mouseUpEvent = new MouseEvent('mouseup', {
-              bubbles: true, cancelable: true, view: window,
-              clientX: clickX, clientY: clickY, button: 0
-            });
+            // Dispatch click event
             const clickEvent = new MouseEvent('click', {
               bubbles: true, cancelable: true, view: window,
               clientX: clickX, clientY: clickY, button: 0
             });
-            const dblClickEvent = new MouseEvent('dblclick', {
-              bubbles: true, cancelable: true, view: window,
-              clientX: clickX, clientY: clickY, button: 0
-            });
+            row.dispatchEvent(clickEvent);
 
-            // Simulate full double-click sequence
-            item.dispatchEvent(mouseDownEvent);
-            item.dispatchEvent(mouseUpEvent);
-            item.dispatchEvent(clickEvent);
-            item.dispatchEvent(mouseDownEvent);
-            item.dispatchEvent(mouseUpEvent);
-            item.dispatchEvent(clickEvent);
-            item.dispatchEvent(dblClickEvent);
-
-            return { success: true, method: 'double-click-coords', logs, rowText: itemText };
+            logs.push(`Clicked row at (${Math.round(clickX)}, ${Math.round(clickY)})`);
+            return { success: true, logs };
           }, i);
 
-          console.log(`[B2PWeb] Click result: ${JSON.stringify(clickResult)}`);
+          console.log(`[B2PWeb] Row click result: ${JSON.stringify(rowClicked)}`);
+          await delay(1500);
 
-          // Wait for panel
-          await delay(2000);
-
-          // Check if detail panel opened
+          // Check if Offer informations panel opened
           const panelOpened = await this.page.evaluate(() => {
             const body = document.body.innerText;
-            return body.includes('Proposer') || body.includes('Propose') ||
-                   body.includes('Historique') || body.includes('History') ||
-                   body.includes('Activité') || body.includes('Activity') ||
-                   body.includes('Détails') || body.includes('Details') ||
-                   body.includes('Départ') || body.includes('Departure');
+            return body.includes('Offer informations') || body.includes('Informations de l\'offre') ||
+                   body.includes('Offer details') || body.includes('Offer\'s contact') ||
+                   body.includes('Depositor') || body.includes('Déposant');
           });
-          console.log(`[B2PWeb] Panel opened: ${panelOpened}`);
+          console.log(`[B2PWeb] Offer informations panel opened: ${panelOpened}`);
 
           if (!panelOpened) {
-            console.log(`[B2PWeb] Panel did not open, trying single click...`);
-            await this.page.evaluate((rowIndex) => {
-              const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
-              if (scrollerItems.length > rowIndex) {
-                (scrollerItems[rowIndex] as HTMLElement).click();
-              }
-            }, i);
-            await delay(1500);
+            console.log(`[B2PWeb] Panel did not open for offer ${i + 1}, skipping...`);
+            continue;
           }
 
           // ==========================================
-          // SECTION: ACTIVITY > CONSULTANTS (only)
+          // STEP 2: CLICK ON HISTORY BUTTON IN "OFFER INFORMATIONS" PANEL
+          // The History button is a clock icon in the right panel
           // ==========================================
-          console.log(`[B2PWeb] Extracting Activity > Consultants...`);
+          console.log(`[B2PWeb] Looking for History button in Offer informations panel...`);
 
-          // First, check if the detail panel is actually open
-          const panelCheck = await this.page.evaluate(() => {
-            // Look for typical detail panel indicators
-            const body = document.body.innerText;
-            const hasDetailPanel = body.includes('Départ') || body.includes('Arrivée') ||
-                                   body.includes('Departure') || body.includes('Arrival') ||
-                                   body.includes('Proposer') || body.includes('Propose') ||
-                                   body.includes('Historique') || body.includes('History');
+          const historyButtonClicked = await this.page.evaluate(() => {
+            const logs: string[] = [];
 
-            // Count buttons/icons in the page
-            const buttons = document.querySelectorAll('button');
-            const svgs = document.querySelectorAll('svg');
+            // The Offer informations panel is typically on the right side of the page
+            // Look for panels/sidebars/drawers
+            const panels = document.querySelectorAll('[class*="panel"], [class*="sidebar"], [class*="drawer"], [class*="aside"], [class*="detail"]');
+            logs.push(`Found ${panels.length} panel-like elements`);
 
-            // Look for any sidebar/drawer/panel
-            const panels = document.querySelectorAll('[class*="drawer"], [class*="panel"], [class*="sidebar"], [class*="detail"], [class*="aside"]');
-
-            // Find ALL clickable elements with text for debugging
-            const allClickableTexts = Array.from(document.querySelectorAll('button, a, [role="tab"], [role="button"], span.clickable, div.clickable'))
-              .map(el => (el.textContent || '').trim())
-              .filter(t => t.length > 0 && t.length < 40);
-
-            // Find all navigation items
-            const navItems = Array.from(document.querySelectorAll('nav *, [role="navigation"] *, [role="tablist"] *'))
-              .map(el => (el.textContent || '').trim())
-              .filter(t => t.length > 0 && t.length < 30);
-
-            // Look for specific B2PWeb panel tabs - they might be in a specific structure
-            const tabLists = document.querySelectorAll('[role="tablist"], .tabs, .tab-list, .nav-tabs');
-            const tabListContent: string[] = [];
-            tabLists.forEach(tl => {
-              tabListContent.push(`TabList: ${(tl.textContent || '').substring(0, 100)}`);
-            });
-
-            return {
-              hasDetailPanel,
-              buttonCount: buttons.length,
-              svgCount: svgs.length,
-              panelCount: panels.length,
-              pageTextSample: body.substring(0, 800),
-              allClickableTexts: allClickableTexts.slice(0, 20),
-              navItems: navItems.slice(0, 15),
-              tabListContent
-            };
-          });
-          console.log(`[B2PWeb] Panel check: ${JSON.stringify(panelCheck)}`);
-
-          // ==========================================
-          // CLICK ON "HISTORY" ICON BUTTON
-          // The SVG has data-icon="history" attribute
-          // ==========================================
-
-          const historyClicked = await this.page.evaluate(() => {
-            const results: string[] = [];
-
-            // STRATEGY 1: Find SVG with data-icon="history" and click its parent button
-            const historyIcon = document.querySelector('svg[data-icon="history"]');
-            if (historyIcon) {
-              results.push(`Found SVG with data-icon="history"`);
-              // Click the parent button or the icon itself
-              const parentButton = historyIcon.closest('button') || historyIcon.parentElement;
-              if (parentButton) {
-                results.push(`Clicking parent: ${parentButton.tagName}`);
-                (parentButton as HTMLElement).click();
-                return { found: true, method: 'data-icon-history', logs: results };
+            // Find the rightmost panel (Offer informations is on the right)
+            let rightPanel: Element | null = null;
+            let maxX = 0;
+            for (const panel of Array.from(panels)) {
+              const rect = panel.getBoundingClientRect();
+              if (rect.left > maxX && rect.width > 100) {
+                maxX = rect.left;
+                rightPanel = panel;
               }
             }
 
-            // STRATEGY 2: Look for any SVG with data-icon attribute containing "history"
-            const allDataIcons = document.querySelectorAll('svg[data-icon]');
-            results.push(`Found ${allDataIcons.length} SVGs with data-icon attribute`);
-            for (const icon of Array.from(allDataIcons)) {
-              const dataIcon = icon.getAttribute('data-icon') || '';
-              results.push(`SVG data-icon: "${dataIcon}"`);
-              if (dataIcon.toLowerCase().includes('histor')) {
-                const parent = icon.closest('button') || icon.parentElement;
-                if (parent) {
-                  (parent as HTMLElement).click();
-                  return { found: true, method: 'data-icon-match', logs: results };
+            // If no panel found, search in the right half of the page
+            const searchArea = rightPanel || document.body;
+            const pageWidth = window.innerWidth;
+
+            // Find all SVG icons that could be the History button
+            const allSvgs = searchArea.querySelectorAll('svg');
+            logs.push(`Found ${allSvgs.length} SVGs in search area`);
+
+            for (const svg of Array.from(allSvgs)) {
+              const svgRect = svg.getBoundingClientRect();
+
+              // Only look at SVGs in the right half of the page (where Offer informations panel is)
+              if (svgRect.left < pageWidth * 0.5) continue;
+
+              const parent = svg.parentElement;
+              if (!parent) continue;
+
+              // Check for history-related attributes
+              const dataIcon = svg.getAttribute('data-icon') || '';
+              const ariaLabel = parent.getAttribute('aria-label') || parent.getAttribute('title') || '';
+              const parentClass = parent.className || '';
+
+              // Look for history/clock icon
+              if (dataIcon.includes('history') || dataIcon.includes('clock') || dataIcon.includes('time') ||
+                  ariaLabel.toLowerCase().includes('history') || ariaLabel.toLowerCase().includes('historique')) {
+                logs.push(`Found history button by attribute: ${dataIcon || ariaLabel}`);
+                (parent as HTMLElement).click();
+                return { success: true, method: 'attribute-match', logs };
+              }
+
+              // Check SVG path for clock-like pattern
+              const path = svg.querySelector('path');
+              if (path) {
+                const d = path.getAttribute('d') || '';
+                // Clock icons typically have circular arcs
+                if (d.includes('M13 3c-4.97') || d.includes('c-4.97') ||
+                    (d.includes('M12') && d.includes('c') && d.length > 50)) {
+                  logs.push(`Found history icon by path pattern`);
+                  const clickTarget = parent.closest('button, [role="button"], .cursor-pointer') || parent;
+                  (clickTarget as HTMLElement).click();
+                  return { success: true, method: 'path-pattern', logs };
                 }
               }
             }
 
-            // STRATEGY 3: Look for the specific SVG path (clock with arrow)
-            const allSvgs = document.querySelectorAll('svg');
-            results.push(`Found ${allSvgs.length} total SVGs`);
-            for (const svg of Array.from(allSvgs)) {
-              const path = svg.querySelector('path');
-              if (path) {
-                const d = path.getAttribute('d') || '';
-                // Check for the unique start of the history icon path
-                if (d.startsWith('M13 3c-4.97')) {
-                  results.push(`Found history icon by SVG path`);
-                  const parent = svg.closest('button') || svg.parentElement;
-                  if (parent) {
-                    (parent as HTMLElement).click();
-                    return { found: true, method: 'svg-path-match', logs: results };
+            // STRATEGY 2: Look for small circular buttons with SVG in the right panel
+            const buttons = searchArea.querySelectorAll('button, [role="button"], .cursor-pointer');
+            logs.push(`Found ${buttons.length} clickable elements`);
+
+            for (const btn of Array.from(buttons)) {
+              const rect = (btn as HTMLElement).getBoundingClientRect();
+
+              // Only right side of page
+              if (rect.left < pageWidth * 0.5) continue;
+
+              // Small circular button (typical icon button)
+              if (rect.width > 20 && rect.width < 50 && rect.height > 20 && rect.height < 50) {
+                const hasSvg = btn.querySelector('svg');
+                if (hasSvg) {
+                  const btnClass = (btn as HTMLElement).className || '';
+                  logs.push(`Potential icon button: ${rect.width}x${rect.height} at x=${Math.round(rect.left)}, class=${btnClass.substring(0, 30)}`);
+
+                  // Check if it looks like a rounded button
+                  if (btnClass.includes('rounded') || btnClass.includes('circle') || btnClass.includes('btn')) {
+                    logs.push(`Clicking rounded button`);
+                    (btn as HTMLElement).click();
+                    return { success: true, method: 'rounded-button', logs };
                   }
                 }
               }
             }
 
-            // STRATEGY 4: Fallback - look for title/aria-label
-            const tooltipSelectors = '[title*="istory"], [aria-label*="istory"]';
-            const tooltipElements = document.querySelectorAll(tooltipSelectors);
-            if (tooltipElements.length > 0) {
-              (tooltipElements[0] as HTMLElement).click();
-              return { found: true, method: 'tooltip', logs: results };
+            // STRATEGY 3: Find by position - History button is usually near the top of the panel
+            // Look for the first clickable SVG button in the Offer informations area
+            for (const svg of Array.from(allSvgs)) {
+              const svgRect = svg.getBoundingClientRect();
+
+              // Right side, upper portion
+              if (svgRect.left > pageWidth * 0.6 && svgRect.top < 400) {
+                const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
+                if (parent) {
+                  const parentRect = (parent as HTMLElement).getBoundingClientRect();
+                  if (parentRect.width < 60 && parentRect.height < 60) {
+                    logs.push(`Clicking upper-right icon at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
+                    (parent as HTMLElement).click();
+                    return { success: true, method: 'position-based', logs };
+                  }
+                }
+              }
             }
 
-            // Debug: list all data-icon values
-            const dataIconValues = Array.from(allDataIcons).map(i => i.getAttribute('data-icon'));
-            results.push(`All data-icon values: ${dataIconValues.join(', ')}`);
-
-            return { found: false, logs: results };
+            return { success: false, error: 'History button not found in panel', logs };
           });
-          console.log(`[B2PWeb] History button result: ${JSON.stringify(historyClicked)}`);
 
-          // Wait and check if content changed
-          await delay(2500);
+          console.log(`[B2PWeb] History button click result: ${JSON.stringify(historyButtonClicked)}`);
 
-          // Debug: log what's visible after clicking History
-          const pageTextAfterHistory = await this.page.evaluate(() => {
-            return document.body.innerText.substring(0, 2000);
+          if (!historyButtonClicked.success) {
+            console.log(`[B2PWeb] Could not find History button for offer ${i + 1}, skipping...`);
+            // Press Escape to close panel and continue
+            await this.page.keyboard.press('Escape');
+            await delay(500);
+            continue;
+          }
+
+          // Wait for History popup to open
+          await delay(2000);
+
+          // Check if History popup opened (should show "History", "Carriers", "Users", "Active searches")
+          const historyPopupOpened = await this.page.evaluate(() => {
+            const body = document.body.innerText;
+            return body.includes('History') || body.includes('Historique') ||
+                   body.includes('Active searches') || body.includes('Recherches actives') ||
+                   body.includes('Carriers') || body.includes('Transporteurs');
           });
-          console.log(`[B2PWeb] Page text after History click: ${pageTextAfterHistory.substring(0, 500)}...`);
+          console.log(`[B2PWeb] History popup opened: ${historyPopupOpened}`);
+
+          // ==========================================
+          // CLICK ON "ACTIVE SEARCHES" TAB
+          // The History popup shows: Carriers, Users, Active searches
+          // We want to click on "Active searches" to see transporters
+          // ==========================================
+          console.log(`[B2PWeb] Looking for Active searches tab in History popup...`);
 
           // Now look for "Active searches" tab - this shows transporters searching for this route
-          // The icon has data-icon="search-check-mark"
           const activeSearchesClicked = await this.page.evaluate(() => {
             const results: string[] = [];
 
