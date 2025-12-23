@@ -950,28 +950,52 @@ export class TransportScrapingService {
             const allSvgs = document.querySelectorAll('svg');
             logs.push(`Found ${allSvgs.length} total SVGs`);
 
-            // Collect all SVG buttons in the upper right area (toolbar area)
+            // The Offer informations panel toolbar is on the RIGHT side of the page
+            // It's BELOW the main navbar (which has truck, chat, bell icons)
+            // Look for a horizontal row of icon buttons in the panel header area
+
+            // First, find the panel by looking for "Informations de dépose" or similar text
+            const panelHeader = Array.from(document.querySelectorAll('h2, h3, div, span')).find(el => {
+              const text = (el.textContent || '').toLowerCase();
+              return text.includes('informations de') || text.includes('offer informations') ||
+                     text.includes('informations de dépose') || text.includes('détails de l\'offre');
+            });
+
+            let panelTop = 50; // Default minimum Y
+            if (panelHeader) {
+              const headerRect = panelHeader.getBoundingClientRect();
+              panelTop = headerRect.top - 50; // Toolbar is just above the panel content
+              logs.push(`Panel header found at y=${Math.round(headerRect.top)}`);
+            }
+
+            // Collect all SVG buttons in the panel toolbar area
+            // The toolbar should be in the right 40% of the page, below the main navbar
             const toolbarButtons: { svg: Element, rect: DOMRect, dataIcon: string }[] = [];
 
             for (const svg of Array.from(allSvgs)) {
               const svgRect = svg.getBoundingClientRect();
 
-              // Only look at SVGs in the right side and upper portion (toolbar area)
-              if (svgRect.left < pageWidth * 0.5) continue;
-              if (svgRect.top > 150) continue; // Toolbar is at the top
+              // Must be on the right side (panel area) - right 40% of page
+              if (svgRect.left < pageWidth * 0.6) continue;
+
+              // Must be in the panel toolbar area (between panelTop and panelTop+100)
+              // Skip the main navbar icons (which are at the very top, y < 70)
+              if (svgRect.top < 70) continue;  // Skip main navbar
+              if (svgRect.top > panelTop + 100) continue; // Don't go too far down
 
               const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
               if (!parent) continue;
 
               const parentRect = (parent as HTMLElement).getBoundingClientRect();
-              // Small icon buttons (typical toolbar buttons)
-              if (parentRect.width > 20 && parentRect.width < 60 && parentRect.height > 20 && parentRect.height < 60) {
+              // Small icon buttons (typical toolbar buttons: 30-50px)
+              if (parentRect.width > 25 && parentRect.width < 55 && parentRect.height > 25 && parentRect.height < 55) {
                 const dataIcon = svg.getAttribute('data-icon') || '';
                 toolbarButtons.push({ svg, rect: parentRect, dataIcon });
+                logs.push(`Toolbar btn: ${dataIcon} at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
               }
             }
 
-            logs.push(`Found ${toolbarButtons.length} toolbar buttons`);
+            logs.push(`Found ${toolbarButtons.length} toolbar buttons in panel`);
 
             // Sort by X position (left to right)
             toolbarButtons.sort((a, b) => a.rect.left - b.rect.left);
