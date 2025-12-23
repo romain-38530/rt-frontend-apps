@@ -28,6 +28,8 @@ export default function TrackingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [ecmrData, setEcmrData] = useState<any>(null);
+  const [ecmrLoading, setEcmrLoading] = useState(false);
 
   const { subscribe, isConnected } = useWebSocket();
 
@@ -187,6 +189,60 @@ export default function TrackingPage() {
     }
   };
 
+  // eCMR functions
+  const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+
+  const loadEcmrData = async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const response = await fetch(`${ORDERS_API_URL}/orders/${id}/ecmr`);
+      const result = await response.json();
+      if (result.success) {
+        setEcmrData(result.data);
+      } else {
+        setEcmrData(null);
+      }
+    } catch (err) {
+      console.error('Error loading eCMR:', err);
+      setEcmrData(null);
+    }
+  };
+
+  const handleCreateEcmr = async () => {
+    if (!id || typeof id !== 'string') return;
+    setEcmrLoading(true);
+    try {
+      const response = await fetch(`${ORDERS_API_URL}/orders/${id}/ecmr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('eCMR créée avec succès');
+        setEcmrData(result.data);
+        await loadEcmrData();
+      } else {
+        toast.error(result.error || 'Erreur lors de la création de l\'eCMR');
+      }
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    } finally {
+      setEcmrLoading(false);
+    }
+  };
+
+  const handleDownloadEcmrPdf = () => {
+    if (!id) return;
+    window.open(`${ORDERS_API_URL}/orders/${id}/ecmr/pdf`, '_blank');
+  };
+
+  // Load eCMR data on mount
+  useEffect(() => {
+    if (id && typeof id === 'string') {
+      loadEcmrData();
+    }
+  }, [id]);
+
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -303,6 +359,46 @@ export default function TrackingPage() {
             >
               🔄 Actualiser
             </button>
+
+            {/* Boutons eCMR */}
+            {ecmrData ? (
+              <button
+                onClick={handleDownloadEcmrPdf}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                📄 Télécharger eCMR
+              </button>
+            ) : (
+              <button
+                onClick={handleCreateEcmr}
+                disabled={ecmrLoading}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: ecmrLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  opacity: ecmrLoading ? 0.7 : 1,
+                }}
+              >
+                {ecmrLoading ? '⏳ Création...' : '➕ Créer eCMR'}
+              </button>
+            )}
           </div>
         </div>
 
