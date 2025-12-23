@@ -939,115 +939,107 @@ export class TransportScrapingService {
 
           const historyButtonClicked = await this.page.evaluate(() => {
             const logs: string[] = [];
-
-            // The Offer informations panel is typically on the right side of the page
-            // Look for panels/sidebars/drawers
-            const panels = document.querySelectorAll('[class*="panel"], [class*="sidebar"], [class*="drawer"], [class*="aside"], [class*="detail"]');
-            logs.push(`Found ${panels.length} panel-like elements`);
-
-            // Find the rightmost panel (Offer informations is on the right)
-            let rightPanel: Element | null = null;
-            let maxX = 0;
-            for (const panel of Array.from(panels)) {
-              const rect = panel.getBoundingClientRect();
-              if (rect.left > maxX && rect.width > 100) {
-                maxX = rect.left;
-                rightPanel = panel;
-              }
-            }
-
-            // If no panel found, search in the right half of the page
-            const searchArea = rightPanel || document.body;
             const pageWidth = window.innerWidth;
 
-            // Find all SVG icons that could be the History button
-            const allSvgs = searchArea.querySelectorAll('svg');
-            logs.push(`Found ${allSvgs.length} SVGs in search area`);
+            // The History button is in a toolbar at the top of the Offer informations panel
+            // It's the 6th button (clock/schedule icon) in a row of icon buttons
+            // Toolbar buttons are: pencil, arrows, copy, trash, magnify, CLOCK(history), list, globe
+
+            // STRATEGY 1: Find toolbar in the right panel and click the 6th button
+            // Look for a row of small icon buttons in the upper right area
+            const allSvgs = document.querySelectorAll('svg');
+            logs.push(`Found ${allSvgs.length} total SVGs`);
+
+            // Collect all SVG buttons in the upper right area (toolbar area)
+            const toolbarButtons: { svg: Element, rect: DOMRect, dataIcon: string }[] = [];
 
             for (const svg of Array.from(allSvgs)) {
               const svgRect = svg.getBoundingClientRect();
 
-              // Only look at SVGs in the right half of the page (where Offer informations panel is)
+              // Only look at SVGs in the right side and upper portion (toolbar area)
               if (svgRect.left < pageWidth * 0.5) continue;
+              if (svgRect.top > 150) continue; // Toolbar is at the top
 
-              const parent = svg.parentElement;
+              const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
               if (!parent) continue;
 
-              // Check for history-related attributes
-              const dataIcon = svg.getAttribute('data-icon') || '';
-              const ariaLabel = parent.getAttribute('aria-label') || parent.getAttribute('title') || '';
-              const parentClass = parent.className || '';
-
-              // Look for history/clock icon
-              if (dataIcon.includes('history') || dataIcon.includes('clock') || dataIcon.includes('time') ||
-                  ariaLabel.toLowerCase().includes('history') || ariaLabel.toLowerCase().includes('historique')) {
-                logs.push(`Found history button by attribute: ${dataIcon || ariaLabel}`);
-                (parent as HTMLElement).click();
-                return { success: true, method: 'attribute-match', logs };
+              const parentRect = (parent as HTMLElement).getBoundingClientRect();
+              // Small icon buttons (typical toolbar buttons)
+              if (parentRect.width > 20 && parentRect.width < 60 && parentRect.height > 20 && parentRect.height < 60) {
+                const dataIcon = svg.getAttribute('data-icon') || '';
+                toolbarButtons.push({ svg, rect: parentRect, dataIcon });
               }
+            }
 
-              // Check SVG path for clock-like pattern
+            logs.push(`Found ${toolbarButtons.length} toolbar buttons`);
+
+            // Sort by X position (left to right)
+            toolbarButtons.sort((a, b) => a.rect.left - b.rect.left);
+
+            // Log all toolbar button icons for debugging
+            const iconNames = toolbarButtons.map(b => b.dataIcon || 'unknown');
+            logs.push(`Toolbar icons: ${iconNames.join(', ')}`);
+
+            // STRATEGY 1a: Find by exact data-icon name (schedule, history, clock-outline, update)
+            const historyIconNames = ['schedule', 'history', 'clock-outline', 'update', 'clock', 'access-time', 'restore'];
+            for (const btn of toolbarButtons) {
+              if (historyIconNames.some(name => btn.dataIcon.toLowerCase().includes(name))) {
+                logs.push(`Found history by icon name: ${btn.dataIcon}`);
+                const clickTarget = btn.svg.closest('button, [role="button"], .cursor-pointer') || btn.svg.parentElement;
+                if (clickTarget) {
+                  (clickTarget as HTMLElement).click();
+                  return { success: true, method: 'icon-name', icon: btn.dataIcon, logs };
+                }
+              }
+            }
+
+            // STRATEGY 1b: Click the 6th button in toolbar (History is typically 6th)
+            if (toolbarButtons.length >= 6) {
+              const historyBtn = toolbarButtons[5]; // 0-indexed, so 5 = 6th button
+              logs.push(`Clicking 6th toolbar button (index 5): ${historyBtn.dataIcon} at x=${Math.round(historyBtn.rect.left)}`);
+              const clickTarget = historyBtn.svg.closest('button, [role="button"], .cursor-pointer') || historyBtn.svg.parentElement;
+              if (clickTarget) {
+                (clickTarget as HTMLElement).click();
+                return { success: true, method: 'position-6th', icon: historyBtn.dataIcon, logs };
+              }
+            }
+
+            // STRATEGY 2: Look for SVG with clock-like path pattern
+            for (const svg of Array.from(allSvgs)) {
+              const svgRect = svg.getBoundingClientRect();
+              if (svgRect.left < pageWidth * 0.5 || svgRect.top > 200) continue;
+
               const path = svg.querySelector('path');
               if (path) {
                 const d = path.getAttribute('d') || '';
-                // Clock icons typically have circular arcs
-                if (d.includes('M13 3c-4.97') || d.includes('c-4.97') ||
-                    (d.includes('M12') && d.includes('c') && d.length > 50)) {
-                  logs.push(`Found history icon by path pattern`);
-                  const clickTarget = parent.closest('button, [role="button"], .cursor-pointer') || parent;
-                  (clickTarget as HTMLElement).click();
-                  return { success: true, method: 'path-pattern', logs };
-                }
-              }
-            }
-
-            // STRATEGY 2: Look for small circular buttons with SVG in the right panel
-            const buttons = searchArea.querySelectorAll('button, [role="button"], .cursor-pointer');
-            logs.push(`Found ${buttons.length} clickable elements`);
-
-            for (const btn of Array.from(buttons)) {
-              const rect = (btn as HTMLElement).getBoundingClientRect();
-
-              // Only right side of page
-              if (rect.left < pageWidth * 0.5) continue;
-
-              // Small circular button (typical icon button)
-              if (rect.width > 20 && rect.width < 50 && rect.height > 20 && rect.height < 50) {
-                const hasSvg = btn.querySelector('svg');
-                if (hasSvg) {
-                  const btnClass = (btn as HTMLElement).className || '';
-                  logs.push(`Potential icon button: ${rect.width}x${rect.height} at x=${Math.round(rect.left)}, class=${btnClass.substring(0, 30)}`);
-
-                  // Check if it looks like a rounded button
-                  if (btnClass.includes('rounded') || btnClass.includes('circle') || btnClass.includes('btn')) {
-                    logs.push(`Clicking rounded button`);
-                    (btn as HTMLElement).click();
-                    return { success: true, method: 'rounded-button', logs };
+                // Clock icons typically have specific path patterns
+                if (d.includes('M12 2C6.5 2') || d.includes('M11.99 2C6.47') ||
+                    d.includes('M12,2A10') || d.includes('schedule') ||
+                    (d.includes('12') && d.includes('10') && d.length > 80 && d.length < 300)) {
+                  logs.push(`Found clock by path pattern`);
+                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
+                  if (clickTarget) {
+                    (clickTarget as HTMLElement).click();
+                    return { success: true, method: 'path-pattern', logs };
                   }
                 }
               }
             }
 
-            // STRATEGY 3: Find by position - History button is usually near the top of the panel
-            // Look for the first clickable SVG button in the Offer informations area
-            for (const svg of Array.from(allSvgs)) {
-              const svgRect = svg.getBoundingClientRect();
-
-              // Right side, upper portion
-              if (svgRect.left > pageWidth * 0.6 && svgRect.top < 400) {
-                const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
-                if (parent) {
-                  const parentRect = (parent as HTMLElement).getBoundingClientRect();
-                  if (parentRect.width < 60 && parentRect.height < 60) {
-                    logs.push(`Clicking upper-right icon at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
-                    (parent as HTMLElement).click();
-                    return { success: true, method: 'position-based', logs };
-                  }
-                }
+            // STRATEGY 3: If toolbar has 8 buttons, click the one after magnify (5th from left)
+            // Order: pencil(0), arrows(1), copy(2), trash(3), magnify(4), HISTORY(5), list(6), globe(7)
+            if (toolbarButtons.length >= 5) {
+              // Try button at index 5 (6th button)
+              const btn = toolbarButtons[Math.min(5, toolbarButtons.length - 1)];
+              logs.push(`Fallback: clicking button at index 5: ${btn.dataIcon}`);
+              const clickTarget = btn.svg.closest('button, [role="button"], .cursor-pointer') || btn.svg.parentElement;
+              if (clickTarget) {
+                (clickTarget as HTMLElement).click();
+                return { success: true, method: 'fallback-position', icon: btn.dataIcon, logs };
               }
             }
 
-            return { success: false, error: 'History button not found in panel', logs };
+            return { success: false, error: 'History button not found in toolbar', logs };
           });
 
           console.log(`[B2PWeb] History button click result: ${JSON.stringify(historyButtonClicked)}`);
