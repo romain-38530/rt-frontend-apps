@@ -409,7 +409,14 @@ export default function TransportScrapingPage() {
           <div className="space-y-6">
             {/* B2PWeb Config */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Configuration B2PWeb</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Configuration B2PWeb</h2>
+                {config?.version && (
+                  <span className="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700 font-mono">
+                    v{config.version}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-4 mb-4">
                 <span className={`px-3 py-1 rounded-full text-sm ${config?.b2pwebAuthenticated ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {config?.b2pwebAuthenticated ? 'Connecte' : 'Non connecte'}

@@ -393,11 +393,24 @@ export class TransportScrapingService {
     try {
       // Step 1: Find and click the Déposant dropdown
       const dropdownOpened = await this.page.evaluate(() => {
+        const logs: string[] = [];
+
+        // Log all dropdown-like elements for debugging
+        const dropdowns = Array.from(document.querySelectorAll('select, [role="combobox"], [role="listbox"], [class*="dropdown"], [class*="select"], [class*="filter"]'));
+        logs.push(`Found ${dropdowns.length} dropdown-like elements`);
+
+        // Log visible filter labels
+        const filterLabels = Array.from(document.querySelectorAll('label, span, div')).filter(el => {
+          const text = (el.textContent || '').trim().toLowerCase();
+          return text.length > 0 && text.length < 30 && (text.includes('filter') || text.includes('déposant') || text.includes('depositor') || text.includes('myself') || text.includes('moi'));
+        }).map(el => (el.textContent || '').trim());
+        logs.push(`Filter-related labels: ${filterLabels.slice(0, 10).join(', ')}`);
+
         // Look for dropdown/select with label "Déposant" or "Depositor"
         const labels = Array.from(document.querySelectorAll('label, span, div'));
         for (const label of labels) {
           const text = (label.textContent || '').trim().toLowerCase();
-          if (text.includes('déposant') || text.includes('deposant') || text.includes('depositor')) {
+          if (text.includes('déposant') || text.includes('deposant') || text.includes('depositor') || text.includes('submitter')) {
             // Find nearby dropdown or clickable element
             const parent = label.closest('div');
             if (parent) {
@@ -405,26 +418,26 @@ export class TransportScrapingService {
               const clickable = parent.querySelector('select, [role="combobox"], [role="listbox"], button, [class*="dropdown"], [class*="select"]');
               if (clickable) {
                 (clickable as HTMLElement).click();
-                return { found: true, element: 'dropdown' };
+                return { found: true, element: 'dropdown', logs };
               }
               // Try clicking the parent itself
               (parent as HTMLElement).click();
-              return { found: true, element: 'parent' };
+              return { found: true, element: 'parent', logs };
             }
           }
         }
 
-        // Alternative: look for any dropdown showing "Moi-même"
+        // Alternative: look for any dropdown showing "Moi-même" or "Myself"
         const allElements = Array.from(document.querySelectorAll('button, div, span'));
         for (const el of allElements) {
           const text = (el.textContent || '').trim();
-          if (text === 'Moi-même' || text === 'Myself' || text.toLowerCase().includes('moi-même')) {
+          if (text === 'Moi-même' || text === 'Myself' || text.toLowerCase().includes('moi-même') || text.toLowerCase() === 'myself') {
             (el as HTMLElement).click();
-            return { found: true, element: 'moi-meme-button' };
+            return { found: true, element: 'moi-meme-button', text, logs };
           }
         }
 
-        return { found: false };
+        return { found: false, logs };
       });
 
       console.log(`[B2PWeb] Déposant dropdown open result: ${JSON.stringify(dropdownOpened)}`);
@@ -655,11 +668,22 @@ export class TransportScrapingService {
       }
 
       console.log('[B2PWeb] Starting offers scraping...');
+      console.log('[B2PWeb] isAuthenticated:', this.isAuthenticated);
+      console.log('[B2PWeb] hasPage:', !!this.page);
+      console.log('[B2PWeb] hasB2pwebClient:', !!this.b2pwebClient);
 
       let rawOffers: any[] = [];
 
+      // Skip API endpoints - go directly to Puppeteer scraping
+      // API endpoints don't work reliably with B2PWeb
+      console.log('[B2PWeb] Using Puppeteer page scraping directly...');
+      if (this.page) {
+        rawOffers = await this.scrapeOffersWithPuppeteer();
+      }
+
+      /* DISABLED: API endpoints don't work with B2PWeb
       // Try API endpoints first (with cookies from Puppeteer session)
-      if (this.b2pwebClient) {
+      if (false && this.b2pwebClient) {
         const offerEndpoints = [
           '/api/offers',
           '/api/v1/offers',
@@ -712,6 +736,7 @@ export class TransportScrapingService {
         console.log('[B2PWeb] API endpoints failed, using Puppeteer page scraping...');
         rawOffers = await this.scrapeOffersWithPuppeteer();
       }
+      */
 
       job.totalFound += rawOffers.length;
       console.log(`[B2PWeb] Found ${rawOffers.length} offers`);
@@ -759,18 +784,28 @@ export class TransportScrapingService {
       // STEP 1: Click on "Dépose" tab
       // The default view might be "Recherche", we need "Dépose"
       // ============================================
-      console.log('[B2PWeb] Looking for Dépose tab...');
+      console.log('[B2PWeb] Looking for Dépose/Submission tab...');
       const deposeClicked = await this.page.evaluate(() => {
-        const tabs = Array.from(document.querySelectorAll('a, button, [role="tab"], span, div'));
+        const logs: string[] = [];
+
+        // First, log all visible tabs/navigation items for debugging
+        const allTabs = Array.from(document.querySelectorAll('a, button, [role="tab"], nav a, nav button, .nav-item, .tab'));
+        const tabTexts = allTabs.map(t => (t.textContent || '').trim()).filter(t => t.length > 0 && t.length < 30);
+        logs.push(`Available tabs/links: ${tabTexts.slice(0, 15).join(', ')}`);
+
+        // Keywords for Dépose tab (French and English)
+        const deposeKeywords = ['dépose', 'depose', 'deposit', 'submission', 'déposes', 'deposes', 'submissions', 'mes déposes', 'my submissions'];
+
+        const tabs = Array.from(document.querySelectorAll('a, button, [role="tab"], span, div, nav a, nav button'));
         for (const tab of tabs) {
           const text = (tab.textContent || '').trim().toLowerCase();
-          // Match "Dépose" or "Depose" (without accent) or "Deposit"
-          if (text === 'dépose' || text === 'depose' || text === 'deposit' || text === 'déposes' || text === 'deposes') {
+          // Match any of the keywords
+          if (deposeKeywords.some(kw => text === kw || text.includes(kw))) {
             (tab as HTMLElement).click();
-            return { clicked: true, text: text };
+            return { clicked: true, text: text, logs };
           }
         }
-        return { clicked: false };
+        return { clicked: false, logs };
       });
       console.log(`[B2PWeb] Dépose tab click result: ${JSON.stringify(deposeClicked)}`);
       await delay(2000);
@@ -840,44 +875,85 @@ export class TransportScrapingService {
           console.log(`[B2PWeb] Route: ${routeInfo.departure} -> ${routeInfo.delivery}`);
 
           // Click on the offer row to open the detail panel
-          // The row click should open a side panel with offer details
+          // B2PWeb uses a virtual scroller - need double-click on the row content (not checkbox)
           const clickResult = await this.page.evaluate((rowIndex) => {
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            const checkbox = checkboxes[rowIndex];
-            if (!checkbox) return { success: false, error: 'No checkbox found' };
+            const logs: string[] = [];
 
-            const row = checkbox.closest('tr, [class*="row"], div[role="row"]');
-            if (!row) return { success: false, error: 'No row found' };
+            // Find items in virtual scroller
+            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
+            logs.push(`Found ${scrollerItems.length} scroller items`);
 
-            // Try clicking on the row itself
-            (row as HTMLElement).click();
-
-            // Also try clicking on the first cell that's not the checkbox cell
-            const cells = row.querySelectorAll('td, [class*="cell"]');
-            for (const cell of Array.from(cells)) {
-              if (!cell.querySelector('input[type="checkbox"]')) {
-                (cell as HTMLElement).click();
-                break;
-              }
+            if (scrollerItems.length <= rowIndex) {
+              return { success: false, error: 'Row index out of bounds', logs };
             }
 
-            return {
-              success: true,
-              rowClass: row.className,
-              rowTag: row.tagName,
-              rowText: (row.textContent || '').substring(0, 100)
-            };
+            const item = scrollerItems[rowIndex] as HTMLElement;
+            const itemText = (item.textContent || '').substring(0, 100);
+            const rect = item.getBoundingClientRect();
+            logs.push(`Target item ${rowIndex}: ${item.className}, size: ${rect.width}x${rect.height}`);
+
+            // DOUBLE-CLICK directly on the row content area (middle of the row, avoiding left side where checkbox is)
+            // Click at 60% from left to avoid the checkbox area
+            const clickX = rect.left + (rect.width * 0.6);
+            const clickY = rect.top + (rect.height / 2);
+            logs.push(`Double-clicking at (${Math.round(clickX)}, ${Math.round(clickY)})`);
+
+            // Create and dispatch mouse events at specific coordinates
+            const mouseDownEvent = new MouseEvent('mousedown', {
+              bubbles: true, cancelable: true, view: window,
+              clientX: clickX, clientY: clickY, button: 0
+            });
+            const mouseUpEvent = new MouseEvent('mouseup', {
+              bubbles: true, cancelable: true, view: window,
+              clientX: clickX, clientY: clickY, button: 0
+            });
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true, cancelable: true, view: window,
+              clientX: clickX, clientY: clickY, button: 0
+            });
+            const dblClickEvent = new MouseEvent('dblclick', {
+              bubbles: true, cancelable: true, view: window,
+              clientX: clickX, clientY: clickY, button: 0
+            });
+
+            // Simulate full double-click sequence
+            item.dispatchEvent(mouseDownEvent);
+            item.dispatchEvent(mouseUpEvent);
+            item.dispatchEvent(clickEvent);
+            item.dispatchEvent(mouseDownEvent);
+            item.dispatchEvent(mouseUpEvent);
+            item.dispatchEvent(clickEvent);
+            item.dispatchEvent(dblClickEvent);
+
+            return { success: true, method: 'double-click-coords', logs, rowText: itemText };
           }, i);
 
           console.log(`[B2PWeb] Click result: ${JSON.stringify(clickResult)}`);
 
-          if (!clickResult.success) {
-            console.log(`[B2PWeb] Could not click offer row ${i + 1}: ${clickResult.error}`);
-            continue;
-          }
+          // Wait for panel
+          await delay(2000);
 
-          // Wait longer for the panel to open - B2PWeb can be slow
-          await delay(2500);
+          // Check if detail panel opened
+          const panelOpened = await this.page.evaluate(() => {
+            const body = document.body.innerText;
+            return body.includes('Proposer') || body.includes('Propose') ||
+                   body.includes('Historique') || body.includes('History') ||
+                   body.includes('Activité') || body.includes('Activity') ||
+                   body.includes('Détails') || body.includes('Details') ||
+                   body.includes('Départ') || body.includes('Departure');
+          });
+          console.log(`[B2PWeb] Panel opened: ${panelOpened}`);
+
+          if (!panelOpened) {
+            console.log(`[B2PWeb] Panel did not open, trying single click...`);
+            await this.page.evaluate((rowIndex) => {
+              const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
+              if (scrollerItems.length > rowIndex) {
+                (scrollerItems[rowIndex] as HTMLElement).click();
+              }
+            }, i);
+            await delay(1500);
+          }
 
           // ==========================================
           // SECTION: ACTIVITY > CONSULTANTS (only)
@@ -900,139 +976,183 @@ export class TransportScrapingService {
             // Look for any sidebar/drawer/panel
             const panels = document.querySelectorAll('[class*="drawer"], [class*="panel"], [class*="sidebar"], [class*="detail"], [class*="aside"]');
 
+            // Find ALL clickable elements with text for debugging
+            const allClickableTexts = Array.from(document.querySelectorAll('button, a, [role="tab"], [role="button"], span.clickable, div.clickable'))
+              .map(el => (el.textContent || '').trim())
+              .filter(t => t.length > 0 && t.length < 40);
+
+            // Find all navigation items
+            const navItems = Array.from(document.querySelectorAll('nav *, [role="navigation"] *, [role="tablist"] *'))
+              .map(el => (el.textContent || '').trim())
+              .filter(t => t.length > 0 && t.length < 30);
+
+            // Look for specific B2PWeb panel tabs - they might be in a specific structure
+            const tabLists = document.querySelectorAll('[role="tablist"], .tabs, .tab-list, .nav-tabs');
+            const tabListContent: string[] = [];
+            tabLists.forEach(tl => {
+              tabListContent.push(`TabList: ${(tl.textContent || '').substring(0, 100)}`);
+            });
+
             return {
               hasDetailPanel,
               buttonCount: buttons.length,
               svgCount: svgs.length,
               panelCount: panels.length,
-              pageTextSample: body.substring(0, 500)
+              pageTextSample: body.substring(0, 800),
+              allClickableTexts: allClickableTexts.slice(0, 20),
+              navItems: navItems.slice(0, 15),
+              tabListContent
             };
           });
           console.log(`[B2PWeb] Panel check: ${JSON.stringify(panelCheck)}`);
 
-          // Click on "Activity" button - it's an ICON BUTTON in the right panel toolbar
-          // B2PWeb UI can be in French (Activités) or English (Activity)
-          // The button has NO text, only an SVG icon
-          const activitesClicked = await this.page.evaluate(() => {
+          // ==========================================
+          // CLICK ON "HISTORY" ICON BUTTON
+          // The SVG has data-icon="history" attribute
+          // ==========================================
+
+          const historyClicked = await this.page.evaluate(() => {
             const results: string[] = [];
 
-            // 1. First check if there are action buttons - click the activity one
-            // In B2PWeb, the actions area typically has buttons for: Info, Activités, Historique, etc.
-            const actionButtons = document.querySelectorAll('[class*="actions"] button, [class*="action"] button');
-            results.push(`Found ${actionButtons.length} action buttons`);
-
-            // Log all action buttons for debugging
-            for (let i = 0; i < actionButtons.length; i++) {
-              const btn = actionButtons[i];
-              const svg = btn.querySelector('svg path');
-              const d = svg?.getAttribute('d') || 'no-path';
-              const title = btn.getAttribute('title') || btn.getAttribute('aria-label') || '';
-              results.push(`Action btn ${i}: title="${title}", path=${d.substring(0, 50)}...`);
+            // STRATEGY 1: Find SVG with data-icon="history" and click its parent button
+            const historyIcon = document.querySelector('svg[data-icon="history"]');
+            if (historyIcon) {
+              results.push(`Found SVG with data-icon="history"`);
+              // Click the parent button or the icon itself
+              const parentButton = historyIcon.closest('button') || historyIcon.parentElement;
+              if (parentButton) {
+                results.push(`Clicking parent: ${parentButton.tagName}`);
+                (parentButton as HTMLElement).click();
+                return { found: true, method: 'data-icon-history', logs: results };
+              }
             }
 
-            // 2. Look for the Activity button by its SVG path
-            // The activity icon has a distinctive path with clipboard/list pattern
-            const activityPatterns = [
-              'M4 2V8H2V2H4',  // Start of mdi-clipboard-text-clock
-              'M2 22H4V16H2V22', // Another part
-              'M5 12C5 10.9',  // Circle part
-              '19 13H11V15H19', // List lines
-              '21 9H11V11H21', // More list lines
-            ];
+            // STRATEGY 2: Look for any SVG with data-icon attribute containing "history"
+            const allDataIcons = document.querySelectorAll('svg[data-icon]');
+            results.push(`Found ${allDataIcons.length} SVGs with data-icon attribute`);
+            for (const icon of Array.from(allDataIcons)) {
+              const dataIcon = icon.getAttribute('data-icon') || '';
+              results.push(`SVG data-icon: "${dataIcon}"`);
+              if (dataIcon.toLowerCase().includes('histor')) {
+                const parent = icon.closest('button') || icon.parentElement;
+                if (parent) {
+                  (parent as HTMLElement).click();
+                  return { found: true, method: 'data-icon-match', logs: results };
+                }
+              }
+            }
 
-            const svgs = Array.from(document.querySelectorAll('svg'));
-            results.push(`Total SVGs on page: ${svgs.length}`);
-
-            // Try to find by partial path match
-            for (const svg of svgs) {
-              const paths = svg.querySelectorAll('path');
-              for (const path of Array.from(paths)) {
+            // STRATEGY 3: Look for the specific SVG path (clock with arrow)
+            const allSvgs = document.querySelectorAll('svg');
+            results.push(`Found ${allSvgs.length} total SVGs`);
+            for (const svg of Array.from(allSvgs)) {
+              const path = svg.querySelector('path');
+              if (path) {
                 const d = path.getAttribute('d') || '';
-                // Check if path matches any activity pattern
-                for (const pattern of activityPatterns) {
-                  if (d.includes(pattern)) {
-                    const clickable = svg.closest('button, a, [role="button"]') as HTMLElement;
-                    if (clickable) {
-                      results.push(`Found Activity by pattern "${pattern}" in ${clickable.tagName}`);
-                      clickable.click();
-                      return { found: true, method: 'pattern-match', pattern, logs: results };
-                    }
+                // Check for the unique start of the history icon path
+                if (d.startsWith('M13 3c-4.97')) {
+                  results.push(`Found history icon by SVG path`);
+                  const parent = svg.closest('button') || svg.parentElement;
+                  if (parent) {
+                    (parent as HTMLElement).click();
+                    return { found: true, method: 'svg-path-match', logs: results };
                   }
                 }
               }
             }
 
-            // 3. Try clicking action buttons by index (Activity is usually button index 1 or 2)
-            // Button 0 is often "Info", Button 1 is often "Activités"
-            if (actionButtons.length >= 2) {
-              results.push(`Trying action button index 1 (likely Activités)`);
-              (actionButtons[1] as HTMLElement).click();
-              return { found: true, method: 'action-index-1', logs: results };
+            // STRATEGY 4: Fallback - look for title/aria-label
+            const tooltipSelectors = '[title*="istory"], [aria-label*="istory"]';
+            const tooltipElements = document.querySelectorAll(tooltipSelectors);
+            if (tooltipElements.length > 0) {
+              (tooltipElements[0] as HTMLElement).click();
+              return { found: true, method: 'tooltip', logs: results };
             }
 
-            // 4. Try finding by aria-label or title attribute
-            const ariaButtons = document.querySelectorAll('[aria-label*="ctivit"], [title*="ctivit"], [aria-label*="ctivity"], [title*="ctivity"]');
-            results.push(`Found ${ariaButtons.length} buttons with aria/title containing activity`);
-            if (ariaButtons.length > 0) {
-              (ariaButtons[0] as HTMLElement).click();
-              return { found: true, method: 'aria-label', logs: results };
-            }
-
-            // 5. Fallback: look for text button
-            const allElements = Array.from(document.querySelectorAll('button, a, [role="tab"], span'));
-            const matchTexts = ['Activity', 'Activities', 'Activités', 'Activites', 'Activité'];
-
-            for (const el of allElements) {
-              const text = el.textContent?.trim() || '';
-              if (matchTexts.includes(text)) {
-                results.push(`Found Activity text: ${el.tagName}.${el.className}`);
-                (el as HTMLElement).click();
-                return { found: true, method: 'text', text, logs: results };
-              }
-            }
-
-            // 6. Log first 10 SVG paths for debugging
-            const allPaths: string[] = [];
-            for (const svg of svgs.slice(0, 15)) {
-              const parent = svg.closest('button, a, div, span');
-              const parentInfo = parent ? `${parent.tagName}.${parent.className?.substring(0, 30)}` : 'no-parent';
-              const paths = svg.querySelectorAll('path');
-              for (const path of Array.from(paths)) {
-                const d = path.getAttribute('d') || '';
-                if (d.length > 10) {
-                  allPaths.push(`[${parentInfo}] ${d.substring(0, 60)}...`);
-                }
-              }
-            }
-            results.push(`First 10 SVG paths: ${allPaths.slice(0, 10).join(' | ')}`);
+            // Debug: list all data-icon values
+            const dataIconValues = Array.from(allDataIcons).map(i => i.getAttribute('data-icon'));
+            results.push(`All data-icon values: ${dataIconValues.join(', ')}`);
 
             return { found: false, logs: results };
           });
-          console.log(`[B2PWeb] Activity button result: ${JSON.stringify(activitesClicked)}`);
-          await delay(2000);
+          console.log(`[B2PWeb] History button result: ${JSON.stringify(historyClicked)}`);
 
-          // Debug: log what's visible after clicking Activités
-          const pageTextAfterActivites = await this.page.evaluate(() => {
+          // Wait and check if content changed
+          await delay(2500);
+
+          // Debug: log what's visible after clicking History
+          const pageTextAfterHistory = await this.page.evaluate(() => {
             return document.body.innerText.substring(0, 2000);
           });
-          console.log(`[B2PWeb] Page text after Activités click: ${pageTextAfterActivites.substring(0, 500)}...`);
+          console.log(`[B2PWeb] Page text after History click: ${pageTextAfterHistory.substring(0, 500)}...`);
 
-          // Click on "Consultants" in left menu (should be visible by default or a sub-tab)
-          const consultantsClicked = await this.page.evaluate(() => {
-            const menuItems = Array.from(document.querySelectorAll('a, button, [role="menuitem"], li, div, span'));
-            for (const item of menuItems) {
-              const text = item.textContent?.trim().toLowerCase() || '';
-              if (text === 'consultants' || (text.includes('consultant') && !text.includes('demande'))) {
-                console.log(`[B2PWeb] Found Consultants menu: ${item.tagName} - "${item.textContent?.trim()}"`);
-                (item as HTMLElement).click();
-                return true;
+          // Now look for "Active searches" tab - this shows transporters searching for this route
+          // The icon has data-icon="search-check-mark"
+          const activeSearchesClicked = await this.page.evaluate(() => {
+            const results: string[] = [];
+
+            // STRATEGY 1: Find by SVG data-icon="search-check-mark"
+            const searchIcon = document.querySelector('svg[data-icon="search-check-mark"]');
+            if (searchIcon) {
+              results.push(`Found SVG with data-icon="search-check-mark"`);
+              // Click the closest clickable parent (div with cursor-pointer)
+              const parent = searchIcon.closest('div.cursor-pointer') || searchIcon.closest('div') || searchIcon.parentElement;
+              if (parent) {
+                results.push(`Clicking parent: ${parent.tagName}, class="${(parent as HTMLElement).className?.substring(0, 50)}"`);
+                (parent as HTMLElement).click();
+                return { clicked: true, method: 'data-icon-search', logs: results };
               }
             }
-            console.log('[B2PWeb] Consultants menu NOT found');
-            return false;
+
+            // STRATEGY 2: Find by text "Active searches"
+            const allElements = Array.from(document.querySelectorAll('div, span, button, a'));
+            for (const item of allElements) {
+              const text = (item.textContent || '').trim();
+              // Look for exact "Active searches" text (the span contains just this text)
+              if (text === 'Active searches' || text === 'Recherches actives') {
+                results.push(`Found exact Active searches text: ${item.tagName}`);
+                // Click the parent div with cursor-pointer class
+                const clickable = item.closest('div.cursor-pointer') || item;
+                (clickable as HTMLElement).click();
+                return { clicked: true, method: 'exact-text', text, logs: results };
+              }
+            }
+
+            // STRATEGY 3: Find elements containing "Active searches" with number badge
+            for (const item of allElements) {
+              const text = (item.textContent || '').trim();
+              // Match pattern like "Active searches962" (text + number)
+              if (text.toLowerCase().includes('active searches') && text.length < 50) {
+                results.push(`Found Active searches by partial: "${text.substring(0, 40)}" in ${item.tagName}`);
+                const clickable = item.closest('div.cursor-pointer') || item;
+                (clickable as HTMLElement).click();
+                return { clicked: true, method: 'partial-text', text: text.substring(0, 40), logs: results };
+              }
+            }
+
+            // STRATEGY 4: Look for "Consultants" as fallback (old terminology)
+            for (const item of allElements) {
+              const text = (item.textContent || '').trim().toLowerCase();
+              if (text.includes('consultant') && text.length < 30) {
+                results.push(`Found Consultants as fallback: "${text}" in ${item.tagName}`);
+                (item as HTMLElement).click();
+                return { clicked: true, method: 'consultants-fallback', text, logs: results };
+              }
+            }
+
+            // Log all data-icon values for debugging
+            const allDataIcons = document.querySelectorAll('svg[data-icon]');
+            const iconValues = Array.from(allDataIcons).map(i => i.getAttribute('data-icon'));
+            results.push(`All data-icon values: ${iconValues.join(', ')}`);
+
+            // Log page state
+            const pageText = document.body.innerText.substring(0, 500);
+            results.push(`Page sample: ${pageText.replace(/\n/g, ' ').substring(0, 200)}`);
+
+            return { clicked: false, logs: results };
           });
-          console.log(`[B2PWeb] Consultants menu clicked: ${consultantsClicked}`);
-          await delay(1500);
+          console.log(`[B2PWeb] Active searches menu clicked: ${JSON.stringify(activeSearchesClicked)}`);
+          await delay(2000);
 
           // Debug: check if table is visible
           const tableInfo = await this.page.evaluate(() => {
