@@ -50,7 +50,7 @@ frontend:
       NEXT_PUBLIC_ECMR_API: 'https://d28q05cx5hmg9q.cloudfront.net'
       NEXT_PUBLIC_PLANNING_API_URL: 'https://dpw23bg2dclr1.cloudfront.net'
       NEXT_PUBLIC_CHATBOT_API_URL: 'https://de1913kh0ya48.cloudfront.net'
-      NEXT_PUBLIC_BILLING_API: 'https://d1ciol606nbfs0.cloudfront.net'
+      NEXT_PUBLIC_BILLING_API_URL: 'https://d1ciol606nbfs0.cloudfront.net/api'
 
       # Build
       NODE_VERSION: '20'

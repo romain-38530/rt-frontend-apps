@@ -1282,7 +1282,7 @@ export const preinvoicesApi = {
     if (filters?.month) params.append('month', filters.month.toString());
     if (filters?.year) params.append('year', filters.year.toString());
 
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices?${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturations?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1291,7 +1291,7 @@ export const preinvoicesApi = {
   // Statistiques préfacturation
   getStats: async (industrialId?: string) => {
     const params = industrialId ? `?industrialId=${industrialId}` : '';
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/stats${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/stats${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1299,7 +1299,7 @@ export const preinvoicesApi = {
 
   // Détail d'une préfacture
   get: async (preInvoiceId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturation/${preInvoiceId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1311,7 +1311,7 @@ export const preinvoicesApi = {
     comments?: string;
     adjustments?: { lineIndex: number; adjustedAmount: number; reason: string }[];
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/validate`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturation/${preInvoiceId}/validate`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -1324,7 +1324,7 @@ export const preinvoicesApi = {
     paymentReference: string;
     paidAmount: number;
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/mark-paid`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturation/${preInvoiceId}/mark-paid`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -1334,7 +1334,7 @@ export const preinvoicesApi = {
 
   // Export CSV pour paiements
   exportPayments: async () => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/export`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturations/export`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1342,7 +1342,7 @@ export const preinvoicesApi = {
 
   // Forcer l'envoi des préfactures mensuelles (admin)
   sendMonthly: async () => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/send-monthly`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturations/send-monthly`, {
       method: 'POST',
       headers: getAuthHeaders()
     });
@@ -1351,7 +1351,7 @@ export const preinvoicesApi = {
 
   // Mettre à jour les décomptes de paiement
   updateCountdowns: async () => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/update-countdowns`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturations/update-countdowns`, {
       method: 'POST',
       headers: getAuthHeaders()
     });
