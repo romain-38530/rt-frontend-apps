@@ -941,61 +941,113 @@ export class TransportScrapingService {
             const logs: string[] = [];
             const pageWidth = window.innerWidth;
 
-            // The History button is in a toolbar at the top of the Offer informations panel
-            // It's the 6th button (clock/schedule icon) in a row of icon buttons
-            // Toolbar buttons are: pencil, arrows, copy, trash, magnify, CLOCK(history), list, globe
+            // The History button is the "schedule" icon (clock) in the panel toolbar
+            // Panel toolbar icons: pencil, arrow-collapse, format-list-text, trash, magnify, SCHEDULE(history), list, globe-europe
+            // The panel is in the CENTER-RIGHT of the page, not necessarily at 70% width
 
-            // STRATEGY 1: Find toolbar in the right panel and click the 6th button
-            // Look for a row of small icon buttons in the upper right area
             const allSvgs = document.querySelectorAll('svg');
             logs.push(`Found ${allSvgs.length} total SVGs`);
 
-            // The Offer informations panel toolbar is on the RIGHT side of the page
-            // It's BELOW the main navbar (which has truck, chat, bell icons)
-            // Look for a horizontal row of icon buttons in the panel header area
+            // Navbar icons to EXCLUDE (these are at top right in the main navbar)
+            const navbarIcons = ['truck', 'notebook', 'chat', 'bell', 'wrench', 'cog', 'help-circle', 'tune-vertical', 'account-circle'];
 
-            // First, find the panel by looking for "Informations de dépose" or similar text
-            const panelHeader = Array.from(document.querySelectorAll('h2, h3, div, span')).find(el => {
-              const text = (el.textContent || '').toLowerCase();
-              return text.includes('informations de') || text.includes('offer informations') ||
-                     text.includes('informations de dépose') || text.includes('détails de l\'offre');
-            });
+            // STRATEGY 1: Find panel toolbar Y position by locating unique panel icons first
+            // Panel toolbar has: pencil, arrow-collapse, format-list-text, trash, magnify, schedule, list/format-list-bulleted, globe-europe
+            // The "pencil" icon is unique to the panel toolbar - find it first to get the toolbar Y level
 
-            let panelTop = 50; // Default minimum Y
-            if (panelHeader) {
-              const headerRect = panelHeader.getBoundingClientRect();
-              panelTop = headerRect.top - 50; // Toolbar is just above the panel content
-              logs.push(`Panel header found at y=${Math.round(headerRect.top)}`);
+            let panelToolbarY = -1;
+            let panelToolbarX = -1;
+
+            // Find pencil icon (unique to panel toolbar, not in offer rows)
+            for (const svg of Array.from(allSvgs)) {
+              const dataIcon = svg.getAttribute('data-icon') || '';
+              if (dataIcon === 'pencil') {
+                const rect = svg.getBoundingClientRect();
+                // Pencil should be in the top area and on the right side (panel area)
+                if (rect.top > 30 && rect.top < 150 && rect.left > pageWidth * 0.4) {
+                  panelToolbarY = rect.top;
+                  panelToolbarX = rect.left;
+                  logs.push(`Found pencil (panel toolbar) at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                  break;
+                }
+              }
             }
 
-            // Collect all SVG buttons in the panel toolbar area
-            // The toolbar should be in the right 40% of the page, below the main navbar
+            // If we found the panel toolbar, look for schedule icon at the same Y level
+            if (panelToolbarY > 0) {
+              logs.push(`Panel toolbar at Y=${Math.round(panelToolbarY)}, looking for schedule icon there...`);
+
+              for (const svg of Array.from(allSvgs)) {
+                const dataIcon = svg.getAttribute('data-icon') || '';
+                if (dataIcon === 'schedule') {
+                  const rect = svg.getBoundingClientRect();
+                  const yDiff = Math.abs(rect.top - panelToolbarY);
+
+                  // Must be at same Y level (within 20px) and to the right of pencil
+                  if (yDiff < 20 && rect.left > panelToolbarX) {
+                    logs.push(`Found schedule icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                    const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
+                    if (clickTarget) {
+                      (clickTarget as HTMLElement).click();
+                      return { success: true, method: 'schedule-same-y-as-pencil', logs };
+                    }
+                  }
+                }
+              }
+            }
+
+            // FALLBACK: Find ALL schedule icons and try to determine which one is in the toolbar
+            const scheduleIcons: { svg: Element, rect: DOMRect }[] = [];
+            for (const svg of Array.from(allSvgs)) {
+              const dataIcon = svg.getAttribute('data-icon') || '';
+              if (dataIcon === 'schedule') {
+                const svgRect = svg.getBoundingClientRect();
+                if (svgRect.width > 5 && svgRect.height > 5 && svgRect.top < 200 && svgRect.top > 0) {
+                  scheduleIcons.push({ svg, rect: svgRect });
+                  logs.push(`Schedule icon at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
+                }
+              }
+            }
+            logs.push(`Found ${scheduleIcons.length} schedule icons in top area`);
+
+            // Try clicking the schedule icon with the smallest Y (topmost one - likely toolbar)
+            if (scheduleIcons.length > 0) {
+              scheduleIcons.sort((a, b) => a.rect.top - b.rect.top);
+              const topSchedule = scheduleIcons[0];
+              logs.push(`Trying topmost schedule at y=${Math.round(topSchedule.rect.top)}`);
+              const clickTarget = topSchedule.svg.closest('button, [role="button"], .cursor-pointer') || topSchedule.svg.parentElement;
+              if (clickTarget) {
+                (clickTarget as HTMLElement).click();
+                return { success: true, method: 'topmost-schedule', logs };
+              }
+            }
+
+            // FALLBACK: Find toolbar buttons by looking for icons that are NOT navbar icons
+            // and are in the top area of the page
             const toolbarButtons: { svg: Element, rect: DOMRect, dataIcon: string }[] = [];
 
             for (const svg of Array.from(allSvgs)) {
               const svgRect = svg.getBoundingClientRect();
+              const dataIcon = svg.getAttribute('data-icon') || '';
 
-              // Must be on the right side (panel area) - right 40% of page
-              if (svgRect.left < pageWidth * 0.6) continue;
+              // Skip navbar icons
+              if (navbarIcons.includes(dataIcon)) continue;
 
-              // Must be in the panel toolbar area (between panelTop and panelTop+100)
-              // Skip the main navbar icons (which are at the very top, y < 70)
-              if (svgRect.top < 70) continue;  // Skip main navbar
-              if (svgRect.top > panelTop + 100) continue; // Don't go too far down
+              // Must be in the top toolbar area (y < 150)
+              if (svgRect.top > 150 || svgRect.top < 0) continue;
+              if (svgRect.width < 10 || svgRect.height < 10) continue;
 
               const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
               if (!parent) continue;
 
               const parentRect = (parent as HTMLElement).getBoundingClientRect();
-              // Small icon buttons (typical toolbar buttons: 30-50px)
-              if (parentRect.width > 25 && parentRect.width < 55 && parentRect.height > 25 && parentRect.height < 55) {
-                const dataIcon = svg.getAttribute('data-icon') || '';
+              if (parentRect.width > 15 && parentRect.width < 70 && parentRect.height > 15 && parentRect.height < 70) {
                 toolbarButtons.push({ svg, rect: parentRect, dataIcon });
                 logs.push(`Toolbar btn: ${dataIcon} at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
               }
             }
 
-            logs.push(`Found ${toolbarButtons.length} toolbar buttons in panel`);
+            logs.push(`Found ${toolbarButtons.length} toolbar buttons (excluding navbar)`);
 
             // Sort by X position (left to right)
             toolbarButtons.sort((a, b) => a.rect.left - b.rect.left);

@@ -27,7 +27,7 @@ router.get('/config', async (_req: AuthRequest, res: Response) => {
       success: true,
       data: {
         ...config,
-        version: '2.19.20', // Scraping version for debugging
+        version: '2.24.0', // Scraping version for debugging
         b2pwebAuthenticated: isAuthenticated,
         b2pwebCredentials: config.b2pwebCredentials ? { username: config.b2pwebCredentials.username } : null
       }
