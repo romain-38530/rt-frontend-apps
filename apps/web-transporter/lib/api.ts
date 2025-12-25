@@ -1362,8 +1362,57 @@ export const preinvoicesApi = {
   /**
    * Contester une prefacture
    */
-  dispute: async (preInvoiceId: string, data: { reason: string; details?: string }) => {
+  dispute: async (preInvoiceId: string, data: {
+    reason: string;
+    details?: string;
+    category?: 'price' | 'quantity' | 'service' | 'damage' | 'delay' | 'other';
+    amountDisputed?: number;
+    documents?: string[];
+  }) => {
     const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/dispute`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Valider une prefacture (accepter les montants)
+   */
+  validate: async (preInvoiceId: string, data: {
+    comment?: string;
+    acceptedAmount?: number;
+  }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Lister les contestations du transporteur
+   */
+  getDisputes: async (filters?: { status?: string; month?: number; year?: number }) => {
+    const carrierId = getCarrierId();
+    const params = new URLSearchParams({ carrierId });
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.month) params.append('month', filters.month.toString());
+    if (filters?.year) params.append('year', filters.year.toString());
+
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/disputes?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Repondre a une contestation (ajouter un message)
+   */
+  addDisputeMessage: async (preInvoiceId: string, data: { message: string; documents?: string[] }) => {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/dispute/message`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)

@@ -19,25 +19,29 @@ import {
   CheckCircle,
   Clock,
   Euro,
-  Calendar,
   TrendingUp,
   FileCheck,
   AlertCircle,
-  Eye,
   Send,
   Download,
-  Shield,
   RefreshCw,
   X,
   ChevronDown,
   ChevronUp,
   Paperclip,
   Building,
-  CreditCard
+  CreditCard,
+  Scale,
+  MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  History,
+  Filter,
+  Tag
 } from 'lucide-react';
 
 export default function BillingPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'preinvoices' | 'upload' | 'payments'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'preinvoices' | 'upload' | 'payments' | 'validations'>('dashboard');
   const [preinvoices, setPreinvoices] = useState<PreInvoice[]>([]);
   const [stats, setStats] = useState<PreInvoiceStats | null>(null);
   const [selectedPreinvoice, setSelectedPreinvoice] = useState<PreInvoice | null>(null);
@@ -56,9 +60,19 @@ export default function BillingPage() {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceAmount, setInvoiceAmount] = useState<number>(0);
 
-  // Dispute modal
+  // Dispute modal - Enhanced
   const [disputeModal, setDisputeModal] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
+  const [disputeCategory, setDisputeCategory] = useState<string>('price');
+  const [disputeAmount, setDisputeAmount] = useState<number>(0);
+  const [disputeDetails, setDisputeDetails] = useState('');
+
+  // Validation modal
+  const [validateModal, setValidateModal] = useState<string | null>(null);
+  const [validateComment, setValidateComment] = useState('');
+
+  // Validation tab state
+  const [validationFilter, setValidationFilter] = useState<'pending' | 'disputed' | 'validated' | 'all'>('pending');
 
   useEffect(() => {
     loadData();
@@ -140,19 +154,25 @@ export default function BillingPage() {
     }
   };
 
-  // Dispute preinvoice
+  // Dispute preinvoice - Enhanced
   const submitDispute = async () => {
     if (!disputeModal || !disputeReason.trim()) return;
 
     try {
       const res = await preinvoicesApi.dispute(disputeModal, {
-        reason: disputeReason
+        reason: disputeReason,
+        category: disputeCategory as any,
+        amountDisputed: disputeAmount || undefined,
+        details: disputeDetails || undefined
       });
 
       if (res.success) {
-        setSuccess('Contestation soumise avec succes');
+        setSuccess('Contestation soumise avec succes. L\'industriel sera notifie.');
         setDisputeModal(null);
         setDisputeReason('');
+        setDisputeCategory('price');
+        setDisputeAmount(0);
+        setDisputeDetails('');
         loadData();
       } else {
         setError(res.error || 'Erreur contestation');
@@ -160,6 +180,53 @@ export default function BillingPage() {
     } catch (err: any) {
       setError(err.message);
     }
+  };
+
+  // Validate preinvoice
+  const submitValidation = async () => {
+    if (!validateModal) return;
+
+    try {
+      const res = await preinvoicesApi.validate(validateModal, {
+        comment: validateComment || undefined
+      });
+
+      if (res.success) {
+        setSuccess('Prefacture validee avec succes!');
+        setValidateModal(null);
+        setValidateComment('');
+        loadData();
+      } else {
+        setError(res.error || 'Erreur validation');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  // Get dispute category label
+  const getDisputeCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      'price': 'Ecart de prix',
+      'quantity': 'Quantite incorrecte',
+      'service': 'Service non conforme',
+      'damage': 'Dommage marchandise',
+      'delay': 'Retard / Penalite injustifiee',
+      'other': 'Autre motif'
+    };
+    return labels[category] || category;
+  };
+
+  const getDisputeCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      'price': '#f59e0b',
+      'quantity': '#8b5cf6',
+      'service': '#3b82f6',
+      'damage': '#ef4444',
+      'delay': '#ec4899',
+      'other': '#6b7280'
+    };
+    return colors[category] || '#6b7280';
   };
 
   // Export CSV
@@ -265,10 +332,11 @@ export default function BillingPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 mt-6 border-b">
+            <div className="flex gap-1 mt-6 border-b overflow-x-auto">
               {[
                 { id: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
                 { id: 'preinvoices', label: 'Mes prefactures', icon: FileText, badge: preinvoices.length },
+                { id: 'validations', label: 'Validations', icon: Scale, badge: preinvoices.filter(p => p.status === 'sent_to_industrial' || p.status === 'disputed').length },
                 { id: 'upload', label: 'Uploader facture', icon: Upload, badge: pendingInvoices.length },
                 { id: 'payments', label: 'Paiements', icon: CreditCard, badge: awaitingPayment.length }
               ].map(tab => (
@@ -791,6 +859,248 @@ export default function BillingPage() {
                 </div>
               )}
 
+              {/* Validations Tab */}
+              {activeTab === 'validations' && (
+                <div className="space-y-6">
+                  {/* Header with filters */}
+                  <div className="bg-white rounded-lg shadow p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-lg font-semibold flex items-center gap-2">
+                          <Scale className="w-5 h-5 text-emerald-600" />
+                          Validation des Prefactures
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          Verifiez et validez vos prefactures ou contestez les ecarts
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-gray-400" />
+                        <select
+                          className="border rounded-lg px-3 py-2 text-sm"
+                          value={validationFilter}
+                          onChange={(e) => setValidationFilter(e.target.value as any)}
+                        >
+                          <option value="all">Toutes</option>
+                          <option value="pending">A valider</option>
+                          <option value="disputed">Contestees</option>
+                          <option value="validated">Validees</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">A valider</p>
+                          <p className="text-2xl font-bold text-amber-600">
+                            {preinvoices.filter(p => p.status === 'sent_to_industrial').length}
+                          </p>
+                        </div>
+                        <Clock className="w-8 h-8 text-amber-500 opacity-60" />
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Contestees</p>
+                          <p className="text-2xl font-bold text-red-600">
+                            {preinvoices.filter(p => p.status === 'disputed').length}
+                          </p>
+                        </div>
+                        <AlertTriangle className="w-8 h-8 text-red-500 opacity-60" />
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Validees</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {preinvoices.filter(p => p.status === 'validated_industrial').length}
+                          </p>
+                        </div>
+                        <CheckCircle className="w-8 h-8 text-green-500 opacity-60" />
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Montant en cours</p>
+                          <p className="text-xl font-bold text-emerald-600">
+                            {formatCurrency(preinvoices.filter(p => p.status === 'sent_to_industrial').reduce((s, p) => s + p.totals.totalTTC, 0))} EUR
+                          </p>
+                        </div>
+                        <Euro className="w-8 h-8 text-emerald-500 opacity-60" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prefactures List for Validation */}
+                  <div className="space-y-4">
+                    {preinvoices
+                      .filter(pi => {
+                        if (validationFilter === 'pending') return pi.status === 'sent_to_industrial';
+                        if (validationFilter === 'disputed') return pi.status === 'disputed';
+                        if (validationFilter === 'validated') return pi.status === 'validated_industrial';
+                        return true;
+                      })
+                      .map(pi => (
+                        <div key={pi.preInvoiceId} className="bg-white rounded-lg shadow overflow-hidden">
+                          <div className="p-6">
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                  pi.status === 'disputed' ? 'bg-red-100' :
+                                  pi.status === 'validated_industrial' ? 'bg-green-100' :
+                                  'bg-amber-100'
+                                }`}>
+                                  {pi.status === 'disputed' ? (
+                                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                                  ) : pi.status === 'validated_industrial' ? (
+                                    <CheckCircle className="w-6 h-6 text-green-600" />
+                                  ) : (
+                                    <Clock className="w-6 h-6 text-amber-600" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-lg">{pi.preInvoiceNumber}</p>
+                                    <span
+                                      className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                      style={{
+                                        backgroundColor: `${getStatusColor(pi.status)}20`,
+                                        color: getStatusColor(pi.status)
+                                      }}
+                                    >
+                                      {getStatusLabel(pi.status)}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-600">{pi.industrialName}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {pi.kpis.totalOrders} commandes - {getMonthName(pi.period.month)} {pi.period.year}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-3xl font-bold text-emerald-600">{formatCurrency(pi.totals.totalTTC)} EUR</p>
+                                <p className="text-sm text-gray-500">TTC</p>
+                              </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase mb-1">Transport Base</p>
+                                <p className="font-medium">{formatCurrency(pi.totals.baseAmount)} EUR</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase mb-1">Surcharges</p>
+                                <p className="font-medium">{formatCurrency(pi.totals.fuelSurcharge + pi.totals.tolls + pi.totals.waitingAmount)} EUR</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase mb-1">Penalites</p>
+                                <p className={`font-medium ${pi.totals.delayPenalty > 0 ? 'text-red-600' : ''}`}>
+                                  {pi.totals.delayPenalty > 0 ? `-${formatCurrency(pi.totals.delayPenalty)}` : '0,00'} EUR
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            {pi.status === 'sent_to_industrial' && (
+                              <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                                <button
+                                  onClick={() => {
+                                    const piForDispute = preinvoices.find(p => p.preInvoiceId === pi.preInvoiceId);
+                                    if (piForDispute) {
+                                      setDisputeAmount(piForDispute.totals.totalTTC);
+                                    }
+                                    setDisputeModal(pi.preInvoiceId);
+                                  }}
+                                  className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                >
+                                  <ThumbsDown className="w-4 h-4" />
+                                  Contester
+                                </button>
+                                <button
+                                  onClick={() => setValidateModal(pi.preInvoiceId)}
+                                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                >
+                                  <ThumbsUp className="w-4 h-4" />
+                                  Valider
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Disputed Status Info */}
+                            {pi.status === 'disputed' && (
+                              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-start gap-3">
+                                  <MessageSquare className="w-5 h-5 text-red-600 mt-0.5" />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-red-800">Contestation en cours</p>
+                                    <p className="text-sm text-red-700 mt-1">
+                                      Votre contestation a ete soumise. L'industriel va examiner votre demande.
+                                    </p>
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <button className="text-sm text-red-700 font-medium hover:underline flex items-center gap-1">
+                                        <History className="w-4 h-4" />
+                                        Voir l'historique
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Validated Status Info */}
+                            {pi.status === 'validated_industrial' && (
+                              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <CheckCircle className="w-5 h-5 text-green-600" />
+                                  <div>
+                                    <p className="font-medium text-green-800">Prefacture validee</p>
+                                    <p className="text-sm text-green-700">
+                                      Vous pouvez maintenant uploader votre facture pour declencher le paiement.
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => setActiveTab('upload')}
+                                    className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                                  >
+                                    Uploader facture
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                    {/* Empty State */}
+                    {preinvoices.filter(pi => {
+                      if (validationFilter === 'pending') return pi.status === 'sent_to_industrial';
+                      if (validationFilter === 'disputed') return pi.status === 'disputed';
+                      if (validationFilter === 'validated') return pi.status === 'validated_industrial';
+                      return true;
+                    }).length === 0 && (
+                      <div className="bg-white rounded-lg shadow p-12 text-center">
+                        <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-600">
+                          {validationFilter === 'pending' ? 'Aucune prefacture a valider' :
+                           validationFilter === 'disputed' ? 'Aucune contestation en cours' :
+                           validationFilter === 'validated' ? 'Aucune prefacture validee' :
+                           'Aucune prefacture pour cette periode'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Upload Tab */}
               {activeTab === 'upload' && (
                 <div className="max-w-3xl mx-auto space-y-6">
@@ -1020,41 +1330,230 @@ export default function BillingPage() {
           )}
         </div>
 
-        {/* Dispute Modal */}
+        {/* Enhanced Dispute Modal */}
         {disputeModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Contester la prefacture</h2>
-                <button onClick={() => { setDisputeModal(null); setDisputeReason(''); }}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-4 border-b flex items-center justify-between bg-red-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-red-800">Contester la prefacture</h2>
+                    <p className="text-sm text-red-600">
+                      {preinvoices.find(p => p.preInvoiceId === disputeModal)?.preInvoiceNumber}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => {
+                  setDisputeModal(null);
+                  setDisputeReason('');
+                  setDisputeCategory('price');
+                  setDisputeAmount(0);
+                  setDisputeDetails('');
+                }}>
                   <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
                 </button>
               </div>
-              <div className="px-6 py-4">
-                <p className="text-gray-600 mb-4">
-                  Expliquez le motif de votre contestation. L'industriel sera notifie et examinera votre demande.
-                </p>
-                <textarea
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  placeholder="Motif de la contestation..."
-                  className="w-full border rounded-lg p-3 h-32 resize-none"
-                />
+
+              <div className="px-6 py-4 space-y-4">
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Tag className="w-4 h-4 inline mr-1" />
+                    Categorie de contestation
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {[
+                      { id: 'price', label: 'Ecart de prix', icon: Euro },
+                      { id: 'quantity', label: 'Quantite', icon: FileText },
+                      { id: 'service', label: 'Service', icon: AlertCircle },
+                      { id: 'damage', label: 'Dommage', icon: AlertTriangle },
+                      { id: 'delay', label: 'Retard/Penalite', icon: Clock },
+                      { id: 'other', label: 'Autre', icon: MessageSquare }
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setDisputeCategory(cat.id)}
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          disputeCategory === cat.id
+                            ? 'border-red-500 bg-red-50 text-red-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <cat.icon className="w-4 h-4" />
+                        <span className="text-sm">{cat.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Disputed Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Montant conteste (EUR)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={disputeAmount || ''}
+                      onChange={(e) => setDisputeAmount(parseFloat(e.target.value) || 0)}
+                      className="flex-1 border rounded-lg px-3 py-2"
+                      placeholder="0.00"
+                    />
+                    <div className="text-sm text-gray-500">
+                      sur {formatCurrency(preinvoices.find(p => p.preInvoiceId === disputeModal)?.totals.totalTTC || 0)} EUR
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Motif de la contestation *
+                  </label>
+                  <textarea
+                    value={disputeReason}
+                    onChange={(e) => setDisputeReason(e.target.value)}
+                    placeholder="Expliquez brievement le motif de votre contestation..."
+                    className="w-full border rounded-lg p-3 h-24 resize-none"
+                    required
+                  />
+                </div>
+
+                {/* Additional Details */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Details supplementaires (optionnel)
+                  </label>
+                  <textarea
+                    value={disputeDetails}
+                    onChange={(e) => setDisputeDetails(e.target.value)}
+                    placeholder="Ajoutez des details, references, numeros de commande concernes..."
+                    className="w-full border rounded-lg p-3 h-20 resize-none"
+                  />
+                </div>
+
+                {/* Info Box */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Information</p>
+                      <p className="mt-1">
+                        L'industriel sera notifie de votre contestation et disposera de 5 jours ouvrables pour examiner
+                        votre demande. Vous recevrez une notification par email lors de la resolution.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="px-6 py-4 border-t flex justify-end gap-2">
+
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
                 <button
-                  onClick={() => { setDisputeModal(null); setDisputeReason(''); }}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  onClick={() => {
+                    setDisputeModal(null);
+                    setDisputeReason('');
+                    setDisputeCategory('price');
+                    setDisputeAmount(0);
+                    setDisputeDetails('');
+                  }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={submitDispute}
                   disabled={!disputeReason.trim()}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Send className="w-4 h-4 inline mr-2" />
-                  Soumettre
+                  <Send className="w-4 h-4" />
+                  Soumettre la contestation
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Validation Modal */}
+        {validateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+              <div className="px-6 py-4 border-b flex items-center justify-between bg-green-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <ThumbsUp className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-green-800">Valider la prefacture</h2>
+                    <p className="text-sm text-green-600">
+                      {preinvoices.find(p => p.preInvoiceId === validateModal)?.preInvoiceNumber}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => { setValidateModal(null); setValidateComment(''); }}>
+                  <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-4">
+                {/* Amount Summary */}
+                <div className="p-4 bg-emerald-50 rounded-lg text-center">
+                  <p className="text-sm text-emerald-600 mb-1">Montant a valider</p>
+                  <p className="text-3xl font-bold text-emerald-700">
+                    {formatCurrency(preinvoices.find(p => p.preInvoiceId === validateModal)?.totals.totalTTC || 0)} EUR
+                  </p>
+                  <p className="text-xs text-emerald-600 mt-1">TTC</p>
+                </div>
+
+                {/* Validation Checklist */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">En validant, je confirme que:</p>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Les montants sont conformes aux prestations realisees</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Les commandes listees correspondent aux livraisons effectuees</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Les eventuelles penalites sont justifiees</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Optional Comment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Commentaire (optionnel)
+                  </label>
+                  <textarea
+                    value={validateComment}
+                    onChange={(e) => setValidateComment(e.target.value)}
+                    placeholder="Ajoutez un commentaire si necessaire..."
+                    className="w-full border rounded-lg p-3 h-20 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button
+                  onClick={() => { setValidateModal(null); setValidateComment(''); }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={submitValidation}
+                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Confirmer la validation
                 </button>
               </div>
             </div>
