@@ -958,13 +958,49 @@ export class TransportScrapingService {
             let panelToolbarY = -1;
             let panelToolbarX = -1;
 
-            // Find pencil icon (unique to panel toolbar, not in offer rows)
+            // STRATEGY 1: Find the green toolbar in the panel header (right side of page)
+            // The toolbar has icons: pencil, arrows, copy, trash, magnify, HISTORY (clock), list, globe
+            // The toolbar is at the TOP RIGHT of the "Informations de dépose" panel
+
+            // First, try to directly find and click the "history" icon (6th button in toolbar)
+            // The history icon should be on the RIGHT side of the page (panel area) and near the TOP
+            const historyIconNames = ['schedule', 'history', 'clock-outline', 'update', 'restore', 'access-time'];
+
+            // First log all schedule icons positions
+            const scheduleIcons: { x: number, y: number }[] = [];
+            for (const svg of Array.from(allSvgs)) {
+              const dataIcon = svg.getAttribute('data-icon') || '';
+              if (dataIcon === 'schedule') {
+                const rect = svg.getBoundingClientRect();
+                scheduleIcons.push({ x: Math.round(rect.left), y: Math.round(rect.top) });
+              }
+            }
+            logs.push(`All schedule icons: ${JSON.stringify(scheduleIcons)}`);
+
+            // Strategy: Find schedule icon that is in the RIGHT panel (x > 50% page width) and in toolbar area (y < 150)
+            for (const svg of Array.from(allSvgs)) {
+              const dataIcon = svg.getAttribute('data-icon') || '';
+              if (historyIconNames.includes(dataIcon)) {
+                const rect = svg.getBoundingClientRect();
+                // Must be on right side (panel area, x > 50% of page) and in top area (y < 150)
+                if (rect.left > pageWidth * 0.5 && rect.top > 30 && rect.top < 150 && rect.width > 5) {
+                  logs.push(`Found ${dataIcon} icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
+                  if (clickTarget) {
+                    (clickTarget as HTMLElement).click();
+                    return { success: true, method: 'direct-history-icon', icon: dataIcon, logs };
+                  }
+                }
+              }
+            }
+
+            // STRATEGY 2: Find pencil icon first to locate the toolbar, then find history at same Y
             for (const svg of Array.from(allSvgs)) {
               const dataIcon = svg.getAttribute('data-icon') || '';
               if (dataIcon === 'pencil') {
                 const rect = svg.getBoundingClientRect();
-                // Pencil should be in the top area and on the right side (panel area)
-                if (rect.top > 30 && rect.top < 150 && rect.left > pageWidth * 0.4) {
+                // Pencil should be on right side (panel area) and in top area
+                if (rect.left > pageWidth * 0.6 && rect.top > 50 && rect.top < 200) {
                   panelToolbarY = rect.top;
                   panelToolbarX = rect.left;
                   logs.push(`Found pencil (panel toolbar) at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
@@ -973,52 +1009,42 @@ export class TransportScrapingService {
               }
             }
 
-            // If we found the panel toolbar, look for schedule icon at the same Y level
+            // If we found the pencil, look for history icon at the same Y level
             if (panelToolbarY > 0) {
-              logs.push(`Panel toolbar at Y=${Math.round(panelToolbarY)}, looking for schedule icon there...`);
+              logs.push(`Panel toolbar at Y=${Math.round(panelToolbarY)}, looking for history icon there...`);
 
               for (const svg of Array.from(allSvgs)) {
                 const dataIcon = svg.getAttribute('data-icon') || '';
-                if (dataIcon === 'schedule') {
+                if (historyIconNames.includes(dataIcon)) {
                   const rect = svg.getBoundingClientRect();
                   const yDiff = Math.abs(rect.top - panelToolbarY);
 
-                  // Must be at same Y level (within 20px) and to the right of pencil
-                  if (yDiff < 20 && rect.left > panelToolbarX) {
-                    logs.push(`Found schedule icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                  // Must be at same Y level (within 30px) and to the right of pencil
+                  if (yDiff < 30 && rect.left > panelToolbarX) {
+                    logs.push(`Found ${dataIcon} icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
                     const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
                     if (clickTarget) {
                       (clickTarget as HTMLElement).click();
-                      return { success: true, method: 'schedule-same-y-as-pencil', logs };
+                      return { success: true, method: 'history-same-y-as-pencil', icon: dataIcon, logs };
                     }
                   }
                 }
               }
             }
 
-            // FALLBACK: Find ALL schedule icons and try to determine which one is in the toolbar
-            const scheduleIcons: { svg: Element, rect: DOMRect }[] = [];
+            // STRATEGY 3: Find history icon anywhere in the page (fallback)
             for (const svg of Array.from(allSvgs)) {
               const dataIcon = svg.getAttribute('data-icon') || '';
-              if (dataIcon === 'schedule') {
+              if (dataIcon === 'history') {
                 const svgRect = svg.getBoundingClientRect();
-                if (svgRect.width > 5 && svgRect.height > 5 && svgRect.top < 200 && svgRect.top > 0) {
-                  scheduleIcons.push({ svg, rect: svgRect });
-                  logs.push(`Schedule icon at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
+                if (svgRect.width > 5 && svgRect.height > 5 && svgRect.top < 250 && svgRect.top > 0) {
+                  logs.push(`Found history icon (fallback) at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
+                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
+                  if (clickTarget) {
+                    (clickTarget as HTMLElement).click();
+                    return { success: true, method: 'history-icon-fallback', logs };
+                  }
                 }
-              }
-            }
-            logs.push(`Found ${scheduleIcons.length} schedule icons in top area`);
-
-            // Try clicking the schedule icon with the smallest Y (topmost one - likely toolbar)
-            if (scheduleIcons.length > 0) {
-              scheduleIcons.sort((a, b) => a.rect.top - b.rect.top);
-              const topSchedule = scheduleIcons[0];
-              logs.push(`Trying topmost schedule at y=${Math.round(topSchedule.rect.top)}`);
-              const clickTarget = topSchedule.svg.closest('button, [role="button"], .cursor-pointer') || topSchedule.svg.parentElement;
-              if (clickTarget) {
-                (clickTarget as HTMLElement).click();
-                return { success: true, method: 'topmost-schedule', logs };
               }
             }
 
@@ -1056,10 +1082,10 @@ export class TransportScrapingService {
             const iconNames = toolbarButtons.map(b => b.dataIcon || 'unknown');
             logs.push(`Toolbar icons: ${iconNames.join(', ')}`);
 
-            // STRATEGY 1a: Find by exact data-icon name (schedule, history, clock-outline, update)
-            const historyIconNames = ['schedule', 'history', 'clock-outline', 'update', 'clock', 'access-time', 'restore'];
+            // STRATEGY 4: Find by exact data-icon name in toolbar buttons
+            const historyNames = ['schedule', 'history', 'clock-outline', 'update', 'clock', 'access-time', 'restore'];
             for (const btn of toolbarButtons) {
-              if (historyIconNames.some(name => btn.dataIcon.toLowerCase().includes(name))) {
+              if (historyNames.some(name => btn.dataIcon.toLowerCase().includes(name))) {
                 logs.push(`Found history by icon name: ${btn.dataIcon}`);
                 const clickTarget = btn.svg.closest('button, [role="button"], .cursor-pointer') || btn.svg.parentElement;
                 if (clickTarget) {
