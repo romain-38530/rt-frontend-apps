@@ -939,209 +939,102 @@ export class TransportScrapingService {
 
           const historyButtonClicked = await this.page.evaluate(() => {
             const logs: string[] = [];
-            const pageWidth = window.innerWidth;
 
-            // The History button is the "schedule" icon (clock) in the panel toolbar
-            // Panel toolbar icons: pencil, arrow-collapse, format-list-text, trash, magnify, SCHEDULE(history), list, globe-europe
-            // The panel is in the CENTER-RIGHT of the page, not necessarily at 70% width
+            // B2PWeb uses Vue.js with virtual scrolling
+            // The History button can use icon "history" OR "schedule" (clock icon)
+            // We need to find the right one in the panel toolbar area
 
-            const allSvgs = document.querySelectorAll('svg');
-            logs.push(`Found ${allSvgs.length} total SVGs`);
+            // Icons that could be the History button
+            const historyIconNames = ['history', 'schedule', 'clock', 'clock-outline', 'access-time'];
 
-            // Navbar icons to EXCLUDE (these are at top right in the main navbar)
-            const navbarIcons = ['truck', 'notebook', 'chat', 'bell', 'wrench', 'cog', 'help-circle', 'tune-vertical', 'account-circle'];
+            // STRATEGY 1: Find all buttons on page and their SVG icons
+            const allButtons = document.querySelectorAll('button');
+            logs.push(`Found ${allButtons.length} total buttons`);
 
-            // STRATEGY 1: Find panel toolbar Y position by locating unique panel icons first
-            // Panel toolbar has: pencil, arrow-collapse, format-list-text, trash, magnify, schedule, list/format-list-bulleted, globe-europe
-            // The "pencil" icon is unique to the panel toolbar - find it first to get the toolbar Y level
-
-            let panelToolbarY = -1;
-            let panelToolbarX = -1;
-
-            // STRATEGY 1: Find the green toolbar in the panel header (right side of page)
-            // The toolbar has icons: pencil, arrows, copy, trash, magnify, HISTORY (clock), list, globe
-            // The toolbar is at the TOP RIGHT of the "Informations de dépose" panel
-
-            // First, try to directly find and click the "history" icon (6th button in toolbar)
-            // The history icon should be on the RIGHT side of the page (panel area) and near the TOP
-            const historyIconNames = ['schedule', 'history', 'clock-outline', 'update', 'restore', 'access-time'];
-
-            // First log all schedule icons positions
-            const scheduleIcons: { x: number, y: number }[] = [];
-            for (const svg of Array.from(allSvgs)) {
-              const dataIcon = svg.getAttribute('data-icon') || '';
-              if (dataIcon === 'schedule') {
-                const rect = svg.getBoundingClientRect();
-                scheduleIcons.push({ x: Math.round(rect.left), y: Math.round(rect.top) });
-              }
-            }
-            logs.push(`All schedule icons: ${JSON.stringify(scheduleIcons)}`);
-
-            // Strategy: Find schedule icon that is in the RIGHT panel (x > 50% page width) and in toolbar area (y < 150)
-            for (const svg of Array.from(allSvgs)) {
-              const dataIcon = svg.getAttribute('data-icon') || '';
-              if (historyIconNames.includes(dataIcon)) {
-                const rect = svg.getBoundingClientRect();
-                // Must be on right side (panel area, x > 50% of page) and in top area (y < 150)
-                if (rect.left > pageWidth * 0.5 && rect.top > 30 && rect.top < 150 && rect.width > 5) {
-                  logs.push(`Found ${dataIcon} icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
-                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
-                  if (clickTarget) {
-                    (clickTarget as HTMLElement).click();
-                    return { success: true, method: 'direct-history-icon', icon: dataIcon, logs };
-                  }
+            // Collect info about all buttons with SVGs
+            const buttonsWithSvg: { btn: Element, icon: string, x: number, y: number, classes: string }[] = [];
+            for (const btn of Array.from(allButtons)) {
+              const svg = btn.querySelector('svg');
+              if (svg) {
+                const dataIcon = svg.getAttribute('data-icon') || '';
+                const rect = btn.getBoundingClientRect();
+                const classes = btn.className || '';
+                if (rect.width > 5 && rect.top > 50 && rect.top < 800) {
+                  buttonsWithSvg.push({
+                    btn,
+                    icon: dataIcon,
+                    x: Math.round(rect.left),
+                    y: Math.round(rect.top),
+                    classes: classes.substring(0, 50)
+                  });
                 }
               }
             }
+            logs.push(`Buttons with SVG: ${buttonsWithSvg.map(b => b.icon + '@(' + b.x + ',' + b.y + ')').join(', ')}`);
 
-            // STRATEGY 2: Find pencil icon first to locate the toolbar, then find history at same Y
-            for (const svg of Array.from(allSvgs)) {
-              const dataIcon = svg.getAttribute('data-icon') || '';
-              if (dataIcon === 'pencil') {
-                const rect = svg.getBoundingClientRect();
-                // Pencil should be on right side (panel area) and in top area
-                if (rect.left > pageWidth * 0.6 && rect.top > 50 && rect.top < 200) {
-                  panelToolbarY = rect.top;
-                  panelToolbarX = rect.left;
-                  logs.push(`Found pencil (panel toolbar) at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
-                  break;
-                }
-              }
+            // Find history/schedule button
+            const historyButton = buttonsWithSvg.find(b => historyIconNames.includes(b.icon));
+            if (historyButton) {
+              logs.push(`Found ${historyButton.icon} button at (${historyButton.x}, ${historyButton.y})`);
+              (historyButton.btn as HTMLElement).scrollIntoView({ block: 'center' });
+              (historyButton.btn as HTMLElement).click();
+              return { success: true, method: 'button-with-svg', icon: historyButton.icon, logs };
             }
 
-            // If we found the pencil, look for history icon at the same Y level
-            if (panelToolbarY > 0) {
-              logs.push(`Panel toolbar at Y=${Math.round(panelToolbarY)}, looking for history icon there...`);
+            // STRATEGY 2: Find clickable elements (div, span) containing history/schedule SVG
+            // Sometimes Vue.js apps use divs with cursor-pointer instead of buttons
+            const clickableSelectors = 'button, [role="button"], .cursor-pointer, div[class*="btn"], span[class*="btn"]';
+            const clickables = document.querySelectorAll(clickableSelectors);
+            logs.push(`Found ${clickables.length} clickable elements`);
 
-              for (const svg of Array.from(allSvgs)) {
+            for (const el of Array.from(clickables)) {
+              const svg = el.querySelector('svg');
+              if (svg) {
                 const dataIcon = svg.getAttribute('data-icon') || '';
                 if (historyIconNames.includes(dataIcon)) {
-                  const rect = svg.getBoundingClientRect();
-                  const yDiff = Math.abs(rect.top - panelToolbarY);
-
-                  // Must be at same Y level (within 30px) and to the right of pencil
-                  if (yDiff < 30 && rect.left > panelToolbarX) {
-                    logs.push(`Found ${dataIcon} icon in panel toolbar at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
-                    const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
-                    if (clickTarget) {
-                      (clickTarget as HTMLElement).click();
-                      return { success: true, method: 'history-same-y-as-pencil', icon: dataIcon, logs };
-                    }
+                  const rect = el.getBoundingClientRect();
+                  if (rect.width > 5 && rect.top > 50 && rect.top < 800) {
+                    logs.push(`Found ${dataIcon} in clickable at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                    (el as HTMLElement).scrollIntoView({ block: 'center' });
+                    (el as HTMLElement).click();
+                    return { success: true, method: 'clickable-with-svg', icon: dataIcon, logs };
                   }
                 }
               }
             }
 
-            // STRATEGY 3: Find history icon anywhere in the page (fallback)
-            for (const svg of Array.from(allSvgs)) {
-              const dataIcon = svg.getAttribute('data-icon') || '';
-              if (dataIcon === 'history') {
-                const svgRect = svg.getBoundingClientRect();
-                if (svgRect.width > 5 && svgRect.height > 5 && svgRect.top < 250 && svgRect.top > 0) {
-                  logs.push(`Found history icon (fallback) at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
-                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
-                  if (clickTarget) {
-                    (clickTarget as HTMLElement).click();
-                    return { success: true, method: 'history-icon-fallback', logs };
+            // STRATEGY 3: Find SVGs directly and click their parent
+            for (const iconName of historyIconNames) {
+              const svgs = document.querySelectorAll(`svg[data-icon="${iconName}"]`);
+              logs.push(`Found ${svgs.length} SVGs with data-icon=${iconName}`);
+
+              for (const svg of Array.from(svgs)) {
+                const rect = svg.getBoundingClientRect();
+                // Skip icons in the offer list rows (they are at y=135, 190, 245, etc - spaced by ~55px)
+                // The panel toolbar should be at a unique Y position
+                if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
+                  logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+
+                  // Find closest clickable parent
+                  const parent = svg.closest('button, [role="button"], .cursor-pointer, div') as HTMLElement;
+                  if (parent) {
+                    logs.push(`Clicking parent: ${parent.tagName}.${parent.className?.substring(0, 30)}`);
+                    parent.scrollIntoView({ block: 'center' });
+                    parent.click();
+                    return { success: true, method: 'svg-parent', icon: iconName, logs };
                   }
                 }
               }
             }
 
-            // FALLBACK: Find toolbar buttons by looking for icons that are NOT navbar icons
-            // and are in the top area of the page
-            const toolbarButtons: { svg: Element, rect: DOMRect, dataIcon: string }[] = [];
+            // Debug: List all unique data-icon values
+            const allDataIcons = new Set<string>();
+            document.querySelectorAll('svg[data-icon]').forEach(svg => {
+              allDataIcons.add(svg.getAttribute('data-icon') || '');
+            });
+            logs.push(`All unique data-icons: ${Array.from(allDataIcons).join(', ')}`);
 
-            for (const svg of Array.from(allSvgs)) {
-              const svgRect = svg.getBoundingClientRect();
-              const dataIcon = svg.getAttribute('data-icon') || '';
-
-              // Skip navbar icons
-              if (navbarIcons.includes(dataIcon)) continue;
-
-              // Must be in the top toolbar area (y < 150)
-              if (svgRect.top > 150 || svgRect.top < 0) continue;
-              if (svgRect.width < 10 || svgRect.height < 10) continue;
-
-              const parent = svg.closest('button, [role="button"], .cursor-pointer, div');
-              if (!parent) continue;
-
-              const parentRect = (parent as HTMLElement).getBoundingClientRect();
-              if (parentRect.width > 15 && parentRect.width < 70 && parentRect.height > 15 && parentRect.height < 70) {
-                toolbarButtons.push({ svg, rect: parentRect, dataIcon });
-                logs.push(`Toolbar btn: ${dataIcon} at (${Math.round(svgRect.left)}, ${Math.round(svgRect.top)})`);
-              }
-            }
-
-            logs.push(`Found ${toolbarButtons.length} toolbar buttons (excluding navbar)`);
-
-            // Sort by X position (left to right)
-            toolbarButtons.sort((a, b) => a.rect.left - b.rect.left);
-
-            // Log all toolbar button icons for debugging
-            const iconNames = toolbarButtons.map(b => b.dataIcon || 'unknown');
-            logs.push(`Toolbar icons: ${iconNames.join(', ')}`);
-
-            // STRATEGY 4: Find by exact data-icon name in toolbar buttons
-            const historyNames = ['schedule', 'history', 'clock-outline', 'update', 'clock', 'access-time', 'restore'];
-            for (const btn of toolbarButtons) {
-              if (historyNames.some(name => btn.dataIcon.toLowerCase().includes(name))) {
-                logs.push(`Found history by icon name: ${btn.dataIcon}`);
-                const clickTarget = btn.svg.closest('button, [role="button"], .cursor-pointer') || btn.svg.parentElement;
-                if (clickTarget) {
-                  (clickTarget as HTMLElement).click();
-                  return { success: true, method: 'icon-name', icon: btn.dataIcon, logs };
-                }
-              }
-            }
-
-            // STRATEGY 1b: Click the 6th button in toolbar (History is typically 6th)
-            if (toolbarButtons.length >= 6) {
-              const historyBtn = toolbarButtons[5]; // 0-indexed, so 5 = 6th button
-              logs.push(`Clicking 6th toolbar button (index 5): ${historyBtn.dataIcon} at x=${Math.round(historyBtn.rect.left)}`);
-              const clickTarget = historyBtn.svg.closest('button, [role="button"], .cursor-pointer') || historyBtn.svg.parentElement;
-              if (clickTarget) {
-                (clickTarget as HTMLElement).click();
-                return { success: true, method: 'position-6th', icon: historyBtn.dataIcon, logs };
-              }
-            }
-
-            // STRATEGY 2: Look for SVG with clock-like path pattern
-            for (const svg of Array.from(allSvgs)) {
-              const svgRect = svg.getBoundingClientRect();
-              if (svgRect.left < pageWidth * 0.5 || svgRect.top > 200) continue;
-
-              const path = svg.querySelector('path');
-              if (path) {
-                const d = path.getAttribute('d') || '';
-                // Clock icons typically have specific path patterns
-                if (d.includes('M12 2C6.5 2') || d.includes('M11.99 2C6.47') ||
-                    d.includes('M12,2A10') || d.includes('schedule') ||
-                    (d.includes('12') && d.includes('10') && d.length > 80 && d.length < 300)) {
-                  logs.push(`Found clock by path pattern`);
-                  const clickTarget = svg.closest('button, [role="button"], .cursor-pointer') || svg.parentElement;
-                  if (clickTarget) {
-                    (clickTarget as HTMLElement).click();
-                    return { success: true, method: 'path-pattern', logs };
-                  }
-                }
-              }
-            }
-
-            // STRATEGY 3: If toolbar has 8 buttons, click the one after magnify (5th from left)
-            // Order: pencil(0), arrows(1), copy(2), trash(3), magnify(4), HISTORY(5), list(6), globe(7)
-            if (toolbarButtons.length >= 5) {
-              // Try button at index 5 (6th button)
-              const btn = toolbarButtons[Math.min(5, toolbarButtons.length - 1)];
-              logs.push(`Fallback: clicking button at index 5: ${btn.dataIcon}`);
-              const clickTarget = btn.svg.closest('button, [role="button"], .cursor-pointer') || btn.svg.parentElement;
-              if (clickTarget) {
-                (clickTarget as HTMLElement).click();
-                return { success: true, method: 'fallback-position', icon: btn.dataIcon, logs };
-              }
-            }
-
-            return { success: false, error: 'History button not found in toolbar', logs };
+            return { success: false, error: 'History button not found', logs };
           });
 
           console.log(`[B2PWeb] History button click result: ${JSON.stringify(historyButtonClicked)}`);
@@ -1307,126 +1200,133 @@ export class TransportScrapingService {
     }
   }
 
-  // Helper: Extract transporters from current table view
-  // Table structure: Score (icon) | Société | Contact | E-mail | Téléphone | Date de consultation
-  // Note: Score column contains only an icon, no text
+  // Helper: Extract transporters from current view
+  // B2PWeb uses DIVs instead of TABLE for the data grid
+  // Structure: Score (icon) | Company | Contact | E-mail | Telephone | Date of the search
   private async extractTransportersFromTable(maxRows: number): Promise<any[]> {
     if (!this.page) return [];
 
-    return await this.page.evaluate((limit) => {
-      const results: any[] = [];
+    // First, get debug info about the popup content
+    const debugInfo = await this.page.evaluate(() => {
+      // Find the modal/popup containing the Active searches
+      const modals = document.querySelectorAll('.modal, .popup, [class*="dialog"], [class*="overlay"], [role="dialog"]');
+      const popupInfo: string[] = [];
 
-      // Find all table rows - use Array.from to find the target table
-      const tables = Array.from(document.querySelectorAll('table'));
-      let targetTable: HTMLTableElement | null = null;
-
-      // Find the table containing "Consultants" data (look for Company/Société and Contact columns)
-      for (const table of tables) {
-        const headerText = table.textContent || '';
-        // Look for Company/Société AND Contact OR E-mail (Score is just an icon, may not have text)
-        // Support both French (Société) and English (Company) UI
-        const hasCompanyCol = headerText.includes('Société') || headerText.includes('Company');
-        const hasContactCol = headerText.includes('Contact') || headerText.includes('E-mail') || headerText.includes('Email');
-        if (hasCompanyCol && hasContactCol) {
-          targetTable = table;
-          console.log(`[B2PWeb] Found target table with headers`);
-          break;
-        }
+      for (const modal of Array.from(modals)) {
+        const html = modal.innerHTML.substring(0, 500);
+        popupInfo.push(`Modal class="${modal.className}" innerHTML(500): ${html}`);
       }
 
-      // If still no table, try any table with tbody
-      if (!targetTable) {
-        const tablesWithTbody = Array.from(document.querySelectorAll('table tbody'));
-        if (tablesWithTbody.length > 0) {
-          targetTable = tablesWithTbody[0].closest('table');
-          console.log(`[B2PWeb] Using first table with tbody`);
-        }
-      }
+      // Also check the full page for email patterns
+      const pageText = document.body.innerText;
+      const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
+      const phoneMatches = pageText.match(/\+\d{2}\s?\d[\d\s]{8,}/g) || [];
 
-      // If no table found, try looking for any table rows
-      const rows: NodeListOf<Element> = targetTable !== null
-        ? targetTable.querySelectorAll('tbody tr, tr')
-        : document.querySelectorAll('table tr, tbody tr');
+      return {
+        modalCount: modals.length,
+        popupInfo: popupInfo.slice(0, 3),
+        emailsFoundInPage: emailMatches.slice(0, 10),
+        phonesFoundInPage: phoneMatches.slice(0, 10),
+        pageTextLength: pageText.length
+      };
+    });
 
-      console.log(`[B2PWeb] Found ${rows.length} rows to process`);
+    console.log('[B2PWeb Extract] Debug info:', JSON.stringify(debugInfo, null, 2));
 
-      rows.forEach((row: Element, index: number) => {
-        if (results.length >= limit) return;
+    const results = await this.page.evaluate((limit) => {
+      const extracted: any[] = [];
+      const seenEmails = new Set<string>();
 
-        const cells = row.querySelectorAll('td');
-        const text = row.textContent || '';
+      // Get full page text to find emails
+      const pageText = document.body.innerText;
 
-        // Skip header rows (th or rows containing header text)
-        if (row.querySelectorAll('th').length > 0) return;
-        // Skip header rows in both French and English
-        if ((text.includes('Société') || text.includes('Company')) && text.includes('Contact') && (text.includes('E-mail') || text.includes('Email'))) return;
+      // Find ALL emails in the page using regex
+      const emailPattern = /[\w.-]+@[\w.-]+\.[a-z]{2,}/gi;
+      const allEmails = pageText.match(emailPattern) || [];
 
-        // Skip if no cells or less than 4 cells
-        if (cells.length < 4) return;
+      // For each email, try to find its surrounding context (row data)
+      for (const email of allEmails) {
+        if (extracted.length >= limit) break;
+        if (seenEmails.has(email.toLowerCase())) continue;
+        seenEmails.add(email.toLowerCase());
 
-        // Table structure: Score (icon) | Société | Contact | E-mail | Téléphone | Date de consultation
-        // Index:              0         |    1    |    2    |    3   |     4     |         5
-        // Note: Score column (index 0) contains only an icon, so we skip it
-        const cellTexts = Array.from(cells).map((c: Element) => c.textContent?.trim() || '');
+        // Skip admin/system emails
+        if (email.includes('b2pweb') || email.includes('admin') || email.includes('support')) continue;
 
-        console.log(`[B2PWeb] Row ${index} (${cells.length} cells): ${JSON.stringify(cellTexts)}`);
+        // Find the DOM element containing this email
+        const xpath = `//*[contains(text(), '${email}')]`;
+        const emailElements = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
 
-        // Detect if first column is empty (icon only) and shift accordingly
-        let companyName: string, contactName: string, email: string, phone: string, consultationDate: string;
+        let companyName = '';
+        let contactName = '';
+        let phone = '';
+        let consultationDate = '';
 
-        // If cellTexts[0] is empty or very short (icon), start from index 1
-        if (!cellTexts[0] || cellTexts[0].length < 2) {
-          // Score is icon, real data starts at index 1
-          companyName = cellTexts[1] || '';
-          contactName = cellTexts[2] || '';
-          email = cellTexts[3] || '';
-          phone = cellTexts[4] || '';
-          consultationDate = cellTexts[5] || '';
-        } else {
-          // First column has text, might be a different structure
-          // Check if first column looks like company name (not a date, not a number)
-          if (cellTexts[0].includes('@') || cellTexts[0].match(/^\+?\d/)) {
-            // Shift - first useful data is actually later
-            companyName = cellTexts[0] || '';
-            contactName = cellTexts[1] || '';
-            email = cellTexts[2] || '';
-            phone = cellTexts[3] || '';
-            consultationDate = cellTexts[4] || '';
-          } else {
-            // Standard structure with Score as icon
-            companyName = cellTexts[1] || '';
-            contactName = cellTexts[2] || '';
-            email = cellTexts[3] || '';
-            phone = cellTexts[4] || '';
-            consultationDate = cellTexts[5] || '';
+        if (emailElements.snapshotLength > 0) {
+          // Get the first element containing the email
+          const emailEl = emailElements.snapshotItem(0) as Element;
+
+          // Go up to find a row-like container
+          let container = emailEl.parentElement;
+          for (let i = 0; i < 5 && container; i++) {
+            const text = container.textContent || '';
+            // If container has phone and date, it's likely the row
+            if (text.match(/\+\d{2}/) && text.match(/\d{1,2}\/\d{1,2}\/\d{4}/)) {
+              break;
+            }
+            container = container.parentElement;
+          }
+
+          if (container) {
+            const rowText = container.textContent || '';
+
+            // Extract phone
+            const phoneMatch = rowText.match(/(\+\d{2}\s?\d[\d\s]{8,})/);
+            phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, ' ').trim() : '';
+
+            // Extract date
+            const dateMatch = rowText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+            consultationDate = dateMatch ? dateMatch[1] : '';
+
+            // Try to find company name - look for text blocks that look like company names
+            // Usually UPPERCASE or contains TRANSPORT, TRANS, LOGISTIC, etc.
+            const textBlocks = rowText.split(/[\s\n]+/).filter(t => t.length > 2);
+            for (const block of textBlocks) {
+              if (block === block.toUpperCase() && block.length > 3 && block.length < 40) {
+                if (!block.includes('@') && !block.match(/^\+?\d/) && !block.match(/^(Score|Company|Contact|E-mail|Telephone|Date)/i)) {
+                  if (!companyName) {
+                    companyName = block;
+                  }
+                }
+              }
+            }
+
+            // Look for contact name (Title Case with accents)
+            const contactMatch = rowText.match(/([A-Z][a-zéèêëàâäùûü]+ [A-Z][A-Za-zéèêëàâäùûü]+)/);
+            if (contactMatch && !contactMatch[1].includes('@')) {
+              contactName = contactMatch[1];
+            }
           }
         }
 
-        // Validate: must have at least company name or email
-        if (!companyName && !email) {
-          console.log(`[B2PWeb] Row ${index} skipped: no company or email`);
-          return;
-        }
-
-        // Skip if it looks like a header row
-        if (companyName === 'Société' || email === 'E-mail' || companyName === 'Contact') {
-          console.log(`[B2PWeb] Row ${index} skipped: header row`);
-          return;
-        }
-
-        console.log(`[B2PWeb] Row ${index} extracted: ${companyName} | ${contactName} | ${email}`);
-        results.push({
-          companyName: companyName,
-          contactName: contactName,
-          email: email,
-          phone: phone,
-          consultationDate: consultationDate
+        extracted.push({
+          companyName,
+          contactName,
+          email,
+          phone,
+          consultationDate
         });
-      });
+      }
 
-      console.log(`[B2PWeb] Extracted ${results.length} transporters total`);
-      return results;
+      return extracted;
     }, maxRows);
+
+    console.log(`[B2PWeb Extract] Found ${results.length} transporters`);
+    if (results.length > 0) {
+      console.log('[B2PWeb Extract] First 3 results:', JSON.stringify(results.slice(0, 3), null, 2));
+    }
+
+    return results;
   }
 
   // Helper: Create transporter result object
