@@ -113,12 +113,58 @@ interface Dispute {
   };
 }
 
+interface IndustrialEncours {
+  industrialId: string;
+  industrialName: string;
+  siret?: string;
+  contact?: { email?: string; phone?: string; contactName?: string };
+  address?: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  isActive: boolean;
+  sites: Array<{
+    siteId: string;
+    name: string;
+    city?: string;
+    quotaRemaining: number;
+  }>;
+  balance: {
+    total: number;
+    details: {
+      EURO_EPAL: number;
+      EURO_EPAL_2: number;
+      DEMI_PALETTE: number;
+      PALETTE_PERDUE: number;
+    };
+  };
+  cheques: {
+    total: number;
+    enCours: number;
+    recus: number;
+    litiges: number;
+    palettesTotal: number;
+  };
+  lastActivity?: string;
+}
+
+interface EncoursSummary {
+  totalIndustriels: number;
+  industrielsWithEncours: number;
+  totalDebt: number;
+  totalCredit: number;
+  totalChequesEnCours: number;
+  totalSites: number;
+}
+
 export default function PalettesCircularPage() {
   const router = useRouter();
   const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State
-  const [activeTab, setActiveTab] = useState<'cheques' | 'ledger' | 'matching' | 'disputes' | 'emit' | 'scan' | 'map'>('cheques');
+  const [activeTab, setActiveTab] = useState<'cheques' | 'encours' | 'ledger' | 'matching' | 'disputes' | 'emit' | 'scan' | 'map'>('cheques');
   const [showScanner, setShowScanner] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [signatureForCheque, setSignatureForCheque] = useState<string | null>(null);
@@ -127,6 +173,10 @@ export default function PalettesCircularPage() {
   const [suggestedSites, setSuggestedSites] = useState<Site[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [selectedCheque, setSelectedCheque] = useState<PalletCheque | null>(null);
+  const [industrialEncours, setIndustrialEncours] = useState<IndustrialEncours[]>([]);
+  const [encoursSummary, setEncoursSummary] = useState<EncoursSummary | null>(null);
+  const [encoursFilter, setEncoursFilter] = useState<'all' | 'debt' | 'credit' | 'active'>('all');
+  const [selectedIndustrial, setSelectedIndustrial] = useState<IndustrialEncours | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +223,21 @@ export default function PalettesCircularPage() {
     loadCheques();
     loadLedger();
     loadDisputes();
+    loadEncoursIndustriels();
   }, []);
+
+  // Load encours industriels
+  const loadEncoursIndustriels = async () => {
+    try {
+      const result = await apiCall(`/api/palettes/encours-industriels?transporterId=${companyId}`);
+      if (result.success) {
+        setIndustrialEncours(result.data || []);
+        setEncoursSummary(result.summary || null);
+      }
+    } catch (err: any) {
+      console.error('Erreur chargement encours industriels:', err.message);
+    }
+  };
 
   // API Helper
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
@@ -472,9 +536,12 @@ export default function PalettesCircularPage() {
               🏗️ Economie Circulaire Palettes
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button style={tabStyle(activeTab === 'cheques')} onClick={() => setActiveTab('cheques')}>
               Mes Cheques
+            </button>
+            <button style={tabStyle(activeTab === 'encours')} onClick={() => setActiveTab('encours')}>
+              🏭 Encours Industriels
             </button>
             <button style={tabStyle(activeTab === 'emit')} onClick={() => setActiveTab('emit')}>
               + Emettre
@@ -592,6 +659,277 @@ export default function PalettesCircularPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab: Encours Industriels */}
+          {activeTab === 'encours' && (
+            <div>
+              <h2 style={{ marginBottom: '24px' }}>🏭 Encours Palettes par Client Industriel</h2>
+
+              {/* Summary Cards */}
+              {encoursSummary && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Clients Industriels</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800' }}>{encoursSummary.totalIndustriels}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>{encoursSummary.industrielsWithEncours} avec encours</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Palettes a Recuperer</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#00D084' }}>+{encoursSummary.totalCredit}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>credit total</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Palettes a Rendre</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#e74c3c' }}>-{encoursSummary.totalDebt}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>dette totale</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Cheques en Cours</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#FFA500' }}>{encoursSummary.totalChequesEnCours}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>en attente</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filters */}
+              <div style={{ ...cardStyle, marginBottom: '24px', padding: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '600', opacity: 0.8 }}>Filtrer:</span>
+                  {(['all', 'credit', 'debt', 'active'] as const).map(filter => (
+                    <button
+                      key={filter}
+                      onClick={() => setEncoursFilter(filter)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: encoursFilter === filter ? 'rgba(102, 126, 234, 0.6)' : 'rgba(255,255,255,0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        fontSize: '13px'
+                      }}
+                    >
+                      {filter === 'all' ? 'Tous' :
+                       filter === 'credit' ? '🟢 Mes Credits' :
+                       filter === 'debt' ? '🔴 Mes Dettes' : '✅ Actifs'}
+                    </button>
+                  ))}
+                  <button
+                    onClick={loadEncoursIndustriels}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '13px'
+                    }}
+                  >
+                    🔄 Actualiser
+                  </button>
+                </div>
+              </div>
+
+              {/* Industriels List */}
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {industrialEncours
+                  .filter(ind => {
+                    if (encoursFilter === 'credit') return ind.balance.total > 0;
+                    if (encoursFilter === 'debt') return ind.balance.total < 0;
+                    if (encoursFilter === 'active') return ind.isActive;
+                    return true;
+                  })
+                  .map(industrial => (
+                    <div
+                      key={industrial.industrialId}
+                      style={{
+                        ...cardStyle,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: selectedIndustrial?.industrialId === industrial.industrialId
+                          ? '2px solid rgba(102, 126, 234, 0.8)'
+                          : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                      onClick={() => setSelectedIndustrial(
+                        selectedIndustrial?.industrialId === industrial.industrialId ? null : industrial
+                      )}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: '700', fontSize: '16px' }}>{industrial.industrialName}</span>
+                            {industrial.isActive && (
+                              <span style={{
+                                padding: '2px 8px',
+                                background: 'rgba(0, 208, 132, 0.3)',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                color: '#00D084'
+                              }}>
+                                ✅ Actif
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '13px', opacity: 0.7 }}>
+                            {industrial.siret && <span>SIRET: {industrial.siret} | </span>}
+                            {industrial.address?.city && <span>{industrial.address.city}</span>}
+                            {industrial.address?.postalCode && <span> ({industrial.address.postalCode})</span>}
+                          </div>
+                          {industrial.contact?.email && (
+                            <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
+                              📧 {industrial.contact.email}
+                              {industrial.contact.phone && ` | 📞 ${industrial.contact.phone}`}
+                            </div>
+                          )}
+                          {industrial.sites.length > 0 && (
+                            <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
+                              📍 {industrial.sites.length} site(s): {industrial.sites.map(s => s.name).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{
+                            fontSize: '28px',
+                            fontWeight: '800',
+                            color: industrial.balance.total >= 0 ? '#00D084' : '#e74c3c'
+                          }}>
+                            {industrial.balance.total > 0 ? '+' : ''}{industrial.balance.total}
+                          </div>
+                          <div style={{ fontSize: '12px', opacity: 0.6 }}>
+                            {industrial.balance.total >= 0 ? 'a recuperer' : 'a rendre'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cheques Stats Row */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gap: '12px',
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700' }}>{industrial.cheques.total}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Total cheques</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#FFA500' }}>{industrial.cheques.enCours}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>En cours</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#00D084' }}>{industrial.cheques.recus}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Recus</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#e74c3c' }}>{industrial.cheques.litiges}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Litiges</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#9b59b6' }}>{industrial.cheques.palettesTotal}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Palettes</div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {selectedIndustrial?.industrialId === industrial.industrialId && (
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                          <h4 style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>Detail par type de palette</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                            {Object.entries(industrial.balance.details).map(([type, value]) => (
+                              <div key={type} style={{
+                                padding: '12px',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '8px',
+                                textAlign: 'center'
+                              }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>{type.replace(/_/g, ' ')}</div>
+                                <div style={{
+                                  fontSize: '20px',
+                                  fontWeight: '700',
+                                  color: (value as number) >= 0 ? '#00D084' : '#e74c3c'
+                                }}>
+                                  {(value as number) > 0 ? '+' : ''}{value as number}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Sites list */}
+                          {industrial.sites.length > 0 && (
+                            <div style={{ marginTop: '16px' }}>
+                              <h4 style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>Sites de restitution</h4>
+                              <div style={{ display: 'grid', gap: '8px' }}>
+                                {industrial.sites.map(site => (
+                                  <div key={site.siteId} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '10px 12px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '8px'
+                                  }}>
+                                    <div>
+                                      <div style={{ fontWeight: '600', fontSize: '13px' }}>{site.name}</div>
+                                      <div style={{ fontSize: '11px', opacity: 0.6 }}>{site.city}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                      <div style={{ fontSize: '14px', fontWeight: '600', color: site.quotaRemaining > 20 ? '#00D084' : '#FFA500' }}>
+                                        {site.quotaRemaining} places
+                                      </div>
+                                      <button
+                                        style={{
+                                          marginTop: '4px',
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          border: 'none',
+                                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                          color: 'white',
+                                          cursor: 'pointer',
+                                          fontWeight: '500',
+                                          fontSize: '11px'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setNewCheque({ ...newCheque, destinationSiteId: site.siteId });
+                                          setActiveTab('emit');
+                                        }}
+                                      >
+                                        Emettre vers ce site
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {industrial.lastActivity && (
+                            <div style={{ marginTop: '12px', fontSize: '12px', opacity: 0.5, textAlign: 'right' }}>
+                              Derniere activite: {new Date(industrial.lastActivity).toLocaleDateString('fr-FR')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                {industrialEncours.length === 0 && (
+                  <div style={{ ...cardStyle, textAlign: 'center', padding: '48px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏭</div>
+                    <p style={{ opacity: 0.7 }}>Aucun client industriel trouve. Les donnees seront disponibles apres le premier echange de palettes.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
