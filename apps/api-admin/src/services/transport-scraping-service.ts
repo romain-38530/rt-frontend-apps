@@ -824,7 +824,7 @@ export class TransportScrapingService {
       await delay(2000);
       const results: any[] = [];
       const maxOffers = Math.min(30, scrapingConfig.maxOffersPerRun);
-      const maxTransportersPerSection = 100; // Limit per section to avoid too long scraping
+      const maxTransportersPerSection = 2500; // Increased to capture all transporters per offer
 
       // Get offer rows count
       const offerCount = await this.page.evaluate(() => {
@@ -1280,33 +1280,88 @@ export class TransportScrapingService {
   private async extractTransportersFromTable(maxRows: number): Promise<any[]> {
     if (!this.page) return [];
 
-    // First, get debug info about the popup content
-    const debugInfo = await this.page.evaluate(() => {
-      // Find the modal/popup containing the Active searches
-      const modals = document.querySelectorAll('.modal, .popup, [class*="dialog"], [class*="overlay"], [role="dialog"]');
-      const popupInfo: string[] = [];
+    // First, scroll down the transporters list to load all items (virtual scroller)
+    console.log('[B2PWeb Extract] Scrolling to load all transporters...');
 
-      for (const modal of Array.from(modals)) {
-        const html = modal.innerHTML.substring(0, 500);
-        popupInfo.push(`Modal class="${modal.className}" innerHTML(500): ${html}`);
+    let previousEmailCount = 0;
+    let scrollAttempts = 0;
+    const maxScrollAttempts = 50; // Max 50 scrolls to avoid infinite loop
+
+    while (scrollAttempts < maxScrollAttempts) {
+      // Scroll the transporters list container
+      const scrollResult = await this.page.evaluate(() => {
+        // Find the scrollable container for the transporters list
+        const scrollContainers = document.querySelectorAll('.vue-recycle-scroller, [class*="scroll"], [class*="list"]');
+        let scrolled = false;
+
+        for (const container of Array.from(scrollContainers)) {
+          const el = container as HTMLElement;
+          if (el.scrollHeight > el.clientHeight) {
+            const prevScroll = el.scrollTop;
+            el.scrollTop += 500; // Scroll down 500px
+            if (el.scrollTop !== prevScroll) {
+              scrolled = true;
+            }
+          }
+        }
+
+        // Also try scrolling the modal/popup content
+        const modals = document.querySelectorAll('.modal-content, [class*="dialog-content"], [class*="popup-content"]');
+        for (const modal of Array.from(modals)) {
+          const el = modal as HTMLElement;
+          if (el.scrollHeight > el.clientHeight) {
+            el.scrollTop += 500;
+            scrolled = true;
+          }
+        }
+
+        // Count current emails visible
+        const pageText = document.body.innerText;
+        const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
+        const uniqueEmails = new Set(emailMatches.map(e => e.toLowerCase()));
+
+        return {
+          scrolled,
+          emailCount: uniqueEmails.size
+        };
+      });
+
+      console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails found`);
+
+      // If no new emails loaded after scroll, we've reached the end
+      if (scrollResult.emailCount === previousEmailCount && scrollAttempts > 3) {
+        console.log('[B2PWeb Extract] No new emails after scroll, stopping');
+        break;
       }
 
-      // Also check the full page for email patterns
+      previousEmailCount = scrollResult.emailCount;
+      scrollAttempts++;
+
+      // Stop if we have enough
+      if (scrollResult.emailCount >= maxRows) {
+        console.log(`[B2PWeb Extract] Reached max rows (${maxRows}), stopping scroll`);
+        break;
+      }
+
+      await delay(300); // Wait for virtual scroller to load more items
+    }
+
+    console.log(`[B2PWeb Extract] Finished scrolling after ${scrollAttempts} attempts, found ${previousEmailCount} emails`);
+
+    // Now extract all the data
+    const debugInfo = await this.page.evaluate(() => {
       const pageText = document.body.innerText;
       const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
-      // Support both international (+33) and French national (06) formats
       const phoneMatches = pageText.match(/(?:\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/g) || [];
 
       return {
-        modalCount: modals.length,
-        popupInfo: popupInfo.slice(0, 3),
-        emailsFoundInPage: emailMatches.slice(0, 10),
-        phonesFoundInPage: phoneMatches.slice(0, 10),
+        emailsFoundInPage: emailMatches.length,
+        phonesFoundInPage: phoneMatches.length,
         pageTextLength: pageText.length
       };
     });
 
-    console.log('[B2PWeb Extract] Debug info:', JSON.stringify(debugInfo, null, 2));
+    console.log('[B2PWeb Extract] Final count:', JSON.stringify(debugInfo));
 
     const results = await this.page.evaluate((limit) => {
       const extracted: any[] = [];
