@@ -14,7 +14,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
-import { isAuthenticated, getAuthToken } from '../lib/auth';
+import { isAuthenticated, getAuthToken, getUser } from '../lib/auth';
 
 // Import dynamique des composants Palettes (SSR disabled)
 const QRScanner = dynamic<any>(
@@ -77,7 +77,7 @@ interface PalletLedger {
 
 interface Site {
   siteId: string;
-  siteName: string;
+  name: string; // API returns 'name' not 'siteName'
   companyId: string;
   address: {
     street: string;
@@ -87,16 +87,17 @@ interface Site {
     coordinates: { latitude: number; longitude: number };
   };
   quota: {
-    maxDaily: number;
+    dailyMax?: number;
+    maxDaily?: number;
     currentDaily: number;
   };
-  capacities: {
+  capacities?: {
     EURO_EPAL: number;
     EURO_EPAL_2: number;
     DEMI_PALETTE: number;
     PALETTE_PERDUE: number;
   };
-  openingHours: { open: string; close: string };
+  openingHours?: { open: string; close: string };
   active: boolean;
 }
 
@@ -179,25 +180,31 @@ export default function PalettesCircularPage() {
     palletType: 'all'
   });
 
-  const companyId = 'IND-001'; // TODO: Get from auth context
+  // Get companyId from auth context, fallback to demo industriel company
+  const user = getUser();
+  const companyId = user?.companyId || user?.industrialId || 'COMP-IND001';
 
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+    // Load all data via dashboard endpoint
+    loadDashboard();
   }, [mounted]);
 
   // API Helper
   const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
     const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`${apiUrl}${endpoint}`, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers,
       body: body ? JSON.stringify(body) : undefined
     });
     const data = await response.json();
@@ -207,7 +214,26 @@ export default function PalettesCircularPage() {
     return data;
   };
 
-  // Load data
+  // Load all data via unified dashboard endpoint
+  const loadDashboard = async () => {
+    setIsLoading(true);
+    try {
+      const result = await apiCall(`/api/palettes/dashboard?companyId=${companyId}`);
+      if (result.success && result.data) {
+        setLedger(result.data.ledger);
+        setCheques(result.data.cheques || []);
+        setDisputes(result.data.disputes || []);
+        setNearbySites(result.data.sites || []);
+      }
+    } catch (err: any) {
+      console.error('Erreur chargement dashboard:', err.message);
+      setError('Erreur de chargement des donnees. Veuillez rafraichir la page.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Individual loaders for refresh
   const loadLedger = async () => {
     try {
       const result = await apiCall(`/api/palettes/ledger/${companyId}`);
@@ -219,7 +245,6 @@ export default function PalettesCircularPage() {
 
   const loadCheques = async () => {
     try {
-      // Get cheques related to this company (as destination or source)
       const result = await apiCall(`/api/palettes/cheques?companyId=${companyId}&limit=100`);
       setCheques(result.data || []);
     } catch (err: any) {
@@ -238,7 +263,6 @@ export default function PalettesCircularPage() {
 
   const loadNearbySites = async () => {
     try {
-      // Get nearby sites for recovery requests
       const result = await apiCall('/api/palettes/sites?active=true&limit=20');
       setNearbySites(result.data || []);
     } catch (err: any) {
@@ -260,7 +284,7 @@ export default function PalettesCircularPage() {
         preferredDate: newRequest.preferredDate,
         status: 'pending',
         siteId: newRequest.siteId || undefined,
-        siteName: nearbySites.find(s => s.siteId === newRequest.siteId)?.siteName,
+        siteName: nearbySites.find(s => s.siteId === newRequest.siteId)?.name,
         createdAt: new Date().toISOString()
       };
       setRecoveryRequests([request, ...recoveryRequests]);
@@ -349,7 +373,7 @@ export default function PalettesCircularPage() {
   // Convert sites for map
   const mapSites = nearbySites.map(site => ({
     siteId: site.siteId,
-    siteName: site.siteName,
+    siteName: site.name,
     address: {
       street: site.address.street,
       city: site.address.city,
@@ -357,7 +381,7 @@ export default function PalettesCircularPage() {
       coordinates: site.address.coordinates
     },
     priority: 'NETWORK' as const,
-    quotaRemaining: site.quota.maxDaily - site.quota.currentDaily,
+    quotaRemaining: (site.quota.dailyMax || site.quota.maxDaily || 100) - site.quota.currentDaily,
     isOpen: site.active
   }));
 
@@ -725,7 +749,7 @@ export default function PalettesCircularPage() {
                     >
                       <option value="">-- Choisir un site --</option>
                       {nearbySites.map(site => (
-                        <option key={site.siteId} value={site.siteId}>{site.siteName} - {site.address.city}</option>
+                        <option key={site.siteId} value={site.siteId}>{site.name} - {site.address.city}</option>
                       ))}
                     </select>
                   </div>
