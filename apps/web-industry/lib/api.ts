@@ -1282,7 +1282,7 @@ export const preinvoicesApi = {
     if (filters?.month) params.append('month', filters.month.toString());
     if (filters?.year) params.append('year', filters.year.toString());
 
-    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/prefacturations?${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/demo/prefacturations?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1291,7 +1291,7 @@ export const preinvoicesApi = {
   // Statistiques préfacturation
   getStats: async (industrialId?: string) => {
     const params = industrialId ? `?industrialId=${industrialId}` : '';
-    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/stats${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/billing/demo/stats${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
