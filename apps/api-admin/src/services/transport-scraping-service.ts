@@ -840,41 +840,71 @@ export class TransportScrapingService {
         return [];
       }
 
+      // Track processed offers by their unique identifier (route + date)
+      const processedOffers = new Set<string>();
+
       // Process each offer
       for (let i = 0; i < Math.min(offerCount, maxOffers); i++) {
         try {
           console.log(`[B2PWeb] Processing offer ${i + 1}/${Math.min(offerCount, maxOffers)}...`);
 
-          // Get route info from the row before clicking
-          const routeInfo = await this.page.evaluate((rowIndex) => {
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            const checkbox = checkboxes[rowIndex];
-            if (!checkbox) return null;
+          // For virtual scroller: scroll to make sure the row at index i is visible
+          await this.page.evaluate((rowIndex) => {
+            const scroller = document.querySelector('.vue-recycle-scroller');
+            if (scroller) {
+              // Each row is approximately 50px high
+              const targetScroll = rowIndex * 50;
+              scroller.scrollTop = Math.max(0, targetScroll - 100);
+            }
+          }, i);
+          await delay(300);
 
-            const row = checkbox.closest('tr, [class*="row"], div[role="row"]');
-            if (!row) return null;
+          // Get route info from the FIRST visible row (virtual scroller recycles elements)
+          const routeInfo = await this.page.evaluate(() => {
+            // Find items in virtual scroller
+            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
 
-            const text = row.textContent || '';
-            // Pattern: "38, VAULX-MILIEU" for departure, "31, TOULOUSE" for delivery
-            const matches = text.match(/(\d{2}),\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-ZÉÈÀÙÂÊÎÔÛ\-\s]+?)(?=\s*\d{2},|\s*J\+|\s*MG|\s*Taut|\s*\d{2}\/)/gi) || [];
+            // Get the first visible item
+            for (const item of Array.from(scrollerItems)) {
+              const rect = (item as HTMLElement).getBoundingClientRect();
+              if (rect.top >= 0 && rect.top < window.innerHeight) {
+                const text = item.textContent || '';
+                // Pattern: "38, VAULX-MILIEU" for departure, "31, TOULOUSE" for delivery
+                const matches = text.match(/(\d{2}),\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-ZÉÈÀÙÂÊÎÔÛ\-\s]+?)(?=\s*\d{2},|\s*J\+|\s*MG|\s*Taut|\s*\d{2}\/)/gi) || [];
 
-            if (matches.length >= 2) {
-              const dep = matches[0] || '';
-              const del = matches[1] || '';
-              return {
-                departure: dep.trim(),
-                delivery: del.trim(),
-                departureDept: dep.match(/^(\d{2})/)?.[1] || '',
-                deliveryDept: del.match(/^(\d{2})/)?.[1] || ''
-              };
+                if (matches.length >= 2) {
+                  const dep = matches[0] || '';
+                  const del = matches[1] || '';
+
+                  // Also get a unique identifier for this offer
+                  const dateMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/);
+                  const uniqueId = `${dep.trim()}-${del.trim()}-${dateMatch?.[1] || ''}`;
+
+                  return {
+                    departure: dep.trim(),
+                    delivery: del.trim(),
+                    departureDept: dep.match(/^(\d{2})/)?.[1] || '',
+                    deliveryDept: del.match(/^(\d{2})/)?.[1] || '',
+                    uniqueId
+                  };
+                }
+                break;
+              }
             }
             return null;
-          }, i);
+          });
 
           if (!routeInfo) {
             console.log(`[B2PWeb] Could not extract route info for offer ${i + 1}`);
             continue;
           }
+
+          // Skip if we already processed this offer
+          if (processedOffers.has(routeInfo.uniqueId)) {
+            console.log(`[B2PWeb] Offer ${i + 1} already processed, skipping...`);
+            continue;
+          }
+          processedOffers.add(routeInfo.uniqueId);
 
           console.log(`[B2PWeb] Route: ${routeInfo.departure} -> ${routeInfo.delivery}`);
 
@@ -883,23 +913,32 @@ export class TransportScrapingService {
           // ==========================================
           console.log(`[B2PWeb] Clicking on offer row ${i} to open Offer informations panel...`);
 
-          const rowClicked = await this.page.evaluate((rowIndex) => {
+          const rowClicked = await this.page.evaluate(() => {
             const logs: string[] = [];
 
             // Find items in virtual scroller
             const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
             logs.push(`Found ${scrollerItems.length} scroller items`);
 
-            if (scrollerItems.length <= rowIndex) {
-              return { success: false, error: 'Row index out of bounds', logs };
+            // Find the first visible row in viewport
+            let targetRow: HTMLElement | null = null;
+            for (const item of Array.from(scrollerItems)) {
+              const rect = (item as HTMLElement).getBoundingClientRect();
+              if (rect.top >= 0 && rect.top < window.innerHeight) {
+                targetRow = item as HTMLElement;
+                break;
+              }
             }
 
-            const row = scrollerItems[rowIndex] as HTMLElement;
-            const rowText = (row.textContent || '').substring(0, 80);
-            logs.push(`Row ${rowIndex} text: ${rowText}`);
+            if (!targetRow) {
+              return { success: false, error: 'No visible row found', logs };
+            }
+
+            const rowText = (targetRow.textContent || '').substring(0, 80);
+            logs.push(`Clicking row with text: ${rowText}`);
 
             // Click on the middle of the row (avoid checkbox on left)
-            const rect = row.getBoundingClientRect();
+            const rect = targetRow.getBoundingClientRect();
             const clickX = rect.left + rect.width * 0.5;
             const clickY = rect.top + rect.height / 2;
 
@@ -908,11 +947,11 @@ export class TransportScrapingService {
               bubbles: true, cancelable: true, view: window,
               clientX: clickX, clientY: clickY, button: 0
             });
-            row.dispatchEvent(clickEvent);
+            targetRow.dispatchEvent(clickEvent);
 
             logs.push(`Clicked row at (${Math.round(clickX)}, ${Math.round(clickY)})`);
             return { success: true, logs };
-          }, i);
+          });
 
           console.log(`[B2PWeb] Row click result: ${JSON.stringify(rowClicked)}`);
           await delay(1500);
@@ -1220,7 +1259,8 @@ export class TransportScrapingService {
       // Also check the full page for email patterns
       const pageText = document.body.innerText;
       const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
-      const phoneMatches = pageText.match(/\+\d{2}\s?\d[\d\s]{8,}/g) || [];
+      // Support both international (+33) and French national (06) formats
+      const phoneMatches = pageText.match(/(?:\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/g) || [];
 
       return {
         modalCount: modals.length,
@@ -1280,9 +1320,9 @@ export class TransportScrapingService {
           if (container) {
             const rowText = container.textContent || '';
 
-            // Extract phone
-            const phoneMatch = rowText.match(/(\+\d{2}\s?\d[\d\s]{8,})/);
-            phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, ' ').trim() : '';
+            // Extract phone - support both international and French national formats
+            const phoneMatch = rowText.match(/(\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/);
+            phone = phoneMatch ? phoneMatch[1].replace(/[\s.-]+/g, ' ').trim() : '';
 
             // Extract date
             const dateMatch = rowText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
@@ -1309,8 +1349,16 @@ export class TransportScrapingService {
           }
         }
 
+        // If no company name found, use email domain as company identifier
+        if (!companyName && email) {
+          const domain = email.split('@')[1]?.split('.')[0];
+          if (domain && domain.length > 2) {
+            companyName = domain.toUpperCase();
+          }
+        }
+
         extracted.push({
-          companyName,
+          companyName: companyName || 'Unknown',
           contactName,
           email,
           phone,
@@ -1790,7 +1838,8 @@ export class TransportScrapingService {
     const contactEmail = company.email || contact.email || contact.mail;
     const contactPhone = company.phone || contact.phone || contact.tel || contact.telephone || contact.mobile;
 
-    return {
+    // Build the result object - only include fields with actual data
+    const result: Partial<ITransportOffer> = {
       offerType: raw.type === 'demand' || raw.type === 'freight' ? 'demand' : 'offer',
 
       company: {
@@ -1809,55 +1858,40 @@ export class TransportScrapingService {
           city: origin.city || origin.ville || origin.locality,
           postalCode: origin.postalCode || origin.zipCode || origin.cp || origin.code_postal,
           department: origin.department || origin.departement,
-          country: origin.country || origin.pays || 'France',
-          lat: parseFloat(origin.lat || origin.latitude) || undefined,
-          lng: parseFloat(origin.lng || origin.longitude || origin.lon) || undefined
+          country: origin.country || origin.pays || 'France'
         },
         destination: {
           city: destination.city || destination.ville || destination.locality,
           postalCode: destination.postalCode || destination.zipCode || destination.cp || destination.code_postal,
           department: destination.department || destination.departement,
-          country: destination.country || destination.pays || 'France',
-          lat: parseFloat(destination.lat || destination.latitude) || undefined,
-          lng: parseFloat(destination.lng || destination.longitude || destination.lon) || undefined
-        },
-        distance: parseFloat(raw.distance || raw.km) || undefined
-      },
-
-      loadingDate: raw.loadingDate || raw.departureDate || raw.dateChargement ? new Date(raw.loadingDate || raw.departureDate || raw.dateChargement) : undefined,
-      deliveryDate: raw.deliveryDate || raw.arrivalDate || raw.dateLivraison ? new Date(raw.deliveryDate || raw.arrivalDate || raw.dateLivraison) : undefined,
-
-      cargo: {
-        type: cargo.type || cargo.nature || cargo.category,
-        weight: parseFloat(cargo.weight || cargo.poids || cargo.tonnage) || undefined,
-        volume: parseFloat(cargo.volume || cargo.m3) || undefined,
-        length: parseFloat(cargo.length || cargo.longueur) || undefined,
-        width: parseFloat(cargo.width || cargo.largeur) || undefined,
-        height: parseFloat(cargo.height || cargo.hauteur) || undefined,
-        quantity: parseInt(cargo.quantity || cargo.quantite || cargo.pallets || cargo.nb_palettes) || undefined,
-        description: cargo.description || cargo.details,
-        adr: cargo.adr || cargo.dangerous || cargo.matiereDangereuse || false,
-        temperature: cargo.temperature ? {
-          min: parseFloat(cargo.temperature.min || cargo.tempMin),
-          max: parseFloat(cargo.temperature.max || cargo.tempMax)
-        } : undefined
-      },
-
-      vehicle: {
-        type: vehicle.type || vehicle.vehicleType || vehicle.typeVehicule,
-        capacity: parseFloat(vehicle.capacity || vehicle.tonnage) || undefined,
-        features: vehicle.features || vehicle.equipements || vehicle.options || []
-      },
-
-      price: {
-        amount: parseFloat(price.amount || price.value || price.montant || raw.price) || undefined,
-        currency: price.currency || price.devise || 'EUR',
-        type: price.negotiable ? 'negotiable' : price.amount ? 'fixed' : 'on_demand'
+          country: destination.country || destination.pays || 'France'
+        }
       },
 
       status: raw.status === 'expired' ? 'expired' : 'active',
-      tags: ['b2pweb']
+      tags: ['b2pweb', raw.source || 'consultant']
     };
+
+    // Only add cargo if there's actual data
+    const cargoType = cargo.type || cargo.nature || cargo.category;
+    const cargoWeight = parseFloat(cargo.weight || cargo.poids || cargo.tonnage) || undefined;
+    if (cargoType || cargoWeight) {
+      result.cargo = {
+        type: cargoType,
+        weight: cargoWeight,
+        description: cargo.description || cargo.details
+      };
+    }
+
+    // Only add vehicle if there's data
+    const vehicleType = vehicle.type || vehicle.vehicleType || vehicle.typeVehicule;
+    if (vehicleType) {
+      result.vehicle = {
+        type: vehicleType
+      };
+    }
+
+    return result;
   }
 
   private async upsertTransportCompany(offerData: Partial<ITransportOffer>, offerId: mongoose.Types.ObjectId): Promise<void> {
