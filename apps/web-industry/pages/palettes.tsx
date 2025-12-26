@@ -134,13 +134,47 @@ interface RecoveryRequest {
   createdAt: string;
 }
 
+interface TransporterEncours {
+  transporterId: string;
+  transporterName: string;
+  siret?: string;
+  contact?: { email?: string; phone?: string };
+  isReferenced: boolean;
+  referenceDate?: string;
+  balance: {
+    total: number;
+    details: {
+      EURO_EPAL: number;
+      EURO_EPAL_2: number;
+      DEMI_PALETTE: number;
+      PALETTE_PERDUE: number;
+    };
+  };
+  cheques: {
+    total: number;
+    enCours: number;
+    recus: number;
+    litiges: number;
+    palettesTotal: number;
+  };
+  lastActivity?: string;
+}
+
+interface EncoursSummary {
+  totalTransporters: number;
+  transportersWithEncours: number;
+  totalDebt: number;
+  totalCredit: number;
+  totalChequesEnCours: number;
+}
+
 export default function PalettesCircularPage() {
   const router = useSafeRouter();
   const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_PALETTES_API_URL || 'https://d2o4ng8nutcmou.cloudfront.net';
 
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'requests' | 'ledger' | 'disputes' | 'reports' | 'scan' | 'map'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'encours' | 'requests' | 'ledger' | 'disputes' | 'reports' | 'scan' | 'map'>('dashboard');
   const [showSignature, setShowSignature] = useState(false);
   const [signatureForCheque, setSignatureForCheque] = useState<string | null>(null);
   const [selectedCheque, setSelectedCheque] = useState<PalletCheque | null>(null);
@@ -149,6 +183,10 @@ export default function PalettesCircularPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [nearbySites, setNearbySites] = useState<Site[]>([]);
   const [recoveryRequests, setRecoveryRequests] = useState<RecoveryRequest[]>([]);
+  const [transporterEncours, setTransporterEncours] = useState<TransporterEncours[]>([]);
+  const [encoursSummary, setEncoursSummary] = useState<EncoursSummary | null>(null);
+  const [encoursFilter, setEncoursFilter] = useState<'all' | 'debt' | 'credit' | 'referenced'>('all');
+  const [selectedTransporter, setSelectedTransporter] = useState<TransporterEncours | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,11 +263,26 @@ export default function PalettesCircularPage() {
         setDisputes(result.data.disputes || []);
         setNearbySites(result.data.sites || []);
       }
+      // Also load encours transporteurs
+      loadEncoursTransporteurs();
     } catch (err: any) {
       console.error('Erreur chargement dashboard:', err.message);
       setError('Erreur de chargement des donnees. Veuillez rafraichir la page.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load encours transporteurs
+  const loadEncoursTransporteurs = async () => {
+    try {
+      const result = await apiCall(`/api/palettes/encours-transporteurs?industrialId=${companyId}`);
+      if (result.success) {
+        setTransporterEncours(result.data || []);
+        setEncoursSummary(result.summary || null);
+      }
+    } catch (err: any) {
+      console.error('Erreur chargement encours transporteurs:', err.message);
     }
   };
 
@@ -527,9 +580,12 @@ export default function PalettesCircularPage() {
               Industriel
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button style={tabStyle(activeTab === 'dashboard')} onClick={() => setActiveTab('dashboard')}>
               Tableau de Bord
+            </button>
+            <button style={tabStyle(activeTab === 'encours')} onClick={() => setActiveTab('encours')}>
+              🚛 Encours Transporteurs
             </button>
             <button style={tabStyle(activeTab === 'requests')} onClick={() => setActiveTab('requests')}>
               Demandes
@@ -686,6 +742,276 @@ export default function PalettesCircularPage() {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Encours Transporteurs */}
+          {activeTab === 'encours' && (
+            <div>
+              <h2 style={{ marginBottom: '24px' }}>🚛 Encours Palettes par Transporteur</h2>
+
+              {/* Summary Cards */}
+              {encoursSummary && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Transporteurs Actifs</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800' }}>{encoursSummary.totalTransporters}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>{encoursSummary.transportersWithEncours} avec encours</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Total Dettes</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#e74c3c' }}>-{encoursSummary.totalDebt}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>palettes a recuperer</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Total Credits</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#00D084' }}>+{encoursSummary.totalCredit}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>palettes a rendre</div>
+                  </div>
+                  <div style={cardStyle}>
+                    <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Cheques en Cours</div>
+                    <div style={{ fontSize: '32px', fontWeight: '800', color: '#FFA500' }}>{encoursSummary.totalChequesEnCours}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>en attente</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filters */}
+              <div style={{ ...cardStyle, marginBottom: '24px', padding: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '600', opacity: 0.8 }}>Filtrer:</span>
+                  {(['all', 'debt', 'credit', 'referenced'] as const).map(filter => (
+                    <button
+                      key={filter}
+                      onClick={() => setEncoursFilter(filter)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: encoursFilter === filter ? 'rgba(240, 147, 251, 0.6)' : 'rgba(255,255,255,0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        fontSize: '13px'
+                      }}
+                    >
+                      {filter === 'all' ? 'Tous' :
+                       filter === 'debt' ? '🔴 Debiteurs' :
+                       filter === 'credit' ? '🟢 Crediteurs' : '✅ References'}
+                    </button>
+                  ))}
+                  <button
+                    onClick={loadEncoursTransporteurs}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '13px'
+                    }}
+                  >
+                    🔄 Actualiser
+                  </button>
+                </div>
+              </div>
+
+              {/* Transporters List */}
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {transporterEncours
+                  .filter(t => {
+                    if (encoursFilter === 'debt') return t.balance.total < 0;
+                    if (encoursFilter === 'credit') return t.balance.total > 0;
+                    if (encoursFilter === 'referenced') return t.isReferenced;
+                    return true;
+                  })
+                  .map(transporter => (
+                    <div
+                      key={transporter.transporterId}
+                      style={{
+                        ...cardStyle,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: selectedTransporter?.transporterId === transporter.transporterId
+                          ? '2px solid rgba(240, 147, 251, 0.8)'
+                          : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                      onClick={() => setSelectedTransporter(
+                        selectedTransporter?.transporterId === transporter.transporterId ? null : transporter
+                      )}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: '700', fontSize: '16px' }}>{transporter.transporterName}</span>
+                            {transporter.isReferenced && (
+                              <span style={{
+                                padding: '2px 8px',
+                                background: 'rgba(0, 208, 132, 0.3)',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                color: '#00D084'
+                              }}>
+                                ✅ Reference
+                              </span>
+                            )}
+                            {!transporter.isReferenced && (
+                              <span style={{
+                                padding: '2px 8px',
+                                background: 'rgba(255, 165, 0, 0.3)',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                color: '#FFA500'
+                              }}>
+                                ⚠️ Non reference
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '13px', opacity: 0.7 }}>
+                            {transporter.siret && <span>SIRET: {transporter.siret} | </span>}
+                            <span>ID: {transporter.transporterId}</span>
+                          </div>
+                          {transporter.contact?.email && (
+                            <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
+                              📧 {transporter.contact.email}
+                              {transporter.contact.phone && ` | 📞 ${transporter.contact.phone}`}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{
+                            fontSize: '28px',
+                            fontWeight: '800',
+                            color: transporter.balance.total >= 0 ? '#00D084' : '#e74c3c'
+                          }}>
+                            {transporter.balance.total > 0 ? '+' : ''}{transporter.balance.total}
+                          </div>
+                          <div style={{ fontSize: '12px', opacity: 0.6 }}>
+                            {transporter.balance.total >= 0 ? 'credit' : 'dette'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cheques Stats Row */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '12px',
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700' }}>{transporter.cheques.total}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Total cheques</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#FFA500' }}>{transporter.cheques.enCours}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>En cours</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#00D084' }}>{transporter.cheques.recus}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Recus</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#e74c3c' }}>{transporter.cheques.litiges}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.6 }}>Litiges</div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {selectedTransporter?.transporterId === transporter.transporterId && (
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                          <h4 style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>Detail par type de palette</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                            {Object.entries(transporter.balance.details).map(([type, value]) => (
+                              <div key={type} style={{
+                                padding: '12px',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '8px',
+                                textAlign: 'center'
+                              }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>{type.replace(/_/g, ' ')}</div>
+                                <div style={{
+                                  fontSize: '20px',
+                                  fontWeight: '700',
+                                  color: (value as number) >= 0 ? '#00D084' : '#e74c3c'
+                                }}>
+                                  {(value as number) > 0 ? '+' : ''}{value as number}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                            <button
+                              style={{
+                                flex: 1,
+                                padding: '12px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '13px'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`/transporteurs?id=${transporter.transporterId}`, '_blank');
+                              }}
+                            >
+                              📋 Voir fiche transporteur
+                            </button>
+                            <button
+                              style={{
+                                flex: 1,
+                                padding: '12px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: transporter.balance.total < 0
+                                  ? 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
+                                  : 'linear-gradient(135deg, #00D084 0%, #00a86b 100%)',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '13px'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab('requests');
+                                setNewRequest({
+                                  ...newRequest,
+                                  type: transporter.balance.total < 0 ? 'recuperation' : 'restitution',
+                                  quantity: Math.abs(transporter.balance.total)
+                                });
+                              }}
+                            >
+                              {transporter.balance.total < 0 ? '📥 Demander recuperation' : '📤 Demander restitution'}
+                            </button>
+                          </div>
+                          {transporter.lastActivity && (
+                            <div style={{ marginTop: '12px', fontSize: '12px', opacity: 0.5, textAlign: 'right' }}>
+                              Derniere activite: {new Date(transporter.lastActivity).toLocaleDateString('fr-FR')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                {transporterEncours.length === 0 && (
+                  <div style={{ ...cardStyle, textAlign: 'center', padding: '48px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚛</div>
+                    <p style={{ opacity: 0.7 }}>Aucun transporteur trouve. Les donnees seront disponibles apres le premier echange de palettes.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
