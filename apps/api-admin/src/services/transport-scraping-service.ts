@@ -1726,43 +1726,52 @@ export class TransportScrapingService {
   }
 
   private async processOffer(rawOffer: any, job: ScrapingJob): Promise<void> {
-    // Extraire l'ID externe
-    const externalId = rawOffer.id?.toString() || rawOffer._id?.toString() || rawOffer.reference || `${Date.now()}-${Math.random()}`;
+    try {
+      // Extraire l'ID externe
+      const externalId = rawOffer.id?.toString() || rawOffer._id?.toString() || rawOffer.reference || `${Date.now()}-${Math.random()}`;
 
-    // Vérifier si l'offre existe déjà
-    const existingOffer = await TransportOffer.findOne({
-      externalId,
-      'source.name': 'b2pweb'
-    });
+      // Parser les données de l'offre
+      const offerData = this.parseB2PWebOffer(rawOffer);
 
-    if (existingOffer) {
-      // Mettre à jour la date de dernière vue
-      existingOffer.source.lastSeenAt = new Date();
-      await existingOffer.save();
-      job.totalUpdated++;
-      return;
+      console.log(`[B2PWeb processOffer] Processing: ${offerData.company?.name || 'Unknown'} | ${offerData.contact?.email || 'no email'}`);
+
+      // Vérifier si l'offre existe déjà
+      const existingOffer = await TransportOffer.findOne({
+        externalId,
+        'source.name': 'b2pweb'
+      });
+
+      if (existingOffer) {
+        // Mettre à jour la date de dernière vue
+        existingOffer.source.lastSeenAt = new Date();
+        await existingOffer.save();
+        job.totalUpdated++;
+        console.log(`[B2PWeb processOffer] Updated existing offer: ${externalId}`);
+        return;
+      }
+
+      // Créer l'offre
+      const offer = new TransportOffer({
+        externalId,
+        source: {
+          name: 'b2pweb',
+          url: rawOffer.url || `https://app.b2pweb.com/offer/${externalId}`,
+          scrapedAt: new Date(),
+          lastSeenAt: new Date()
+        },
+        ...offerData
+      });
+
+      await offer.save();
+      job.totalImported++;
+      console.log(`[B2PWeb processOffer] Created new offer: ${externalId} | Company: ${offerData.company?.name}`);
+
+      // Créer ou mettre à jour l'entreprise de transport
+      await this.upsertTransportCompany(offerData, offer._id);
+    } catch (error: any) {
+      console.error(`[B2PWeb processOffer] Error: ${error.message}`);
+      job.errors.push(`processOffer error: ${error.message}`);
     }
-
-    // Parser les données de l'offre
-    const offerData = this.parseB2PWebOffer(rawOffer);
-
-    // Créer l'offre
-    const offer = new TransportOffer({
-      externalId,
-      source: {
-        name: 'b2pweb',
-        url: rawOffer.url || `https://app.b2pweb.com/offer/${externalId}`,
-        scrapedAt: new Date(),
-        lastSeenAt: new Date()
-      },
-      ...offerData
-    });
-
-    await offer.save();
-    job.totalImported++;
-
-    // Créer ou mettre à jour l'entreprise de transport
-    await this.upsertTransportCompany(offerData, offer._id);
   }
 
   private parseB2PWebOffer(raw: any): Partial<ITransportOffer> {
@@ -1775,18 +1784,24 @@ export class TransportScrapingService {
     const vehicle = raw.vehicle || raw.truck || raw.equipment || {};
     const price = raw.price || raw.tarif || raw.cost || {};
 
+    // Handle our scrapeOffersWithPuppeteer format where contact info is in company object
+    const companyName = company.name || company.companyName || company.raison_sociale || raw.companyName || 'Inconnu';
+    const contactName = company.contactName || contact.name || contact.fullName || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || undefined;
+    const contactEmail = company.email || contact.email || contact.mail;
+    const contactPhone = company.phone || contact.phone || contact.tel || contact.telephone || contact.mobile;
+
     return {
       offerType: raw.type === 'demand' || raw.type === 'freight' ? 'demand' : 'offer',
 
       company: {
-        name: company.name || company.companyName || company.raison_sociale || raw.companyName || 'Inconnu',
+        name: companyName,
         externalId: company.id?.toString() || company._id?.toString()
       },
 
       contact: {
-        name: contact.name || contact.fullName || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || undefined,
-        email: contact.email || contact.mail,
-        phone: contact.phone || contact.tel || contact.telephone || contact.mobile
+        name: contactName,
+        email: contactEmail,
+        phone: contactPhone
       },
 
       route: {
@@ -1847,7 +1862,11 @@ export class TransportScrapingService {
 
   private async upsertTransportCompany(offerData: Partial<ITransportOffer>, offerId: mongoose.Types.ObjectId): Promise<void> {
     const companyName = offerData.company?.name;
-    if (!companyName || companyName === 'Inconnu') return;
+    if (!companyName || companyName === 'Inconnu') {
+      console.log(`[B2PWeb upsertCompany] Skipping - no company name`);
+      return;
+    }
+    console.log(`[B2PWeb upsertCompany] Processing: ${companyName} | ${offerData.contact?.email || 'no email'}`);
 
     // Chercher l'entreprise existante
     let company = await TransportCompany.findOne({
@@ -1878,6 +1897,7 @@ export class TransportScrapingService {
 
       company.source.lastUpdated = new Date();
       await company.save();
+      console.log(`[B2PWeb upsertCompany] Updated existing company: ${companyName}`);
 
       // Lier l'offre à l'entreprise
       await TransportOffer.findByIdAndUpdate(offerId, {
@@ -1921,6 +1941,7 @@ export class TransportScrapingService {
       });
 
       await company.save();
+      console.log(`[B2PWeb upsertCompany] Created NEW company: ${companyName} | ID: ${company._id}`);
 
       // Lier l'offre à l'entreprise
       await TransportOffer.findByIdAndUpdate(offerId, {
