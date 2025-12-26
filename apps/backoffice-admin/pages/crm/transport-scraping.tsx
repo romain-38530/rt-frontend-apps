@@ -45,6 +45,26 @@ interface OfferStats {
   lastScrapedAt?: string;
 }
 
+interface ActiveSearch {
+  route: {
+    origin: {
+      city?: string;
+      department?: string;
+      departmentCode?: string;
+      country?: string;
+    };
+    destination: {
+      city?: string;
+      department?: string;
+      departmentCode?: string;
+      country?: string;
+    };
+  };
+  consultationDate?: string;
+  source: string;
+  lastSeenAt: string;
+}
+
 interface TransportCompany {
   _id: string;
   companyName: string;
@@ -66,6 +86,7 @@ interface TransportCompany {
     name: string;
     scrapedAt?: string;
   };
+  activeSearches?: ActiveSearch[];
   prospectionStatus: string;
   addedToLeadPool: boolean;
   tags?: string[];
@@ -482,7 +503,7 @@ export default function TransportScrapingPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-sm text-gray-500">Entreprises</p>
                 <p className="text-2xl font-bold">{companyStats?.total || 0}</p>
@@ -490,6 +511,10 @@ export default function TransportScrapingPage() {
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-sm text-gray-500">Avec Email</p>
                 <p className="text-2xl font-bold">{companyStats?.withEmail || 0}</p>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <p className="text-sm text-gray-500">Avec Telephone</p>
+                <p className="text-2xl font-bold">{companyStats?.withPhone || 0}</p>
               </div>
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-sm text-gray-500">Dans Lead Pool</p>
@@ -590,6 +615,7 @@ export default function TransportScrapingPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entreprise</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Routes Actives</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -618,6 +644,24 @@ export default function TransportScrapingPage() {
                       <td className="px-4 py-3 text-sm">
                         {company.address?.city && <div>{company.address.city}</div>}
                         {company.address?.departmentCode && <div className="text-gray-500">Dept. {company.address.departmentCode}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {company.activeSearches && company.activeSearches.length > 0 ? (
+                          <div className="space-y-1">
+                            {company.activeSearches.slice(0, 3).map((search, idx) => (
+                              <div key={idx} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                <span className="font-medium">{search.route.origin.departmentCode || search.route.origin.city || '?'}</span>
+                                <span className="mx-1">→</span>
+                                <span className="font-medium">{search.route.destination.departmentCode || search.route.destination.city || '?'}</span>
+                              </div>
+                            ))}
+                            {company.activeSearches.length > 3 && (
+                              <div className="text-xs text-gray-500">+{company.activeSearches.length - 3} autres</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="px-2 py-1 bg-gray-100 rounded text-xs">{company.source?.name || '-'}</span>

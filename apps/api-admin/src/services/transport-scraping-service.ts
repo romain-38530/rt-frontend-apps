@@ -848,65 +848,100 @@ export class TransportScrapingService {
         try {
           console.log(`[B2PWeb] Processing offer ${i + 1}/${Math.min(offerCount, maxOffers)}...`);
 
-          // For virtual scroller: scroll to make sure the row at index i is visible
-          await this.page.evaluate((rowIndex) => {
+          // For virtual scroller: scroll to position i, then get and click the row
+          const scrollAndGetInfo = await this.page.evaluate((rowIndex) => {
+            const logs: string[] = [];
             const scroller = document.querySelector('.vue-recycle-scroller');
-            if (scroller) {
-              // Each row is approximately 50px high
-              const targetScroll = rowIndex * 50;
-              scroller.scrollTop = Math.max(0, targetScroll - 100);
-            }
-          }, i);
-          await delay(300);
 
-          // Get route info from the FIRST visible row (virtual scroller recycles elements)
-          const routeInfo = await this.page.evaluate(() => {
+            if (scroller) {
+              // Each row is approximately 50px high - scroll to make row i visible
+              const targetScroll = rowIndex * 50;
+              scroller.scrollTop = targetScroll;
+              logs.push(`Scrolled to ${targetScroll}px for row ${rowIndex}`);
+            } else {
+              logs.push('No scroller found');
+            }
+
+            // Get all visible scroller items
+            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
+            logs.push(`Found ${scrollerItems.length} scroller items`);
+
+            // Find visible items and their positions
+            const visibleItems: { index: number; top: number; text: string }[] = [];
+            scrollerItems.forEach((item, idx) => {
+              const rect = (item as HTMLElement).getBoundingClientRect();
+              if (rect.top > 0 && rect.top < 800 && rect.height > 0) {
+                visibleItems.push({
+                  index: idx,
+                  top: rect.top,
+                  text: (item.textContent || '').substring(0, 60)
+                });
+              }
+            });
+            logs.push(`Visible items: ${visibleItems.length}`);
+            if (visibleItems.length > 0) {
+              logs.push(`First visible: ${JSON.stringify(visibleItems[0])}`);
+            }
+
+            return { logs, visibleCount: visibleItems.length };
+          }, i);
+
+          console.log(`[B2PWeb] Scroll result: ${JSON.stringify(scrollAndGetInfo)}`);
+          await delay(500); // Wait for virtual scroller to render
+
+          // Now get the row info - try to get the Nth visible item (matching i modulo visible count)
+          const offerInfo = await this.page.evaluate((rowIndex) => {
             // Find items in virtual scroller
             const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
 
-            // Get the first visible item
+            // Get visible items
+            const visibleItems: HTMLElement[] = [];
             for (const item of Array.from(scrollerItems)) {
               const rect = (item as HTMLElement).getBoundingClientRect();
-              if (rect.top >= 0 && rect.top < window.innerHeight) {
-                const text = item.textContent || '';
-                // Pattern: "38, VAULX-MILIEU" for departure, "31, TOULOUSE" for delivery
-                const matches = text.match(/(\d{2}),\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-ZÉÈÀÙÂÊÎÔÛ\-\s]+?)(?=\s*\d{2},|\s*J\+|\s*MG|\s*Taut|\s*\d{2}\/)/gi) || [];
-
-                if (matches.length >= 2) {
-                  const dep = matches[0] || '';
-                  const del = matches[1] || '';
-
-                  // Also get a unique identifier for this offer
-                  const dateMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/);
-                  const uniqueId = `${dep.trim()}-${del.trim()}-${dateMatch?.[1] || ''}`;
-
-                  return {
-                    departure: dep.trim(),
-                    delivery: del.trim(),
-                    departureDept: dep.match(/^(\d{2})/)?.[1] || '',
-                    deliveryDept: del.match(/^(\d{2})/)?.[1] || '',
-                    uniqueId
-                  };
-                }
-                break;
+              if (rect.top > 0 && rect.top < 800 && rect.height > 0) {
+                visibleItems.push(item as HTMLElement);
               }
             }
-            return null;
-          });
 
-          if (!routeInfo) {
-            console.log(`[B2PWeb] Could not extract route info for offer ${i + 1}`);
+            // Get the first visible item (after scrolling, this should be the target row)
+            const targetItem = visibleItems[0];
+            if (!targetItem) return null;
+
+            const text = targetItem.textContent || '';
+            // More flexible pattern - find department codes
+            const deptMatches = text.match(/(\d{2})[,\s]+([A-ZÉÈÀÙÂÊÎÔÛ][A-Za-zéèàùâêîôûÉÈÀÙÂÊÎÔÛ\-\s]+)/gi) || [];
+
+            let departure = '';
+            let delivery = '';
+            let departureDept = '';
+            let deliveryDept = '';
+
+            if (deptMatches.length >= 2) {
+              departure = (deptMatches[0] || '').trim();
+              delivery = (deptMatches[1] || '').trim();
+              departureDept = departure.match(/^(\d{2})/)?.[1] || '';
+              deliveryDept = delivery.match(/^(\d{2})/)?.[1] || '';
+            }
+
+            // Use row index as primary identifier since virtual scroller recycles elements
+            const uniqueId = `offer-${rowIndex}`;
+
+            return {
+              departure: departure || 'Unknown',
+              delivery: delivery || 'Unknown',
+              departureDept,
+              deliveryDept,
+              uniqueId,
+              rowText: text.substring(0, 80)
+            };
+          }, i);
+
+          if (!offerInfo) {
+            console.log(`[B2PWeb] Could not find visible row for offer ${i + 1}`);
             continue;
           }
 
-          // Skip if we already processed this offer
-          if (processedOffers.has(routeInfo.uniqueId)) {
-            console.log(`[B2PWeb] Offer ${i + 1} already processed, skipping...`);
-            continue;
-          }
-          processedOffers.add(routeInfo.uniqueId);
-
-          console.log(`[B2PWeb] Route: ${routeInfo.departure} -> ${routeInfo.delivery}`);
+          console.log(`[B2PWeb] Route ${i + 1}: ${offerInfo.departure} -> ${offerInfo.delivery} (${offerInfo.rowText.substring(0, 40)}...)`);
 
           // ==========================================
           // STEP 1: CLICK ON THE OFFER ROW TO OPEN "OFFER INFORMATIONS" PANEL
@@ -1194,7 +1229,7 @@ export class TransportScrapingService {
           console.log(`[B2PWeb] Found ${consultants.length} consultants`);
 
           for (const t of consultants) {
-            results.push(this.createTransporterResult(t, routeInfo, 'consultant'));
+            results.push(this.createTransporterResult(t, offerInfo, 'consultant'));
           }
 
           // ==========================================
@@ -1907,8 +1942,31 @@ export class TransportScrapingService {
       companyName: { $regex: new RegExp(`^${companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
     });
 
-    const originDept = offerData.route?.origin?.postalCode?.substring(0, 2);
-    const destDept = offerData.route?.destination?.postalCode?.substring(0, 2);
+    const originDept = offerData.route?.origin?.postalCode?.substring(0, 2) || offerData.route?.origin?.department;
+    const destDept = offerData.route?.destination?.postalCode?.substring(0, 2) || offerData.route?.destination?.department;
+
+    // Créer l'objet de recherche active
+    const activeSearch = {
+      route: {
+        origin: {
+          city: offerData.route?.origin?.city,
+          postalCode: offerData.route?.origin?.postalCode,
+          department: offerData.route?.origin?.department,
+          departmentCode: originDept,
+          country: offerData.route?.origin?.country || 'France'
+        },
+        destination: {
+          city: offerData.route?.destination?.city,
+          postalCode: offerData.route?.destination?.postalCode,
+          department: offerData.route?.destination?.department,
+          departmentCode: destDept,
+          country: offerData.route?.destination?.country || 'France'
+        }
+      },
+      consultationDate: new Date(),
+      source: 'b2pweb',
+      lastSeenAt: new Date()
+    };
 
     if (company) {
       // Mettre à jour les départements couverts
@@ -1929,9 +1987,27 @@ export class TransportScrapingService {
         company.phone = offerData.contact.phone;
       }
 
+      // Ajouter ou mettre à jour la recherche active
+      const existingSearchIndex = (company.activeSearches || []).findIndex(s =>
+        s.route.origin.departmentCode === originDept &&
+        s.route.destination.departmentCode === destDept
+      );
+
+      if (existingSearchIndex >= 0) {
+        // Mettre à jour la date de dernière consultation
+        company.activeSearches[existingSearchIndex].lastSeenAt = new Date();
+        company.activeSearches[existingSearchIndex].consultationDate = new Date();
+      } else {
+        // Ajouter une nouvelle recherche active
+        if (!company.activeSearches) {
+          company.activeSearches = [];
+        }
+        company.activeSearches.push(activeSearch as any);
+      }
+
       company.source.lastUpdated = new Date();
       await company.save();
-      console.log(`[B2PWeb upsertCompany] Updated existing company: ${companyName}`);
+      console.log(`[B2PWeb upsertCompany] Updated existing company: ${companyName} | Routes: ${company.activeSearches?.length || 0}`);
 
       // Lier l'offre à l'entreprise
       await TransportOffer.findByIdAndUpdate(offerId, {
@@ -1971,6 +2047,7 @@ export class TransportScrapingService {
         prospectionStatus: 'new',
         addedToLeadPool: false,
         tags: ['b2pweb', 'transport'],
+        activeSearches: [activeSearch],
         isActive: true
       });
 

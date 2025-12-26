@@ -89,6 +89,29 @@ export interface ITransportCompany extends Document {
   leadPoolId?: mongoose.Types.ObjectId;
   addedToLeadPoolAt?: Date;
 
+  // Recherches actives (routes sur lesquelles le transporteur cherche du fret)
+  activeSearches: {
+    route: {
+      origin: {
+        city?: string;
+        postalCode?: string;
+        department?: string;
+        departmentCode?: string;
+        country: string;
+      };
+      destination: {
+        city?: string;
+        postalCode?: string;
+        department?: string;
+        departmentCode?: string;
+        country: string;
+      };
+    };
+    consultationDate?: Date;
+    source: string; // b2pweb, teleroute, etc.
+    lastSeenAt: Date;
+  }[];
+
   // Tags et notes
   tags: string[];
   notes?: string;
@@ -177,6 +200,28 @@ const TransportCompanySchema = new Schema<ITransportCompany>({
   leadPoolId: { type: Schema.Types.ObjectId, ref: 'LeadCompany' },
   addedToLeadPoolAt: Date,
 
+  activeSearches: [{
+    route: {
+      origin: {
+        city: String,
+        postalCode: String,
+        department: String,
+        departmentCode: { type: String, index: true },
+        country: { type: String, default: 'France' }
+      },
+      destination: {
+        city: String,
+        postalCode: String,
+        department: String,
+        departmentCode: { type: String, index: true },
+        country: { type: String, default: 'France' }
+      }
+    },
+    consultationDate: Date,
+    source: { type: String, required: true },
+    lastSeenAt: { type: Date, default: Date.now }
+  }],
+
   tags: [String],
   notes: String,
   score: { type: Number, min: 0, max: 100 },
@@ -192,5 +237,9 @@ TransportCompanySchema.index({ 'address.departmentCode': 1, prospectionStatus: 1
 TransportCompanySchema.index({ 'source.name': 1 });
 TransportCompanySchema.index({ addedToLeadPool: 1 });
 TransportCompanySchema.index({ score: -1 });
+// Index pour recherches actives (Affret IA)
+TransportCompanySchema.index({ 'activeSearches.route.origin.departmentCode': 1 });
+TransportCompanySchema.index({ 'activeSearches.route.destination.departmentCode': 1 });
+TransportCompanySchema.index({ 'activeSearches.route.origin.departmentCode': 1, 'activeSearches.route.destination.departmentCode': 1 });
 
 export default mongoose.model<ITransportCompany>('TransportCompany', TransportCompanySchema);
