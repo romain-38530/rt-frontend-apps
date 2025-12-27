@@ -1287,23 +1287,36 @@ export class TransportScrapingService {
           // ==========================================
           // GO BACK TO OFFER LIST
           // ==========================================
-          await this.page.keyboard.press('Escape');
-          await delay(500);
-          await this.page.keyboard.press('Escape');
-          await delay(1000);
+          console.log(`[B2PWeb] Closing popups and returning to offer list...`);
 
-          // If still on detail view, navigate back
+          // Close all popups with multiple Escape presses
+          await this.page.keyboard.press('Escape');
+          await delay(800);
+          await this.page.keyboard.press('Escape');
+          await delay(800);
+          await this.page.keyboard.press('Escape');
+          await delay(1500);
+
+          // Check if we need to navigate back
           const stillOnDetail = await this.page.evaluate(() => {
-            return document.body.innerText.includes('Historique') || document.body.innerText.includes('Activités');
+            return document.body.innerText.includes('Historique') ||
+                   document.body.innerText.includes('Activités') ||
+                   document.body.innerText.includes('Active searches') ||
+                   document.body.innerText.includes('Recherches actives');
           });
 
           if (stillOnDetail) {
+            console.log(`[B2PWeb] Still on detail view, navigating back to offer list...`);
             await this.page.goto('https://app.b2pweb.com/offer', {
               waitUntil: 'networkidle2',
-              timeout: 30000
+              timeout: 60000
             });
-            await delay(2000);
+            await delay(3000);
           }
+
+          // Small delay before processing next offer
+          console.log(`[B2PWeb] Offer ${i + 1} completed. Waiting before next...`);
+          await delay(2000);
 
         } catch (err: any) {
           console.log(`[B2PWeb] Error processing offer ${i + 1}: ${err.message}`);
