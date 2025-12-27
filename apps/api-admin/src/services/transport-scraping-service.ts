@@ -823,7 +823,7 @@ export class TransportScrapingService {
       console.log(`[B2PWeb] Déposant filter result: ${JSON.stringify(filterResult)}`);
       await delay(2000);
       const results: any[] = [];
-      const maxOffers = Math.min(100, scrapingConfig.maxOffersPerRun); // Increased from 30 to 100 offers per run
+      const maxOffers = Math.min(500, scrapingConfig.maxOffersPerRun); // Increased to 500 offers per run for longer scraping sessions
       const maxTransportersPerSection = 2500; // Increased to capture all transporters per offer
 
       // Get offer rows count
@@ -1490,9 +1490,10 @@ export class TransportScrapingService {
               }
             }
 
-            // Look for contact name (Title Case with accents)
-            const contactMatch = rowText.match(/([A-Z][a-zéèêëàâäùûü]+ [A-Z][A-Za-zéèêëàâäùûü]+)/);
-            if (contactMatch && !contactMatch[1].includes('@')) {
+            // Look for contact name - B2PWeb format: "Prénom NOM" or "Prénom-Prénom NOM"
+            // Examples: "Mathis CHASSAT", "Jean-Michel SOUSA", "Émilie CHARLEMAGNE"
+            const contactMatch = rowText.match(/([A-ZÀ-Ü][a-zà-ÿ]+(?:-[A-ZÀ-Ü][a-zà-ÿ]+)?\s+[A-ZÀ-Ü]{2,})/);
+            if (contactMatch && !contactMatch[1].includes('@') && !contactMatch[1].match(/^(TRANSPORT|LOGISTIC|EXPRESS|SARL|SAS|EURL)/i)) {
               contactName = contactMatch[1];
             }
           }
