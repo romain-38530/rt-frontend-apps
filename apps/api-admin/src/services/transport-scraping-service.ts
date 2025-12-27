@@ -851,20 +851,57 @@ export class TransportScrapingService {
           // For virtual scroller: scroll to position i, then get and click the row
           const scrollAndGetInfo = await this.page.evaluate((rowIndex) => {
             const logs: string[] = [];
-            const scroller = document.querySelector('.vue-recycle-scroller');
+
+            // Try multiple scroller selectors (B2PWeb may use different ones)
+            const scrollerSelectors = [
+              '.vue-recycle-scroller',
+              '[class*="virtual-scroller"]',
+              '[class*="recycle-scroller"]',
+              '.v-data-table__wrapper',
+              '.table-responsive',
+              'table tbody',
+              '[class*="scroll"]'
+            ];
+
+            let scroller: Element | null = null;
+            for (const selector of scrollerSelectors) {
+              scroller = document.querySelector(selector);
+              if (scroller) {
+                logs.push(`Found scroller with selector: ${selector}`);
+                break;
+              }
+            }
 
             if (scroller) {
               // Each row is approximately 50px high - scroll to make row i visible
               const targetScroll = rowIndex * 50;
-              scroller.scrollTop = targetScroll;
+              (scroller as HTMLElement).scrollTop = targetScroll;
               logs.push(`Scrolled to ${targetScroll}px for row ${rowIndex}`);
             } else {
-              logs.push('No scroller found');
+              logs.push('No scroller found, trying window scroll');
+              // Fallback: scroll the window
+              window.scrollTo(0, rowIndex * 50);
             }
 
-            // Get all visible scroller items
-            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
-            logs.push(`Found ${scrollerItems.length} scroller items`);
+            // Get all visible scroller items - try multiple selectors
+            const itemSelectors = [
+              '.vue-recycle-scroller__item-wrapper > div',
+              '.vue-recycle-scroller__item-view',
+              'tr[class*="row"]',
+              'table tbody tr',
+              '[class*="list-item"]',
+              '[class*="grid-row"]'
+            ];
+
+            let scrollerItems: NodeListOf<Element> = document.querySelectorAll(itemSelectors[0]);
+            for (const selector of itemSelectors) {
+              const items = document.querySelectorAll(selector);
+              if (items.length > scrollerItems.length) {
+                scrollerItems = items;
+                logs.push(`Using item selector: ${selector} (${items.length} items)`);
+              }
+            }
+            logs.push(`Found ${scrollerItems.length} scroller items total`);
 
             // Find visible items and their positions
             const visibleItems: { index: number; top: number; text: string }[] = [];
@@ -891,8 +928,23 @@ export class TransportScrapingService {
 
           // Now get the row info - try to get the Nth visible item (matching i modulo visible count)
           const offerInfo = await this.page.evaluate((rowIndex) => {
-            // Find items in virtual scroller
-            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
+            // Find items using multiple selectors
+            const itemSelectors = [
+              '.vue-recycle-scroller__item-wrapper > div',
+              '.vue-recycle-scroller__item-view',
+              'tr[class*="row"]',
+              'table tbody tr',
+              '[class*="list-item"]',
+              '[class*="grid-row"]'
+            ];
+
+            let scrollerItems: NodeListOf<Element> = document.querySelectorAll(itemSelectors[0]);
+            for (const selector of itemSelectors) {
+              const items = document.querySelectorAll(selector);
+              if (items.length > scrollerItems.length) {
+                scrollerItems = items;
+              }
+            }
 
             // Get visible items
             const visibleItems: HTMLElement[] = [];

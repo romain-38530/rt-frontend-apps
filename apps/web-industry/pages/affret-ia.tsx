@@ -28,7 +28,8 @@ export default function AffretiaPage() {
     const token = getToken();
     const options: RequestInit = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
     if (body) options.body = JSON.stringify(body);
-    const response = await fetch(apiUrl + endpoint, options);
+    const fullUrl = apiUrl + '/api/v1' + endpoint;
+    const response = await fetch(fullUrl, options);
     const data = await response.json();
     if (!data.success) throw new Error(data.error || 'API Error');
     return data;
@@ -39,7 +40,9 @@ export default function AffretiaPage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
-    // Load data
+    // Load initial data
+    loadStats();
+    loadSessions();
   }, [mounted]);
 
   const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };

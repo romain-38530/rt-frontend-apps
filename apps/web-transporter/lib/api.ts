@@ -940,26 +940,34 @@ export const affretIaApi = {
   // Liste des offres disponibles sur la bourse
   getOffers: async (filters?: { origin?: string; destination?: string; date?: string; type?: string }) => {
     const params = new URLSearchParams(filters as any);
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/offers?${params}`, {
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/bourse?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   getOffer: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/offers/${id}`, {
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/session/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
-  // Soumettre une proposition
-  submitProposal: async (offerId: string, data: { price: number; availableDate: string; message?: string }) => {
+  // Soumettre une proposition via la bourse
+  submitProposal: async (sessionId: string, data: { price: number; availableDate: string; message?: string }) => {
     const carrierId = getCarrierId();
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/offers/${offerId}/proposals`, {
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/bourse/submit`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ ...data, carrierId })
+      body: JSON.stringify({
+        sessionId,
+        carrierId,
+        carrierName: localStorage.getItem('carrierName') || 'Transporteur',
+        proposedPrice: data.price,
+        estimatedPickupDate: data.availableDate,
+        message: data.message,
+        source: 'bourse'
+      })
     });
     return res.json();
   },
@@ -969,7 +977,7 @@ export const affretIaApi = {
     const carrierId = getCarrierId();
     const params = new URLSearchParams({ carrierId });
     if (status) params.append('status', status);
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/proposals?${params}`, {
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/proposals/carrier/${carrierId}?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -977,8 +985,8 @@ export const affretIaApi = {
 
   // Retirer une proposition
   withdrawProposal: async (proposalId: string) => {
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/proposals/${proposalId}`, {
-      method: 'DELETE',
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/proposals/${proposalId}/withdraw`, {
+      method: 'PUT',
       headers: getAuthHeaders()
     });
     return res.json();
@@ -986,8 +994,8 @@ export const affretIaApi = {
 
   // Confirmer attribution
   confirmAttribution: async (proposalId: string) => {
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/proposals/${proposalId}/confirm`, {
-      method: 'POST',
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/proposals/${proposalId}/confirm`, {
+      method: 'PUT',
       headers: getAuthHeaders()
     });
     return res.json();
@@ -996,10 +1004,9 @@ export const affretIaApi = {
   // Recherche intelligente
   searchMatches: async (criteria: { origin: string; destination: string; dateFrom: string; dateTo?: string }) => {
     const carrierId = getCarrierId();
-    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/bourse/search`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ ...criteria, carrierId })
+    const params = new URLSearchParams(criteria as any);
+    const res = await fetch(`${API_CONFIG.AFFRET_IA_API}/api/v1/affretia/bourse?${params}`, {
+      headers: getAuthHeaders()
     });
     return res.json();
   }
