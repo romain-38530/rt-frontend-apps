@@ -1335,6 +1335,19 @@ export class TransportScrapingService {
     // First, scroll down the transporters list to load all items (virtual scroller)
     console.log('[B2PWeb Extract] Scrolling to load all transporters...');
 
+    // Debug: log what containers we can find
+    const debugContainers = await this.page.evaluate(() => {
+      const allScrollable: string[] = [];
+      document.querySelectorAll('*').forEach(el => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.scrollHeight > htmlEl.clientHeight + 50) {
+          allScrollable.push(`${el.tagName}.${el.className.split(' ').slice(0,2).join('.')} (h:${htmlEl.scrollHeight}, ch:${htmlEl.clientHeight})`);
+        }
+      });
+      return allScrollable.slice(0, 10);
+    });
+    console.log('[B2PWeb Extract] Scrollable containers found:', JSON.stringify(debugContainers));
+
     let previousEmailCount = 0;
     let scrollAttempts = 0;
     const maxScrollAttempts = 50; // Max 50 scrolls to avoid infinite loop
@@ -1342,30 +1355,22 @@ export class TransportScrapingService {
     while (scrollAttempts < maxScrollAttempts) {
       // Scroll the transporters list container
       const scrollResult = await this.page.evaluate(() => {
-        // Find the scrollable container for the transporters list
-        const scrollContainers = document.querySelectorAll('.vue-recycle-scroller, [class*="scroll"], [class*="list"]');
+        const logs: string[] = [];
         let scrolled = false;
 
-        for (const container of Array.from(scrollContainers)) {
-          const el = container as HTMLElement;
-          if (el.scrollHeight > el.clientHeight) {
-            const prevScroll = el.scrollTop;
-            el.scrollTop += 500; // Scroll down 500px
-            if (el.scrollTop !== prevScroll) {
+        // Try ALL scrollable elements on the page
+        document.querySelectorAll('*').forEach(el => {
+          const htmlEl = el as HTMLElement;
+          // Check if element is scrollable (has more content than visible)
+          if (htmlEl.scrollHeight > htmlEl.clientHeight + 100) {
+            const prevScroll = htmlEl.scrollTop;
+            htmlEl.scrollTop += 500; // Scroll down 500px
+            if (htmlEl.scrollTop !== prevScroll) {
               scrolled = true;
+              logs.push(`Scrolled ${el.tagName}.${el.className.split(' ')[0]}`);
             }
           }
-        }
-
-        // Also try scrolling the modal/popup content
-        const modals = document.querySelectorAll('.modal-content, [class*="dialog-content"], [class*="popup-content"]');
-        for (const modal of Array.from(modals)) {
-          const el = modal as HTMLElement;
-          if (el.scrollHeight > el.clientHeight) {
-            el.scrollTop += 500;
-            scrolled = true;
-          }
-        }
+        });
 
         // Count current emails visible
         const pageText = document.body.innerText;
@@ -1374,11 +1379,12 @@ export class TransportScrapingService {
 
         return {
           scrolled,
-          emailCount: uniqueEmails.size
+          emailCount: uniqueEmails.size,
+          logs: logs.slice(0, 5)
         };
       });
 
-      console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails found`);
+      console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails, scrolled: ${scrollResult.scrolled}, logs: ${scrollResult.logs.join(', ')}`);
 
       // If no new emails loaded after scroll, we've reached the end
       // Wait for 5 consecutive scrolls with no new emails before stopping

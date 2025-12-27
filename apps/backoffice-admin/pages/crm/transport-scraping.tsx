@@ -277,6 +277,21 @@ export default function TransportScrapingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  // Auto-refresh when scraping is running
+  useEffect(() => {
+    const isScrapingActive = jobs.some(j => j.status === 'running' || j.isActive);
+    if (!isScrapingActive) return;
+
+    const interval = setInterval(() => {
+      fetchStats();
+      fetchJobs();
+      if (activeTab === 'companies') fetchCompanies();
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, activeTab]);
+
   // Tab change effect
   useEffect(() => {
     if (activeTab === 'companies') fetchCompanies();
