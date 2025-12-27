@@ -1329,8 +1329,9 @@ export class TransportScrapingService {
       console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails found`);
 
       // If no new emails loaded after scroll, we've reached the end
-      if (scrollResult.emailCount === previousEmailCount && scrollAttempts > 3) {
-        console.log('[B2PWeb Extract] No new emails after scroll, stopping');
+      // Wait for 5 consecutive scrolls with no new emails before stopping
+      if (scrollResult.emailCount === previousEmailCount && scrollAttempts > 10) {
+        console.log('[B2PWeb Extract] No new emails after multiple scrolls, stopping');
         break;
       }
 
@@ -1343,7 +1344,7 @@ export class TransportScrapingService {
         break;
       }
 
-      await delay(300); // Wait for virtual scroller to load more items
+      await delay(800); // Wait for virtual scroller to load more items (increased for network latency)
     }
 
     console.log(`[B2PWeb Extract] Finished scrolling after ${scrollAttempts} attempts, found ${previousEmailCount} emails`);
