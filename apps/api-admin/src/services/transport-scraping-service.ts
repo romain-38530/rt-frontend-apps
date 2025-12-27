@@ -1289,34 +1289,45 @@ export class TransportScrapingService {
           // ==========================================
           console.log(`[B2PWeb] Closing popups and returning to offer list...`);
 
+          // Try clicking outside popup to close it (click on left side of screen)
+          await this.page.mouse.click(100, 300);
+          await delay(500);
+
           // Close all popups with multiple Escape presses
           await this.page.keyboard.press('Escape');
-          await delay(800);
+          await delay(500);
           await this.page.keyboard.press('Escape');
-          await delay(800);
+          await delay(500);
           await this.page.keyboard.press('Escape');
-          await delay(1500);
+          await delay(1000);
 
-          // Check if we need to navigate back
-          const stillOnDetail = await this.page.evaluate(() => {
-            return document.body.innerText.includes('Historique') ||
+          // Check if we're still on the offer detail page (URL contains offer ID)
+          const currentUrl = this.page.url();
+          const isOnOfferDetail = currentUrl.includes('/offer/') && currentUrl.match(/\/offer\/\d+/);
+
+          // Check if popup is still visible
+          const stillHasPopup = await this.page.evaluate(() => {
+            return document.body.innerText.includes('Consultants') ||
+                   document.body.innerText.includes('Historique') ||
                    document.body.innerText.includes('Activités') ||
                    document.body.innerText.includes('Active searches') ||
-                   document.body.innerText.includes('Recherches actives');
+                   document.body.innerText.includes('Recherches actives') ||
+                   document.body.innerText.includes('Utilisateurs ayant consulté');
           });
 
-          if (stillOnDetail) {
-            console.log(`[B2PWeb] Still on detail view, navigating back to offer list...`);
-            await this.page.goto('https://app.b2pweb.com/offer', {
-              waitUntil: 'networkidle2',
-              timeout: 60000
-            });
-            await delay(3000);
-          }
+          console.log(`[B2PWeb] Current URL: ${currentUrl}, isOnOfferDetail: ${isOnOfferDetail}, stillHasPopup: ${stillHasPopup}`);
+
+          // Always navigate back to offer list to ensure clean state
+          console.log(`[B2PWeb] Navigating back to offer list...`);
+          await this.page.goto('https://app.b2pweb.com/offer', {
+            waitUntil: 'networkidle2',
+            timeout: 60000
+          });
+          await delay(2000);
 
           // Small delay before processing next offer
           console.log(`[B2PWeb] Offer ${i + 1} completed. Waiting before next...`);
-          await delay(2000);
+          await delay(1000);
 
         } catch (err: any) {
           console.log(`[B2PWeb] Error processing offer ${i + 1}: ${err.message}`);
