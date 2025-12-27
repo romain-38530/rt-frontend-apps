@@ -823,7 +823,7 @@ export class TransportScrapingService {
       console.log(`[B2PWeb] Déposant filter result: ${JSON.stringify(filterResult)}`);
       await delay(2000);
       const results: any[] = [];
-      const maxOffers = Math.min(500, scrapingConfig.maxOffersPerRun); // Increased to 500 offers per run for longer scraping sessions
+      const maxOffers = Math.min(5000, scrapingConfig.maxOffersPerRun); // Increased to 5000 offers per run
       const maxTransportersPerSection = 2500; // Increased to capture all transporters per offer
 
       // Get offer rows count
@@ -955,8 +955,10 @@ export class TransportScrapingService {
               }
             }
 
-            // Get the first visible item (after scrolling, this should be the target row)
-            const targetItem = visibleItems[0];
+            // Calculate which visible item to select based on rowIndex
+            // Virtual scroller shows ~15-20 items at a time, we need item at rowIndex % visibleCount
+            const visibleIndex = rowIndex % Math.max(visibleItems.length, 1);
+            const targetItem = visibleItems[visibleIndex] || visibleItems[0];
             if (!targetItem) return null;
 
             const text = targetItem.textContent || '';
@@ -1000,29 +1002,33 @@ export class TransportScrapingService {
           // ==========================================
           console.log(`[B2PWeb] Clicking on offer row ${i} to open Offer informations panel...`);
 
-          const rowClicked = await this.page.evaluate(() => {
+          const rowClicked = await this.page.evaluate((targetRowIndex) => {
             const logs: string[] = [];
 
             // Find items in virtual scroller
             const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
             logs.push(`Found ${scrollerItems.length} scroller items`);
 
-            // Find the first visible row in viewport
-            let targetRow: HTMLElement | null = null;
+            // Get all visible rows in viewport
+            const visibleRows: HTMLElement[] = [];
             for (const item of Array.from(scrollerItems)) {
               const rect = (item as HTMLElement).getBoundingClientRect();
-              if (rect.top >= 0 && rect.top < window.innerHeight) {
-                targetRow = item as HTMLElement;
-                break;
+              if (rect.top >= 0 && rect.top < window.innerHeight && rect.height > 0) {
+                visibleRows.push(item as HTMLElement);
               }
             }
+            logs.push(`Found ${visibleRows.length} visible rows`);
+
+            // Select the row at targetRowIndex % visibleRows.length
+            const visibleIndex = targetRowIndex % Math.max(visibleRows.length, 1);
+            const targetRow = visibleRows[visibleIndex] || visibleRows[0];
 
             if (!targetRow) {
               return { success: false, error: 'No visible row found', logs };
             }
 
             const rowText = (targetRow.textContent || '').substring(0, 80);
-            logs.push(`Clicking row with text: ${rowText}`);
+            logs.push(`Clicking row ${visibleIndex} of ${visibleRows.length} with text: ${rowText}`);
 
             // Click on the middle of the row (avoid checkbox on left)
             const rect = targetRow.getBoundingClientRect();
@@ -1038,7 +1044,7 @@ export class TransportScrapingService {
 
             logs.push(`Clicked row at (${Math.round(clickX)}, ${Math.round(clickY)})`);
             return { success: true, logs };
-          });
+          }, i);
 
           console.log(`[B2PWeb] Row click result: ${JSON.stringify(rowClicked)}`);
           await delay(1500);
