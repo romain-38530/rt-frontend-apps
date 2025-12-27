@@ -1317,27 +1317,87 @@ export class TransportScrapingService {
 
           console.log(`[B2PWeb] Current URL: ${currentUrl}, isOnOfferDetail: ${isOnOfferDetail}, stillHasPopup: ${stillHasPopup}`);
 
-          // Always navigate back to offer list to ensure clean state
-          console.log(`[B2PWeb] Navigating back to offer list...`);
-          await this.page.goto('https://app.b2pweb.com/offer', {
-            waitUntil: 'networkidle2',
-            timeout: 60000
+          // If popup is still visible, try more aggressive closing
+          if (stillHasPopup) {
+            console.log(`[B2PWeb] Popup still visible, trying more clicks outside...`);
+            // Click multiple times in different positions to ensure popup closes
+            await this.page.mouse.click(50, 400);
+            await delay(300);
+            await this.page.mouse.click(50, 500);
+            await delay(300);
+            await this.page.keyboard.press('Escape');
+            await delay(500);
+          }
+
+          // Check if panel is still open and close it by clicking X button
+          const panelClosed = await this.page.evaluate(() => {
+            // Look for close button in panel
+            const closeSelectors = [
+              '[aria-label="Close"]',
+              '[aria-label="Fermer"]',
+              'button[class*="close"]',
+              '.close-button',
+              'button svg[class*="close"]',
+              '[class*="panel"] button:first-child'
+            ];
+            for (const sel of closeSelectors) {
+              const closeBtn = document.querySelector(sel);
+              if (closeBtn) {
+                (closeBtn as HTMLElement).click();
+                return `Closed via ${sel}`;
+              }
+            }
+            return null;
           });
-          await delay(2000);
+
+          if (panelClosed) {
+            console.log(`[B2PWeb] ${panelClosed}`);
+            await delay(500);
+          }
+
+          // Final escape presses to ensure clean state
+          await this.page.keyboard.press('Escape');
+          await delay(300);
+          await this.page.keyboard.press('Escape');
+          await delay(500);
+
+          // Only navigate back if absolutely necessary (if we're on wrong URL)
+          const finalUrl = this.page.url();
+          const needsNavigation = !finalUrl.includes('/offer') || (finalUrl.includes('/offer/') && finalUrl.match(/\/offer\/\d+/));
+
+          if (needsNavigation) {
+            console.log(`[B2PWeb] URL changed, navigating back to offer list...`);
+            await this.page.goto('https://app.b2pweb.com/offer', {
+              waitUntil: 'networkidle2',
+              timeout: 60000
+            });
+            await delay(2000);
+
+            // Re-apply the Déposant filter after navigation
+            console.log(`[B2PWeb] Re-applying Déposant filter...`);
+            await this.setDeposantFilter();
+            await delay(1500);
+          } else {
+            console.log(`[B2PWeb] Still on offer list, no navigation needed`);
+          }
 
           // Small delay before processing next offer
-          console.log(`[B2PWeb] Offer ${i + 1} completed. Waiting before next...`);
+          console.log(`[B2PWeb] Offer ${i + 1} completed. Moving to next offer...`);
           await delay(1000);
 
         } catch (err: any) {
           console.log(`[B2PWeb] Error processing offer ${i + 1}: ${err.message}`);
           // Try to recover by going back to offer list
           try {
+            console.log(`[B2PWeb] Recovering - navigating to offer list...`);
             await this.page.goto('https://app.b2pweb.com/offer', {
               waitUntil: 'networkidle2',
               timeout: 30000
             });
             await delay(2000);
+            // Re-apply filter after recovery
+            await this.setDeposantFilter();
+            await delay(1000);
           } catch (e) { /* ignore */ }
         }
       }
