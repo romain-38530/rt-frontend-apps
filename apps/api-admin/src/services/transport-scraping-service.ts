@@ -823,7 +823,7 @@ export class TransportScrapingService {
       console.log(`[B2PWeb] Déposant filter result: ${JSON.stringify(filterResult)}`);
       await delay(2000);
       const results: any[] = [];
-      const maxOffers = Math.min(30, scrapingConfig.maxOffersPerRun);
+      const maxOffers = Math.min(100, scrapingConfig.maxOffersPerRun); // Increased from 30 to 100 offers per run
       const maxTransportersPerSection = 2500; // Increased to capture all transporters per offer
 
       // Get offer rows count
@@ -2049,7 +2049,7 @@ export class TransportScrapingService {
       console.log(`[B2PWeb upsertCompany] Skipping - no company name`);
       return;
     }
-    console.log(`[B2PWeb upsertCompany] Processing: ${companyName} | ${offerData.contact?.email || 'no email'}`);
+    console.log(`[B2PWeb upsertCompany] Processing: ${companyName} | email: ${offerData.contact?.email || 'none'} | phone: ${offerData.contact?.phone || 'none'} | contact: ${offerData.contact?.name || 'none'}`);
 
     // Chercher l'entreprise existante
     let company = await TransportCompany.findOne({

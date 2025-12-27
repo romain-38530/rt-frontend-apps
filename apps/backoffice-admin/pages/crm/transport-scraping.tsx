@@ -86,6 +86,12 @@ interface TransportCompany {
     name: string;
     scrapedAt?: string;
   };
+  mainContact?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  };
   activeSearches?: ActiveSearch[];
   prospectionStatus: string;
   addedToLeadPool: boolean;
@@ -653,8 +659,15 @@ export default function TransportScrapingPage() {
                         {company.siret && <div className="text-xs text-gray-500">SIRET: {company.siret}</div>}
                       </td>
                       <td className="px-4 py-3 text-sm">
+                        {company.mainContact?.firstName && (
+                          <div className="font-medium text-blue-600">
+                            {company.mainContact.firstName} {company.mainContact.lastName}
+                          </div>
+                        )}
                         {company.email && <div>{company.email}</div>}
-                        {company.phone && <div>{company.phone}</div>}
+                        {(company.phone || company.mainContact?.phone) && (
+                          <div className="text-green-600">{company.phone || company.mainContact?.phone}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {company.address?.city && <div>{company.address.city}</div>}
