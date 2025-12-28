@@ -219,6 +219,7 @@ export class TransportScrapingService {
   }
 
   // Traiter une offre par son ID (navigation directe)
+  // COPY OF scrapeOffersWithPuppeteer logic to ensure same behavior
   private async processOfferById(offerId: string): Promise<void> {
     if (!this.page) {
       throw new Error('Browser not authenticated. Please authenticate first.');
@@ -230,11 +231,12 @@ export class TransportScrapingService {
     await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await delay(1500);
 
-    // Recuperer les infos de l'offre
+    // Get offer info from the page
     const offerInfo = await this.page.evaluate(() => {
       const pageText = document.body.innerText;
 
-      // Chercher les locations
+      // Try to find departure and delivery from the details panel
+      // Look for patterns like "13300, SALON-DE-PROVENCE (13)" and "69220, BELLEVILLE (69)"
       const locationPattern = /(\d{5}),?\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-Za-zéèàùâêîôûÉÈÀÙÂÊÎÔÛ\-\s]+)\s*\((\d{2})\)/gi;
       const matches = pageText.match(locationPattern) || [];
 
@@ -262,114 +264,248 @@ export class TransportScrapingService {
 
     console.log(`[Queue] Route: ${offerInfo.departure} -> ${offerInfo.delivery}`);
 
-    // Cliquer sur le bouton History pour voir les recherches actives
-    const historyClicked = await this.clickHistoryButton();
-    if (!historyClicked) {
-      console.log('[Queue] Could not click History button');
+    // Check if Offer informations panel opened
+    const panelOpened = await this.page.evaluate(() => {
+      const body = document.body.innerText;
+      return body.includes('Offer informations') || body.includes('Informations de l\'offre') ||
+             body.includes('Offer details') || body.includes('Offer\'s contact') ||
+             body.includes('Depositor') || body.includes('Déposant');
+    });
+    console.log(`[Queue] Offer informations panel opened: ${panelOpened}`);
+
+    if (!panelOpened) {
+      console.log(`[Queue] Panel did not open for offer ${offerId}, skipping...`);
+      return;
     }
 
-    await delay(1500);
+    // ==========================================
+    // STEP 1: CLICK ON HISTORY BUTTON IN "OFFER INFORMATIONS" PANEL
+    // EXACT COPY FROM scrapeOffersWithPuppeteer
+    // The History button is a clock icon in the right panel
+    // ==========================================
+    console.log(`[Queue] Looking for History button in Offer informations panel...`);
 
-    // Extraire les transporteurs de la section Active searches
-    const transporters = await this.extractTransportersFromActiveSearches();
+    const historyButtonClicked = await this.page.evaluate(() => {
+      const logs: string[] = [];
+
+      // B2PWeb uses Vue.js with virtual scrolling
+      // The History button can use icon "history" OR "schedule" (clock icon)
+      // We need to find the right one in the panel toolbar area
+
+      // Icons that could be the History button
+      const historyIconNames = ['history', 'schedule', 'clock', 'clock-outline', 'access-time'];
+
+      // STRATEGY 1: Find all buttons on page and their SVG icons
+      const allButtons = document.querySelectorAll('button');
+      logs.push(`Found ${allButtons.length} total buttons`);
+
+      // Collect info about all buttons with SVGs
+      const buttonsWithSvg: { btn: Element, icon: string, x: number, y: number, classes: string }[] = [];
+      for (const btn of Array.from(allButtons)) {
+        const svg = btn.querySelector('svg');
+        if (svg) {
+          const dataIcon = svg.getAttribute('data-icon') || '';
+          const rect = btn.getBoundingClientRect();
+          const classes = btn.className || '';
+          if (rect.width > 5 && rect.top > 50 && rect.top < 800) {
+            buttonsWithSvg.push({
+              btn,
+              icon: dataIcon,
+              x: Math.round(rect.left),
+              y: Math.round(rect.top),
+              classes: classes.substring(0, 50)
+            });
+          }
+        }
+      }
+      logs.push(`Buttons with SVG: ${buttonsWithSvg.map(b => b.icon + '@(' + b.x + ',' + b.y + ')').join(', ')}`);
+
+      // Find history/schedule button
+      const historyButton = buttonsWithSvg.find(b => historyIconNames.includes(b.icon));
+      if (historyButton) {
+        logs.push(`Found ${historyButton.icon} button at (${historyButton.x}, ${historyButton.y})`);
+        (historyButton.btn as HTMLElement).scrollIntoView({ block: 'center' });
+        (historyButton.btn as HTMLElement).click();
+        return { success: true, method: 'button-with-svg', icon: historyButton.icon, logs };
+      }
+
+      // STRATEGY 2: Find clickable elements (div, span) containing history/schedule SVG
+      // Sometimes Vue.js apps use divs with cursor-pointer instead of buttons
+      const clickableSelectors = 'button, [role="button"], .cursor-pointer, div[class*="btn"], span[class*="btn"]';
+      const clickables = document.querySelectorAll(clickableSelectors);
+      logs.push(`Found ${clickables.length} clickable elements`);
+
+      for (const el of Array.from(clickables)) {
+        const svg = el.querySelector('svg');
+        if (svg) {
+          const dataIcon = svg.getAttribute('data-icon') || '';
+          if (historyIconNames.includes(dataIcon)) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 5 && rect.top > 50 && rect.top < 800) {
+              logs.push(`Found ${dataIcon} in clickable at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+              (el as HTMLElement).scrollIntoView({ block: 'center' });
+              (el as HTMLElement).click();
+              return { success: true, method: 'clickable-with-svg', icon: dataIcon, logs };
+            }
+          }
+        }
+      }
+
+      // STRATEGY 3: Find SVGs directly and click their parent
+      for (const iconName of historyIconNames) {
+        const svgs = document.querySelectorAll(`svg[data-icon="${iconName}"]`);
+        logs.push(`Found ${svgs.length} SVGs with data-icon=${iconName}`);
+
+        for (const svg of Array.from(svgs)) {
+          const rect = svg.getBoundingClientRect();
+          // Skip icons in the offer list rows (they are at y=135, 190, 245, etc - spaced by ~55px)
+          // The panel toolbar should be at a unique Y position
+          if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
+            logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+
+            // Find closest clickable parent
+            const parent = svg.closest('button, [role="button"], .cursor-pointer, div') as HTMLElement;
+            if (parent) {
+              logs.push(`Clicking parent: ${parent.tagName}.${parent.className?.substring(0, 30)}`);
+              parent.scrollIntoView({ block: 'center' });
+              parent.click();
+              return { success: true, method: 'svg-parent', icon: iconName, logs };
+            }
+          }
+        }
+      }
+
+      // Debug: List all unique data-icon values
+      const allDataIcons = new Set<string>();
+      document.querySelectorAll('svg[data-icon]').forEach(svg => {
+        allDataIcons.add(svg.getAttribute('data-icon') || '');
+      });
+      logs.push(`All unique data-icons: ${Array.from(allDataIcons).join(', ')}`);
+
+      return { success: false, error: 'History button not found', logs };
+    });
+
+    console.log(`[Queue] History button click result: ${JSON.stringify(historyButtonClicked)}`);
+
+    if (!historyButtonClicked.success) {
+      console.log(`[Queue] Could not find History button for offer ${offerId}, skipping...`);
+      return;
+    }
+
+    // Wait for History popup to open
+    await delay(2000);
+
+    // Check if History popup opened (should show "History", "Carriers", "Users", "Active searches")
+    const historyPopupOpened = await this.page.evaluate(() => {
+      const body = document.body.innerText;
+      return body.includes('History') || body.includes('Historique') ||
+             body.includes('Active searches') || body.includes('Recherches actives') ||
+             body.includes('Carriers') || body.includes('Transporteurs');
+    });
+    console.log(`[Queue] History popup opened: ${historyPopupOpened}`);
+
+    // ==========================================
+    // STEP 2: CLICK ON "ACTIVE SEARCHES" TAB
+    // EXACT COPY FROM scrapeOffersWithPuppeteer
+    // The History popup shows: Carriers, Users, Active searches
+    // We want to click on "Active searches" to see transporters
+    // ==========================================
+    console.log(`[Queue] Looking for Active searches tab in History popup...`);
+
+    // Now look for "Active searches" tab - this shows transporters searching for this route
+    const activeSearchesClicked = await this.page.evaluate(() => {
+      const results: string[] = [];
+
+      // STRATEGY 1: Find by SVG data-icon="search-check-mark"
+      const searchIcon = document.querySelector('svg[data-icon="search-check-mark"]');
+      if (searchIcon) {
+        results.push(`Found SVG with data-icon="search-check-mark"`);
+        // Click the closest clickable parent (div with cursor-pointer)
+        const parent = searchIcon.closest('div.cursor-pointer') || searchIcon.closest('div') || searchIcon.parentElement;
+        if (parent) {
+          results.push(`Clicking parent: ${parent.tagName}, class="${(parent as HTMLElement).className?.substring(0, 50)}"`);
+          (parent as HTMLElement).click();
+          return { clicked: true, method: 'data-icon-search', logs: results };
+        }
+      }
+
+      // STRATEGY 2: Find by text "Active searches"
+      const allElements = Array.from(document.querySelectorAll('div, span, button, a'));
+      for (const item of allElements) {
+        const text = (item.textContent || '').trim();
+        // Look for exact "Active searches" text (the span contains just this text)
+        if (text === 'Active searches' || text === 'Recherches actives') {
+          results.push(`Found exact Active searches text: ${item.tagName}`);
+          // Click the parent div with cursor-pointer class
+          const clickable = item.closest('div.cursor-pointer') || item;
+          (clickable as HTMLElement).click();
+          return { clicked: true, method: 'exact-text', text, logs: results };
+        }
+      }
+
+      // STRATEGY 3: Find elements containing "Active searches" with number badge
+      for (const item of allElements) {
+        const text = (item.textContent || '').trim();
+        // Match pattern like "Active searches962" (text + number)
+        if (text.toLowerCase().includes('active searches') && text.length < 50) {
+          results.push(`Found Active searches by partial: "${text.substring(0, 40)}" in ${item.tagName}`);
+          const clickable = item.closest('div.cursor-pointer') || item;
+          (clickable as HTMLElement).click();
+          return { clicked: true, method: 'partial-text', text: text.substring(0, 40), logs: results };
+        }
+      }
+
+      // STRATEGY 4: Look for "Consultants" as fallback (old terminology)
+      for (const item of allElements) {
+        const text = (item.textContent || '').trim().toLowerCase();
+        if (text.includes('consultant') && text.length < 30) {
+          results.push(`Found Consultants as fallback: "${text}" in ${item.tagName}`);
+          (item as HTMLElement).click();
+          return { clicked: true, method: 'consultants-fallback', text, logs: results };
+        }
+      }
+
+      // Log all data-icon values for debugging
+      const allDataIcons = document.querySelectorAll('svg[data-icon]');
+      const iconValues = Array.from(allDataIcons).map(i => i.getAttribute('data-icon'));
+      results.push(`All data-icon values: ${iconValues.join(', ')}`);
+
+      // Log page state
+      const pageText = document.body.innerText.substring(0, 500);
+      results.push(`Page sample: ${pageText.replace(/\n/g, ' ').substring(0, 200)}`);
+
+      return { clicked: false, logs: results };
+    });
+    console.log(`[Queue] Active searches menu clicked: ${JSON.stringify(activeSearchesClicked)}`);
+    await delay(2000);
+
+    // Debug: check if table is visible
+    const tableInfo = await this.page.evaluate(() => {
+      const tables = document.querySelectorAll('table');
+      const divRows = document.querySelectorAll('[class*="row"], [role="row"]');
+      const pageText = document.body.innerText;
+      const hasScore = pageText.includes('Score');
+      const hasSociete = pageText.includes('Société') || pageText.includes('Company');
+      return {
+        tableCount: tables.length,
+        divRowCount: divRows.length,
+        hasScore,
+        hasSociete,
+        sample: pageText.substring(0, 1000)
+      };
+    });
+    console.log(`[Queue] Table info: ${JSON.stringify(tableInfo)}`);
+
+    // ==========================================
+    // STEP 3: Extract transporters using same method as continuous scraping
+    // ==========================================
+    const transporters = await this.extractTransportersFromTable(500);
     console.log(`[Queue] Found ${transporters.length} transporters`);
 
     // Sauvegarder les transporteurs
     for (const transporter of transporters) {
       await this.saveTransporterWithRoute(transporter, offerInfo.departureDept, offerInfo.deliveryDept);
     }
-  }
-
-  // Cliquer sur le bouton History
-  private async clickHistoryButton(): Promise<boolean> {
-    if (!this.page) return false;
-
-    const result = await this.page.evaluate(() => {
-      // Chercher le bouton History dans la toolbar du panel
-      const allButtons = document.querySelectorAll('button');
-
-      for (const btn of Array.from(allButtons)) {
-        const svg = btn.querySelector('svg use, svg path');
-        if (svg) {
-          const href = svg.getAttribute('xlink:href') || svg.getAttribute('href') || '';
-          if (href.includes('history') || href.includes('schedule')) {
-            (btn as HTMLElement).click();
-            return true;
-          }
-        }
-      }
-
-      // Fallback: chercher par position (6e bouton dans toolbar)
-      const toolbar = document.querySelector('.v-toolbar__content, [class*="toolbar"]');
-      if (toolbar) {
-        const buttons = toolbar.querySelectorAll('button');
-        if (buttons.length >= 6) {
-          (buttons[5] as HTMLElement).click();
-          return true;
-        }
-      }
-
-      return false;
-    });
-
-    return result;
-  }
-
-  // Extraire les transporteurs de la section Active searches
-  private async extractTransportersFromActiveSearches(): Promise<{ companyName: string; email?: string; phone?: string }[]> {
-    if (!this.page) return [];
-
-    // Scroll et extraire
-    const transporters: { companyName: string; email?: string; phone?: string }[] = [];
-
-    for (let scroll = 0; scroll < 5; scroll++) {
-      const newTransporters = await this.page.evaluate(() => {
-        const results: { companyName: string; email?: string; phone?: string }[] = [];
-
-        // Chercher les elements de transporteur
-        const items = document.querySelectorAll('[class*="transporter"], [class*="carrier"], [class*="company"]');
-
-        for (const item of Array.from(items)) {
-          const text = item.textContent || '';
-
-          // Extraire email
-          const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-
-          // Extraire telephone
-          const phoneMatch = text.match(/(?:\+33|0)[1-9](?:[\s.-]?\d{2}){4}/);
-
-          // Extraire nom (premiere ligne souvent)
-          const nameMatch = text.split('\n')[0]?.trim();
-
-          if (emailMatch || nameMatch) {
-            results.push({
-              companyName: nameMatch || 'Unknown',
-              email: emailMatch?.[0],
-              phone: phoneMatch?.[0]
-            });
-          }
-        }
-
-        // Scroll pour charger plus
-        const scroller = document.querySelector('.vue-recycle-scroller, [class*="scroller"]');
-        if (scroller) {
-          (scroller as HTMLElement).scrollTop += 300;
-        }
-
-        return results;
-      });
-
-      // Ajouter les nouveaux transporteurs (eviter les doublons)
-      for (const t of newTransporters) {
-        if (!transporters.some(existing => existing.email === t.email && existing.companyName === t.companyName)) {
-          transporters.push(t);
-        }
-      }
-
-      await delay(500);
-    }
-
-    return transporters;
   }
 
   // Sauvegarder un transporteur avec sa route
