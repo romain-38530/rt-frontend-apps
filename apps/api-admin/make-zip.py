@@ -3,7 +3,7 @@ import os
 
 os.chdir('deploy')
 
-with zipfile.ZipFile('../deploy-v2.53.0-row-index-fix.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+with zipfile.ZipFile('../deploy-v2.56.0-mouse-wheel.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
     for root, dirs, files in os.walk('.'):
         for file in files:
             filepath = os.path.join(root, file)

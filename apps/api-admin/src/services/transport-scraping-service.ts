@@ -848,40 +848,40 @@ export class TransportScrapingService {
         try {
           console.log(`[B2PWeb] Processing offer ${i + 1}/${Math.min(offerCount, maxOffers)}...`);
 
-          // For virtual scroller: scroll to position i, then get and click the row
-          const scrollAndGetInfo = await this.page.evaluate((rowIndex) => {
+          // For virtual scroller: use Puppeteer mouse.wheel to scroll like a real user
+          // Vue recycle scroller needs real scroll events, not just scrollTop manipulation
+
+          // First, hover over the table area to ensure scroll events go to the right element
+          const tableArea = await this.page.$('.vue-recycle-scroller, [class*="virtual-scroller"], table');
+          if (tableArea) {
+            const box = await tableArea.boundingBox();
+            if (box) {
+              // Move mouse to center of table
+              await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            }
+          }
+
+          // Scroll down to row i using mouse wheel
+          // Each row is approximately 50px high
+          const rowHeight = 50;
+          const targetScrollY = i * rowHeight;
+
+          // First scroll to top (reset)
+          if (i === 0) {
+            await this.page.mouse.wheel({ deltaY: -10000 });
+            await delay(500);
+          }
+
+          // Then scroll down to target position
+          if (i > 0) {
+            // Scroll one row at a time for reliability
+            await this.page.mouse.wheel({ deltaY: rowHeight });
+            await delay(300);
+          }
+
+          // Get scroll info after wheel scroll
+          const scrollAndGetInfo = await this.page.evaluate(() => {
             const logs: string[] = [];
-
-            // Try multiple scroller selectors (B2PWeb may use different ones)
-            const scrollerSelectors = [
-              '.vue-recycle-scroller',
-              '[class*="virtual-scroller"]',
-              '[class*="recycle-scroller"]',
-              '.v-data-table__wrapper',
-              '.table-responsive',
-              'table tbody',
-              '[class*="scroll"]'
-            ];
-
-            let scroller: Element | null = null;
-            for (const selector of scrollerSelectors) {
-              scroller = document.querySelector(selector);
-              if (scroller) {
-                logs.push(`Found scroller with selector: ${selector}`);
-                break;
-              }
-            }
-
-            if (scroller) {
-              // Each row is approximately 50px high - scroll to make row i visible
-              const targetScroll = rowIndex * 50;
-              (scroller as HTMLElement).scrollTop = targetScroll;
-              logs.push(`Scrolled to ${targetScroll}px for row ${rowIndex}`);
-            } else {
-              logs.push('No scroller found, trying window scroll');
-              // Fallback: scroll the window
-              window.scrollTo(0, rowIndex * 50);
-            }
 
             // Get all visible scroller items - try multiple selectors
             const itemSelectors = [
@@ -921,9 +921,9 @@ export class TransportScrapingService {
             }
 
             return { logs, visibleCount: visibleItems.length };
-          }, i);
+          });
 
-          console.log(`[B2PWeb] Scroll result: ${JSON.stringify(scrollAndGetInfo)}`);
+          console.log(`[B2PWeb] Scroll result for row ${i}: ${JSON.stringify(scrollAndGetInfo)}`);
           await delay(500); // Wait for virtual scroller to render
 
           // Now get the row info - try to get the Nth visible item (matching i modulo visible count)
@@ -955,10 +955,10 @@ export class TransportScrapingService {
               }
             }
 
-            // Calculate which visible item to select based on rowIndex
-            // Virtual scroller shows ~15-20 items at a time, we need item at rowIndex % visibleCount
-            const visibleIndex = rowIndex % Math.max(visibleItems.length, 1);
-            const targetItem = visibleItems[visibleIndex] || visibleItems[0];
+            // After scrolling to position rowIndex * rowHeight, the first visible item
+            // IS the item at rowIndex. Virtual scroller recycles DOM elements but updates content.
+            // So we always click the FIRST visible item (index 0), not rowIndex % visibleCount
+            const targetItem = visibleItems[0];
             if (!targetItem) return null;
 
             const text = targetItem.textContent || '';
@@ -1019,16 +1019,17 @@ export class TransportScrapingService {
             }
             logs.push(`Found ${visibleRows.length} visible rows`);
 
-            // Select the row at targetRowIndex % visibleRows.length
-            const visibleIndex = targetRowIndex % Math.max(visibleRows.length, 1);
-            const targetRow = visibleRows[visibleIndex] || visibleRows[0];
+            // After scrolling to targetRowIndex * rowHeight, the first visible row IS the target
+            // Virtual scroller updates content but recycles DOM elements
+            // So we always click the FIRST visible row (index 0)
+            const targetRow = visibleRows[0];
 
             if (!targetRow) {
               return { success: false, error: 'No visible row found', logs };
             }
 
             const rowText = (targetRow.textContent || '').substring(0, 80);
-            logs.push(`Clicking row ${visibleIndex} of ${visibleRows.length} with text: ${rowText}`);
+            logs.push(`Clicking first visible row (0) of ${visibleRows.length} with text: ${rowText}`);
 
             // Click on the middle of the row (avoid checkbox on left)
             const rect = targetRow.getBoundingClientRect();
