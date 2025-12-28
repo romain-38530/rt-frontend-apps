@@ -5,7 +5,7 @@ import { isAuthenticated, getUser, logout, getAuthToken } from '../lib/auth';
 
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rt-api.symphonia-controltower.com';
-const STRIPE_API_URL = process.env.NEXT_PUBLIC_STRIPE_API_URL || 'http://rt-subscriptions-api-prod-v2.eba-pwrpmmxu.eu-central-1.elasticbeanstalk.com/api/stripe';
+const STRIPE_API_URL = process.env.NEXT_PUBLIC_STRIPE_API_URL || 'https://d14f2cikqe2x8i.cloudfront.net/api/stripe';
 
 // Plans disponibles pour les transporteurs
 const transporterPlans = [
