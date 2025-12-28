@@ -27,7 +27,7 @@ router.get('/config', async (_req: AuthRequest, res: Response) => {
       success: true,
       data: {
         ...config,
-        version: '2.56.0', // Scraping version for debugging
+        version: '2.63.0', // Scraping version for debugging
         b2pwebAuthenticated: isAuthenticated,
         b2pwebCredentials: config.b2pwebCredentials ? { username: config.b2pwebCredentials.username } : null
       }
@@ -909,6 +909,91 @@ router.get('/export/csv', async (req: AuthRequest, res: Response) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=transport-companies-${Date.now()}.csv`);
     res.send(csv);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// FILE D'IDS - MODE SEMI-AUTOMATIQUE
+// ============================================
+
+/**
+ * GET /queue - Récupérer la file d'IDs
+ */
+router.get('/queue', async (_req: AuthRequest, res: Response) => {
+  try {
+    const queue = transportScrapingService.getIdQueue();
+    const processing = transportScrapingService.isQueueProcessing();
+    res.json({ success: true, data: { queue, processing } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /queue/add - Ajouter des IDs à la file
+ */
+router.post('/queue/add', async (req: AuthRequest, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Liste d\'IDs requise' });
+    }
+    const result = transportScrapingService.addToIdQueue(ids);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /queue/remove - Retirer un ID de la file
+ */
+router.post('/queue/remove', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'ID requis' });
+    }
+    transportScrapingService.removeFromIdQueue(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /queue/clear - Vider la file
+ */
+router.post('/queue/clear', async (_req: AuthRequest, res: Response) => {
+  try {
+    transportScrapingService.clearIdQueue();
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /queue/start - Démarrer le traitement de la file
+ */
+router.post('/queue/start', async (_req: AuthRequest, res: Response) => {
+  try {
+    transportScrapingService.startQueueProcessing();
+    res.json({ success: true, message: 'Traitement de la file démarré' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /queue/stop - Arrêter le traitement de la file
+ */
+router.post('/queue/stop', async (_req: AuthRequest, res: Response) => {
+  try {
+    transportScrapingService.stopQueueProcessing();
+    res.json({ success: true, message: 'Traitement arrêté' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

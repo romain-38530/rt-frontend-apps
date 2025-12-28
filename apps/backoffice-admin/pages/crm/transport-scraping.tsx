@@ -150,13 +150,18 @@ export default function TransportScrapingPage() {
   const api = useApi();
 
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'companies' | 'offers' | 'jobs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'companies' | 'offers' | 'jobs' | 'queue'>('dashboard');
   const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
   const [offerStats, setOfferStats] = useState<OfferStats | null>(null);
   const [jobs, setJobs] = useState<ScrapingJob[]>([]);
   const [companies, setCompanies] = useState<TransportCompany[]>([]);
   const [offers, setOffers] = useState<TransportOffer[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+
+  // ID Queue state
+  const [idQueue, setIdQueue] = useState<{ id: string; status: 'pending' | 'processing' | 'done' | 'error'; addedAt: string; processedAt?: string; error?: string }[]>([]);
+  const [newIdInput, setNewIdInput] = useState('');
+  const [queueProcessing, setQueueProcessing] = useState(false);
 
   // Pagination
   const [companiesPage, setCompaniesPage] = useState(1);
@@ -303,6 +308,7 @@ export default function TransportScrapingPage() {
     if (activeTab === 'companies') fetchCompanies();
     if (activeTab === 'offers') fetchOffers();
     if (activeTab === 'jobs') fetchJobs();
+    if (activeTab === 'queue') fetchIdQueue();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -391,6 +397,109 @@ export default function TransportScrapingPage() {
     }
   };
 
+  // ============================================
+  // ID QUEUE FUNCTIONS
+  // ============================================
+  const fetchIdQueue = useCallback(async () => {
+    try {
+      const response = await api.get('/admin/transport-scraping/queue');
+      setIdQueue(response.data?.queue || []);
+      setQueueProcessing(response.data?.processing || false);
+    } catch (error) {
+      console.error('Error fetching queue:', error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAddIdsToQueue = async () => {
+    if (!newIdInput.trim()) {
+      alert('Entrez au moins un ID ou URL');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Parse IDs or URLs (accept comma, space, or newline separated)
+      const inputs = newIdInput
+        .split(/[\s,\n]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      const ids: string[] = [];
+      for (const input of inputs) {
+        // Check if it's a URL
+        const urlMatch = input.match(/\/offer\/(\d+)/);
+        if (urlMatch) {
+          ids.push(urlMatch[1]);
+        } else if (/^\d+$/.test(input)) {
+          // It's a plain ID
+          ids.push(input);
+        }
+      }
+
+      if (ids.length === 0) {
+        alert('Aucun ID valide trouve. Format attendu: ID numerique ou URL complete (ex: 20251227000248 ou https://app.b2pweb.com/offer/20251227000248)');
+        setLoading(false);
+        return;
+      }
+
+      const response = await api.post('/admin/transport-scraping/queue/add', { ids });
+      if (response.success) {
+        alert(`${ids.length} ID(s) ajoute(s) a la file`);
+        setNewIdInput('');
+        fetchIdQueue();
+      }
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleClearQueue = async () => {
+    if (!confirm('Vider toute la file d\'attente?')) return;
+    try {
+      await api.post('/admin/transport-scraping/queue/clear');
+      fetchIdQueue();
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    }
+  };
+
+  const handleStartQueueProcessing = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post('/admin/transport-scraping/queue/start');
+      if (response.success) {
+        alert('Traitement de la file demarre!');
+        setQueueProcessing(true);
+        fetchIdQueue();
+      }
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleStopQueueProcessing = async () => {
+    setLoading(true);
+    try {
+      await api.post('/admin/transport-scraping/queue/stop');
+      setQueueProcessing(false);
+      fetchIdQueue();
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleRemoveFromQueue = async (id: string) => {
+    try {
+      await api.post('/admin/transport-scraping/queue/remove', { id });
+      fetchIdQueue();
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    }
+  };
+
   const continuousJob = jobs.find(j => j.type === 'continuous' && j.isActive);
 
   // Prevent hydration mismatch by not rendering dynamic content until mounted
@@ -429,7 +538,8 @@ export default function TransportScrapingPage() {
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'companies', label: 'Entreprises' },
               { id: 'offers', label: 'Offres/Routes' },
-              { id: 'jobs', label: 'Jobs' }
+              { id: 'jobs', label: 'Jobs' },
+              { id: 'queue', label: 'File d\'IDs' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -872,6 +982,157 @@ export default function TransportScrapingPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Queue Tab - File d'IDs */}
+        {activeTab === 'queue' && (
+          <div className="space-y-6">
+            {/* Add IDs Form */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-4">Ajouter des IDs d'offres</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Entrez des IDs ou URLs B2PWeb (un par ligne, ou separes par des virgules/espaces)
+              </p>
+              <div className="flex gap-4">
+                <textarea
+                  value={newIdInput}
+                  onChange={(e) => setNewIdInput(e.target.value)}
+                  placeholder="Ex: 20251227000248 ou https://app.b2pweb.com/offer/20251227000248"
+                  className="flex-1 border rounded-lg p-3 h-32 font-mono text-sm"
+                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleAddIdsToQueue}
+                    disabled={loading || !newIdInput.trim()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    Ajouter a la file
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Queue Controls */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-semibold">File d'attente</h2>
+                  <span className={`px-3 py-1 rounded-full text-xs ${
+                    queueProcessing ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {queueProcessing ? 'En cours...' : 'Arrete'}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {idQueue.filter(q => q.status === 'pending').length} en attente /
+                    {idQueue.filter(q => q.status === 'done').length} traites /
+                    {idQueue.filter(q => q.status === 'error').length} erreurs
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  {!queueProcessing ? (
+                    <button
+                      onClick={handleStartQueueProcessing}
+                      disabled={loading || idQueue.filter(q => q.status === 'pending').length === 0}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Demarrer le traitement
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStopQueueProcessing}
+                      disabled={loading}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Arreter
+                    </button>
+                  )}
+                  <button
+                    onClick={handleClearQueue}
+                    disabled={loading || idQueue.length === 0}
+                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Vider la file
+                  </button>
+                  <button
+                    onClick={fetchIdQueue}
+                    disabled={loading}
+                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Rafraichir
+                  </button>
+                </div>
+              </div>
+
+              {/* Queue Table */}
+              <div className="overflow-hidden border rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Offre</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ajoute le</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Traite le</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {idQueue.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                          Aucun ID dans la file. Ajoutez des IDs ci-dessus.
+                        </td>
+                      </tr>
+                    ) : (
+                      idQueue.map((item, index) => (
+                        <tr key={`${item.id}-${index}`} className={item.status === 'processing' ? 'bg-blue-50' : ''}>
+                          <td className="px-4 py-3 font-mono text-sm">
+                            <a
+                              href={`https://app.b2pweb.com/offer/${item.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:underline"
+                            >
+                              {item.id}
+                            </a>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              item.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                              item.status === 'done' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {item.status === 'pending' ? 'En attente' :
+                               item.status === 'processing' ? 'En cours...' :
+                               item.status === 'done' ? 'Termine' : 'Erreur'}
+                            </span>
+                            {item.error && (
+                              <span className="ml-2 text-xs text-red-600">{item.error}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {formatDate(item.addedAt, true)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {item.processedAt ? formatDate(item.processedAt, true) : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleRemoveFromQueue(item.id)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                              disabled={item.status === 'processing'}
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

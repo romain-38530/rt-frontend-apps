@@ -73,6 +73,15 @@ let scrapingConfig: ScrapingConfig = {
 // Helper function for delays (waitForTimeout is deprecated in newer Puppeteer)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Interface pour un item de la file d'IDs
+interface QueueItem {
+  id: string;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  addedAt: string;
+  processedAt?: string;
+  error?: string;
+}
+
 export class TransportScrapingService {
   private b2pwebClient: AxiosInstance | null = null;
   private b2pwebToken: string | null = null;
@@ -82,6 +91,11 @@ export class TransportScrapingService {
   // Puppeteer browser instance
   private browser: Browser | null = null;
   private page: Page | null = null;
+
+  // File d'IDs pour le mode semi-automatique
+  private idQueue: QueueItem[] = [];
+  private queueProcessing: boolean = false;
+  private queueStopRequested: boolean = false;
 
   constructor() {}
 
@@ -96,6 +110,348 @@ export class TransportScrapingService {
   updateConfig(config: Partial<ScrapingConfig>): ScrapingConfig {
     scrapingConfig = { ...scrapingConfig, ...config };
     return scrapingConfig;
+  }
+
+  // ============================================
+  // FILE D'IDS - MODE SEMI-AUTOMATIQUE
+  // ============================================
+
+  getIdQueue(): QueueItem[] {
+    return [...this.idQueue];
+  }
+
+  isQueueProcessing(): boolean {
+    return this.queueProcessing;
+  }
+
+  addToIdQueue(ids: string[]): { added: number; duplicates: number } {
+    let added = 0;
+    let duplicates = 0;
+
+    for (const id of ids) {
+      // Verifier si l'ID existe deja
+      const exists = this.idQueue.some(item => item.id === id);
+      if (exists) {
+        duplicates++;
+        continue;
+      }
+
+      this.idQueue.push({
+        id,
+        status: 'pending',
+        addedAt: new Date().toISOString()
+      });
+      added++;
+    }
+
+    console.log(`[Queue] Added ${added} IDs, ${duplicates} duplicates ignored`);
+    return { added, duplicates };
+  }
+
+  removeFromIdQueue(id: string): void {
+    this.idQueue = this.idQueue.filter(item => item.id !== id);
+    console.log(`[Queue] Removed ID ${id}`);
+  }
+
+  clearIdQueue(): void {
+    this.idQueue = [];
+    console.log('[Queue] Queue cleared');
+  }
+
+  startQueueProcessing(): void {
+    if (this.queueProcessing) {
+      console.log('[Queue] Already processing');
+      return;
+    }
+
+    this.queueStopRequested = false;
+    this.queueProcessing = true;
+    console.log('[Queue] Starting queue processing...');
+
+    // Lancer le traitement en arrière-plan
+    this.processQueue();
+  }
+
+  stopQueueProcessing(): void {
+    console.log('[Queue] Stop requested');
+    this.queueStopRequested = true;
+  }
+
+  private async processQueue(): Promise<void> {
+    console.log('[Queue] Processing queue...');
+
+    while (!this.queueStopRequested) {
+      // Trouver le prochain item en attente
+      const nextItem = this.idQueue.find(item => item.status === 'pending');
+
+      if (!nextItem) {
+        console.log('[Queue] No more pending items, waiting...');
+        // Attendre 5 secondes et verifier s'il y a de nouveaux items
+        await delay(5000);
+        continue;
+      }
+
+      // Marquer comme en cours
+      nextItem.status = 'processing';
+      console.log(`[Queue] Processing offer ID: ${nextItem.id}`);
+
+      try {
+        // Traiter l'offre
+        await this.processOfferById(nextItem.id);
+
+        // Marquer comme termine
+        nextItem.status = 'done';
+        nextItem.processedAt = new Date().toISOString();
+        console.log(`[Queue] Offer ${nextItem.id} processed successfully`);
+      } catch (error: any) {
+        nextItem.status = 'error';
+        nextItem.error = error.message;
+        nextItem.processedAt = new Date().toISOString();
+        console.error(`[Queue] Error processing ${nextItem.id}:`, error.message);
+      }
+
+      // Petite pause entre les traitements
+      await delay(2000);
+    }
+
+    this.queueProcessing = false;
+    console.log('[Queue] Processing stopped');
+  }
+
+  // Traiter une offre par son ID (navigation directe)
+  private async processOfferById(offerId: string): Promise<void> {
+    if (!this.page) {
+      throw new Error('Browser not authenticated. Please authenticate first.');
+    }
+
+    const offerUrl = `https://app.b2pweb.com/offer/${offerId}`;
+    console.log(`[Queue] Navigating to ${offerUrl}`);
+
+    await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    await delay(1500);
+
+    // Recuperer les infos de l'offre
+    const offerInfo = await this.page.evaluate(() => {
+      const pageText = document.body.innerText;
+
+      // Chercher les locations
+      const locationPattern = /(\d{5}),?\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-Za-zéèàùâêîôûÉÈÀÙÂÊÎÔÛ\-\s]+)\s*\((\d{2})\)/gi;
+      const matches = pageText.match(locationPattern) || [];
+
+      let departure = '';
+      let delivery = '';
+      let departureDept = '';
+      let deliveryDept = '';
+
+      if (matches.length >= 2) {
+        departure = matches[0] || '';
+        delivery = matches[1] || '';
+        const deptMatch1 = departure.match(/\((\d{2})\)/);
+        const deptMatch2 = delivery.match(/\((\d{2})\)/);
+        departureDept = deptMatch1 ? deptMatch1[1] : '';
+        deliveryDept = deptMatch2 ? deptMatch2[1] : '';
+      }
+
+      return {
+        departure: departure || 'Unknown',
+        delivery: delivery || 'Unknown',
+        departureDept,
+        deliveryDept
+      };
+    });
+
+    console.log(`[Queue] Route: ${offerInfo.departure} -> ${offerInfo.delivery}`);
+
+    // Cliquer sur le bouton History pour voir les recherches actives
+    const historyClicked = await this.clickHistoryButton();
+    if (!historyClicked) {
+      console.log('[Queue] Could not click History button');
+    }
+
+    await delay(1500);
+
+    // Extraire les transporteurs de la section Active searches
+    const transporters = await this.extractTransportersFromActiveSearches();
+    console.log(`[Queue] Found ${transporters.length} transporters`);
+
+    // Sauvegarder les transporteurs
+    for (const transporter of transporters) {
+      await this.saveTransporterWithRoute(transporter, offerInfo.departureDept, offerInfo.deliveryDept);
+    }
+  }
+
+  // Cliquer sur le bouton History
+  private async clickHistoryButton(): Promise<boolean> {
+    if (!this.page) return false;
+
+    const result = await this.page.evaluate(() => {
+      // Chercher le bouton History dans la toolbar du panel
+      const allButtons = document.querySelectorAll('button');
+
+      for (const btn of Array.from(allButtons)) {
+        const svg = btn.querySelector('svg use, svg path');
+        if (svg) {
+          const href = svg.getAttribute('xlink:href') || svg.getAttribute('href') || '';
+          if (href.includes('history') || href.includes('schedule')) {
+            (btn as HTMLElement).click();
+            return true;
+          }
+        }
+      }
+
+      // Fallback: chercher par position (6e bouton dans toolbar)
+      const toolbar = document.querySelector('.v-toolbar__content, [class*="toolbar"]');
+      if (toolbar) {
+        const buttons = toolbar.querySelectorAll('button');
+        if (buttons.length >= 6) {
+          (buttons[5] as HTMLElement).click();
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    return result;
+  }
+
+  // Extraire les transporteurs de la section Active searches
+  private async extractTransportersFromActiveSearches(): Promise<{ companyName: string; email?: string; phone?: string }[]> {
+    if (!this.page) return [];
+
+    // Scroll et extraire
+    const transporters: { companyName: string; email?: string; phone?: string }[] = [];
+
+    for (let scroll = 0; scroll < 5; scroll++) {
+      const newTransporters = await this.page.evaluate(() => {
+        const results: { companyName: string; email?: string; phone?: string }[] = [];
+
+        // Chercher les elements de transporteur
+        const items = document.querySelectorAll('[class*="transporter"], [class*="carrier"], [class*="company"]');
+
+        for (const item of Array.from(items)) {
+          const text = item.textContent || '';
+
+          // Extraire email
+          const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+
+          // Extraire telephone
+          const phoneMatch = text.match(/(?:\+33|0)[1-9](?:[\s.-]?\d{2}){4}/);
+
+          // Extraire nom (premiere ligne souvent)
+          const nameMatch = text.split('\n')[0]?.trim();
+
+          if (emailMatch || nameMatch) {
+            results.push({
+              companyName: nameMatch || 'Unknown',
+              email: emailMatch?.[0],
+              phone: phoneMatch?.[0]
+            });
+          }
+        }
+
+        // Scroll pour charger plus
+        const scroller = document.querySelector('.vue-recycle-scroller, [class*="scroller"]');
+        if (scroller) {
+          (scroller as HTMLElement).scrollTop += 300;
+        }
+
+        return results;
+      });
+
+      // Ajouter les nouveaux transporteurs (eviter les doublons)
+      for (const t of newTransporters) {
+        if (!transporters.some(existing => existing.email === t.email && existing.companyName === t.companyName)) {
+          transporters.push(t);
+        }
+      }
+
+      await delay(500);
+    }
+
+    return transporters;
+  }
+
+  // Sauvegarder un transporteur avec sa route
+  private async saveTransporterWithRoute(
+    transporter: { companyName: string; email?: string; phone?: string },
+    originDept: string,
+    destDept: string
+  ): Promise<void> {
+    try {
+      // Chercher si le transporteur existe deja (par email ou nom)
+      let company = await TransportCompany.findOne({
+        $or: [
+          { email: transporter.email },
+          { companyName: transporter.companyName }
+        ]
+      });
+
+      const routeData = {
+        route: {
+          origin: {
+            departmentCode: originDept,
+            country: 'France'
+          },
+          destination: {
+            departmentCode: destDept,
+            country: 'France'
+          }
+        },
+        source: 'b2pweb',
+        lastSeenAt: new Date()
+      };
+
+      if (company) {
+        // Mettre à jour les recherches actives
+        const existingRoute = company.activeSearches?.find(
+          s => s.route.origin.departmentCode === originDept &&
+               s.route.destination.departmentCode === destDept
+        );
+
+        if (existingRoute) {
+          existingRoute.lastSeenAt = new Date();
+        } else {
+          company.activeSearches = company.activeSearches || [];
+          company.activeSearches.push(routeData);
+        }
+
+        await company.save();
+        console.log(`[Queue] Updated company: ${company.companyName}`);
+      } else {
+        // Créer une nouvelle entreprise
+        company = new TransportCompany({
+          companyName: transporter.companyName,
+          email: transporter.email,
+          phone: transporter.phone,
+          address: { country: 'France' },
+          transportInfo: {
+            services: [],
+            specializations: [],
+            vehicleTypes: [],
+            operatingZones: [],
+            coveredDepartments: [],
+            coveredCountries: []
+          },
+          source: {
+            type: 'scraping',
+            name: 'b2pweb',
+            scrapedAt: new Date()
+          },
+          enrichment: {},
+          prospectionStatus: 'new',
+          addedToLeadPool: false,
+          activeSearches: [routeData],
+          tags: [],
+          isActive: true
+        });
+
+        await company.save();
+        console.log(`[Queue] Created company: ${company.companyName}`);
+      }
+    } catch (error: any) {
+      console.error(`[Queue] Error saving transporter:`, error.message);
+    }
   }
 
   // ============================================
@@ -380,6 +736,176 @@ export class TransportScrapingService {
     }
 
     console.log(`[B2PWeb] Total popups handled: ${popupsClosed}`);
+  }
+
+  // ============================================
+  // COLLECT ALL OFFER IDS USING KEYBOARD NAVIGATION
+  // Uses ArrowDown to navigate through the list which works better with Vue virtual scroller
+  // ============================================
+  private async collectAllOfferIds(maxOffers: number): Promise<string[]> {
+    if (!this.page) return [];
+
+    const collectedIds: string[] = [];
+    let consecutiveDuplicates = 0;
+    const maxConsecutiveDuplicates = 10; // Stop if we get 10 duplicates in a row (end of list)
+
+    console.log(`[B2PWeb] === Starting offer ID collection with keyboard nav (max: ${maxOffers}) ===`);
+
+    // Step 1: Click the first row to select it and focus the list
+    const firstClick = await this.page.evaluate(() => {
+      const rows = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view, [class*="offer-row"], [class*="OfferRow"], tr[class*="row"]');
+      for (const row of Array.from(rows)) {
+        const rect = (row as HTMLElement).getBoundingClientRect();
+        if (rect.top > 50 && rect.height > 20 && rect.width > 100) {
+          const rowText = (row.textContent || '').substring(0, 60);
+          (row as HTMLElement).click();
+          return { clicked: true, rowText };
+        }
+      }
+      return { clicked: false };
+    });
+
+    if (!firstClick.clicked) {
+      console.log(`[B2PWeb] Could not click first row`);
+      return [];
+    }
+
+    console.log(`[B2PWeb] Clicked first row: ${firstClick.rowText?.substring(0, 40)}...`);
+    await delay(1000);
+
+    // Collect first offer ID
+    let url = this.page.url();
+    let match = url.match(/\/offer\/(\d+)/);
+    if (match && match[1]) {
+      collectedIds.push(match[1]);
+      console.log(`[B2PWeb] Collected ID 1: ${match[1]}`);
+    }
+
+    // Step 2: Use ArrowDown to navigate through the list
+    for (let i = 0; i < maxOffers * 3 && collectedIds.length < maxOffers; i++) {
+      // Press Escape to close any open panel
+      await this.page.keyboard.press('Escape');
+      await delay(200);
+
+      // Press ArrowDown to move to next row
+      await this.page.keyboard.press('ArrowDown');
+      await delay(300);
+
+      // Press Enter or click to select the row
+      await this.page.keyboard.press('Enter');
+      await delay(800);
+
+      // Check if URL changed (new offer selected)
+      url = this.page.url();
+      match = url.match(/\/offer\/(\d+)/);
+      const offerId = match ? match[1] : null;
+
+      if (offerId) {
+        if (!collectedIds.includes(offerId)) {
+          collectedIds.push(offerId);
+          consecutiveDuplicates = 0;
+          console.log(`[B2PWeb] Collected ID ${collectedIds.length}: ${offerId}`);
+        } else {
+          consecutiveDuplicates++;
+          console.log(`[B2PWeb] Duplicate ID ${offerId} (${consecutiveDuplicates}/${maxConsecutiveDuplicates})`);
+
+          // Try scrolling the list manually as fallback
+          await this.scrollOffersList();
+          await delay(300);
+
+          if (consecutiveDuplicates >= maxConsecutiveDuplicates) {
+            console.log(`[B2PWeb] Too many duplicates, trying alternative approach...`);
+            // Try clicking a different visible row
+            const altClick = await this.clickDifferentRow(collectedIds);
+            if (!altClick) {
+              console.log(`[B2PWeb] No more rows to collect, stopping`);
+              break;
+            }
+            consecutiveDuplicates = 0;
+          }
+        }
+      } else {
+        console.log(`[B2PWeb] No offer ID in URL: ${url}`);
+        // Try clicking directly on a row
+        await this.page.evaluate(() => {
+          const rows = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div');
+          if (rows.length > 0) {
+            (rows[0] as HTMLElement).click();
+          }
+        });
+        await delay(500);
+      }
+    }
+
+    console.log(`[B2PWeb] === Collected ${collectedIds.length} unique offer IDs ===`);
+    console.log(`[B2PWeb] IDs: ${collectedIds.join(', ')}`);
+    return collectedIds;
+  }
+
+  // ============================================
+  // CLICK A DIFFERENT ROW (not already collected)
+  // ============================================
+  private async clickDifferentRow(collectedIds: string[]): Promise<boolean> {
+    if (!this.page) return false;
+
+    // Scroll down first
+    await this.scrollOffersList();
+    await this.scrollOffersList();
+    await this.scrollOffersList();
+    await delay(500);
+
+    // Try to click a row we haven't processed
+    const clicked = await this.page.evaluate(() => {
+      const rows = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] as HTMLElement;
+        const rect = row.getBoundingClientRect();
+        if (rect.top > 100 && rect.top < 600 && rect.height > 20) {
+          row.click();
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (clicked) {
+      await delay(800);
+      const url = this.page.url();
+      const match = url.match(/\/offer\/(\d+)/);
+      if (match && match[1] && !collectedIds.includes(match[1])) {
+        collectedIds.push(match[1]);
+        console.log(`[B2PWeb] Alt click collected ID ${collectedIds.length}: ${match[1]}`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ============================================
+  // SCROLL THE OFFERS LIST TO LOAD NEW ITEMS
+  // ============================================
+  private async scrollOffersList(): Promise<void> {
+    if (!this.page) return;
+
+    await this.page.evaluate(() => {
+      // Find the virtual scroller container
+      const scroller = document.querySelector('.vue-recycle-scroller') ||
+                       document.querySelector('[class*="scroller"]') ||
+                       document.querySelector('[class*="list"]');
+
+      if (scroller) {
+        (scroller as HTMLElement).scrollTop += 150; // Scroll more aggressively
+      }
+
+      // Also try scrolling any scrollable container
+      document.querySelectorAll('*').forEach(el => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.scrollHeight > htmlEl.clientHeight + 50 &&
+            (htmlEl.className.includes('scroller') || htmlEl.className.includes('list'))) {
+          htmlEl.scrollTop += 150;
+        }
+      });
+    });
   }
 
   // ============================================
@@ -823,8 +1349,8 @@ export class TransportScrapingService {
       console.log(`[B2PWeb] Déposant filter result: ${JSON.stringify(filterResult)}`);
       await delay(2000);
       const results: any[] = [];
-      const maxOffers = Math.min(5000, scrapingConfig.maxOffersPerRun); // Increased to 5000 offers per run
-      const maxTransportersPerSection = 2500; // Increased to capture all transporters per offer
+      const maxOffers = Math.min(10, scrapingConfig.maxOffersPerRun); // Limit to 10 offers per run for testing
+      const maxTransportersPerSection = 50; // Limit to 50 transporters per offer (10 scrolls * ~5 new emails per scroll)
 
       // Get offer rows count
       const offerCount = await this.page.evaluate(() => {
@@ -840,215 +1366,72 @@ export class TransportScrapingService {
         return [];
       }
 
-      // Track processed offers by their unique identifier (route + date)
-      const processedOffers = new Set<string>();
+      // ============================================
+      // STEP 1: COLLECT ALL OFFER IDS
+      // Use dedicated routine to scroll and collect all unique offer IDs
+      // ============================================
+      console.log(`[B2PWeb] Phase 1: Collecting offer IDs...`);
+      const offerIds = await this.collectAllOfferIds(maxOffers);
 
-      // Process each offer
-      for (let i = 0; i < Math.min(offerCount, maxOffers); i++) {
+      if (offerIds.length === 0) {
+        console.log(`[B2PWeb] No offer IDs collected, aborting...`);
+        return [];
+      }
+
+      console.log(`[B2PWeb] Phase 2: Processing ${offerIds.length} offers...`);
+
+      // ============================================
+      // STEP 2: PROCESS EACH OFFER BY DIRECT URL NAVIGATION
+      // ============================================
+      for (let i = 0; i < offerIds.length; i++) {
+        const offerId = offerIds[i];
+
         try {
-          console.log(`[B2PWeb] Processing offer ${i + 1}/${Math.min(offerCount, maxOffers)}...`);
+          console.log(`[B2PWeb] === Processing offer ${i + 1}/${offerIds.length} (ID: ${offerId}) ===`);
 
-          // For virtual scroller: use Puppeteer mouse.wheel to scroll like a real user
-          // Vue recycle scroller needs real scroll events, not just scrollTop manipulation
-
-          // First, hover over the table area to ensure scroll events go to the right element
-          const tableArea = await this.page.$('.vue-recycle-scroller, [class*="virtual-scroller"], table');
-          if (tableArea) {
-            const box = await tableArea.boundingBox();
-            if (box) {
-              // Move mouse to center of table
-              await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-            }
-          }
-
-          // Scroll down to row i using mouse wheel
-          // Each row is approximately 50px high
-          const rowHeight = 50;
-          const targetScrollY = i * rowHeight;
-
-          // First scroll to top (reset)
-          if (i === 0) {
-            await this.page.mouse.wheel({ deltaY: -10000 });
-            await delay(500);
-          }
-
-          // Then scroll down to target position
-          if (i > 0) {
-            // Scroll one row at a time for reliability
-            await this.page.mouse.wheel({ deltaY: rowHeight });
-            await delay(300);
-          }
-
-          // Get scroll info after wheel scroll
-          const scrollAndGetInfo = await this.page.evaluate(() => {
-            const logs: string[] = [];
-
-            // Get all visible scroller items - try multiple selectors
-            const itemSelectors = [
-              '.vue-recycle-scroller__item-wrapper > div',
-              '.vue-recycle-scroller__item-view',
-              'tr[class*="row"]',
-              'table tbody tr',
-              '[class*="list-item"]',
-              '[class*="grid-row"]'
-            ];
-
-            let scrollerItems: NodeListOf<Element> = document.querySelectorAll(itemSelectors[0]);
-            for (const selector of itemSelectors) {
-              const items = document.querySelectorAll(selector);
-              if (items.length > scrollerItems.length) {
-                scrollerItems = items;
-                logs.push(`Using item selector: ${selector} (${items.length} items)`);
-              }
-            }
-            logs.push(`Found ${scrollerItems.length} scroller items total`);
-
-            // Find visible items and their positions
-            const visibleItems: { index: number; top: number; text: string }[] = [];
-            scrollerItems.forEach((item, idx) => {
-              const rect = (item as HTMLElement).getBoundingClientRect();
-              if (rect.top > 0 && rect.top < 800 && rect.height > 0) {
-                visibleItems.push({
-                  index: idx,
-                  top: rect.top,
-                  text: (item.textContent || '').substring(0, 60)
-                });
-              }
-            });
-            logs.push(`Visible items: ${visibleItems.length}`);
-            if (visibleItems.length > 0) {
-              logs.push(`First visible: ${JSON.stringify(visibleItems[0])}`);
-            }
-
-            return { logs, visibleCount: visibleItems.length };
+          // Navigate directly to the offer URL
+          const offerUrl = `https://app.b2pweb.com/offer/${offerId}`;
+          console.log(`[B2PWeb] Navigating to ${offerUrl}...`);
+          await this.page.goto(offerUrl, {
+            waitUntil: 'networkidle2',
+            timeout: 30000
           });
+          await delay(1500);
 
-          console.log(`[B2PWeb] Scroll result for row ${i}: ${JSON.stringify(scrollAndGetInfo)}`);
-          await delay(500); // Wait for virtual scroller to render
+          // Get offer info from the page
+          const offerInfo = await this.page.evaluate(() => {
+            const pageText = document.body.innerText;
 
-          // Now get the row info - try to get the Nth visible item (matching i modulo visible count)
-          const offerInfo = await this.page.evaluate((rowIndex) => {
-            // Find items using multiple selectors
-            const itemSelectors = [
-              '.vue-recycle-scroller__item-wrapper > div',
-              '.vue-recycle-scroller__item-view',
-              'tr[class*="row"]',
-              'table tbody tr',
-              '[class*="list-item"]',
-              '[class*="grid-row"]'
-            ];
-
-            let scrollerItems: NodeListOf<Element> = document.querySelectorAll(itemSelectors[0]);
-            for (const selector of itemSelectors) {
-              const items = document.querySelectorAll(selector);
-              if (items.length > scrollerItems.length) {
-                scrollerItems = items;
-              }
-            }
-
-            // Get visible items
-            const visibleItems: HTMLElement[] = [];
-            for (const item of Array.from(scrollerItems)) {
-              const rect = (item as HTMLElement).getBoundingClientRect();
-              if (rect.top > 0 && rect.top < 800 && rect.height > 0) {
-                visibleItems.push(item as HTMLElement);
-              }
-            }
-
-            // After scrolling to position rowIndex * rowHeight, the first visible item
-            // IS the item at rowIndex. Virtual scroller recycles DOM elements but updates content.
-            // So we always click the FIRST visible item (index 0), not rowIndex % visibleCount
-            const targetItem = visibleItems[0];
-            if (!targetItem) return null;
-
-            const text = targetItem.textContent || '';
-            // More flexible pattern - find department codes
-            const deptMatches = text.match(/(\d{2})[,\s]+([A-ZÉÈÀÙÂÊÎÔÛ][A-Za-zéèàùâêîôûÉÈÀÙÂÊÎÔÛ\-\s]+)/gi) || [];
+            // Try to find departure and delivery from the details panel
+            // Look for patterns like "13300, SALON-DE-PROVENCE (13)" and "69220, BELLEVILLE (69)"
+            const locationPattern = /(\d{5}),?\s*([A-ZÉÈÀÙÂÊÎÔÛ][A-Za-zéèàùâêîôûÉÈÀÙÂÊÎÔÛ\-\s]+)\s*\((\d{2})\)/gi;
+            const matches = pageText.match(locationPattern) || [];
 
             let departure = '';
             let delivery = '';
             let departureDept = '';
             let deliveryDept = '';
 
-            if (deptMatches.length >= 2) {
-              departure = (deptMatches[0] || '').trim();
-              delivery = (deptMatches[1] || '').trim();
-              departureDept = departure.match(/^(\d{2})/)?.[1] || '';
-              deliveryDept = delivery.match(/^(\d{2})/)?.[1] || '';
+            if (matches.length >= 2) {
+              departure = matches[0] || '';
+              delivery = matches[1] || '';
+              const deptMatch1 = departure.match(/\((\d{2})\)/);
+              const deptMatch2 = delivery.match(/\((\d{2})\)/);
+              departureDept = deptMatch1 ? deptMatch1[1] : '';
+              deliveryDept = deptMatch2 ? deptMatch2[1] : '';
             }
-
-            // Use row index as primary identifier since virtual scroller recycles elements
-            const uniqueId = `offer-${rowIndex}`;
 
             return {
               departure: departure || 'Unknown',
               delivery: delivery || 'Unknown',
               departureDept,
               deliveryDept,
-              uniqueId,
-              rowText: text.substring(0, 80)
+              uniqueId: `offer-${Date.now()}`,
+              rowText: pageText.substring(0, 100)
             };
-          }, i);
+          });
 
-          if (!offerInfo) {
-            console.log(`[B2PWeb] Could not find visible row for offer ${i + 1}`);
-            continue;
-          }
-
-          console.log(`[B2PWeb] Route ${i + 1}: ${offerInfo.departure} -> ${offerInfo.delivery} (${offerInfo.rowText.substring(0, 40)}...)`);
-
-          // ==========================================
-          // STEP 1: CLICK ON THE OFFER ROW TO OPEN "OFFER INFORMATIONS" PANEL
-          // ==========================================
-          console.log(`[B2PWeb] Clicking on offer row ${i} to open Offer informations panel...`);
-
-          const rowClicked = await this.page.evaluate((targetRowIndex) => {
-            const logs: string[] = [];
-
-            // Find items in virtual scroller
-            const scrollerItems = document.querySelectorAll('.vue-recycle-scroller__item-wrapper > div, .vue-recycle-scroller__item-view');
-            logs.push(`Found ${scrollerItems.length} scroller items`);
-
-            // Get all visible rows in viewport
-            const visibleRows: HTMLElement[] = [];
-            for (const item of Array.from(scrollerItems)) {
-              const rect = (item as HTMLElement).getBoundingClientRect();
-              if (rect.top >= 0 && rect.top < window.innerHeight && rect.height > 0) {
-                visibleRows.push(item as HTMLElement);
-              }
-            }
-            logs.push(`Found ${visibleRows.length} visible rows`);
-
-            // After scrolling to targetRowIndex * rowHeight, the first visible row IS the target
-            // Virtual scroller updates content but recycles DOM elements
-            // So we always click the FIRST visible row (index 0)
-            const targetRow = visibleRows[0];
-
-            if (!targetRow) {
-              return { success: false, error: 'No visible row found', logs };
-            }
-
-            const rowText = (targetRow.textContent || '').substring(0, 80);
-            logs.push(`Clicking first visible row (0) of ${visibleRows.length} with text: ${rowText}`);
-
-            // Click on the middle of the row (avoid checkbox on left)
-            const rect = targetRow.getBoundingClientRect();
-            const clickX = rect.left + rect.width * 0.5;
-            const clickY = rect.top + rect.height / 2;
-
-            // Dispatch click event
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true, cancelable: true, view: window,
-              clientX: clickX, clientY: clickY, button: 0
-            });
-            targetRow.dispatchEvent(clickEvent);
-
-            logs.push(`Clicked row at (${Math.round(clickX)}, ${Math.round(clickY)})`);
-            return { success: true, logs };
-          }, i);
-
-          console.log(`[B2PWeb] Row click result: ${JSON.stringify(rowClicked)}`);
-          await delay(1500);
+          console.log(`[B2PWeb] Route: ${offerInfo.departure} -> ${offerInfo.delivery}`);
 
           // Check if Offer informations panel opened
           const panelOpened = await this.page.evaluate(() => {
@@ -1060,7 +1443,7 @@ export class TransportScrapingService {
           console.log(`[B2PWeb] Offer informations panel opened: ${panelOpened}`);
 
           if (!panelOpened) {
-            console.log(`[B2PWeb] Panel did not open for offer ${i + 1}, skipping...`);
+            console.log(`[B2PWeb] Panel did not open for offer ${offerId}, skipping...`);
             continue;
           }
 
@@ -1173,10 +1556,7 @@ export class TransportScrapingService {
           console.log(`[B2PWeb] History button click result: ${JSON.stringify(historyButtonClicked)}`);
 
           if (!historyButtonClicked.success) {
-            console.log(`[B2PWeb] Could not find History button for offer ${i + 1}, skipping...`);
-            // Press Escape to close panel and continue
-            await this.page.keyboard.press('Escape');
-            await delay(500);
+            console.log(`[B2PWeb] Could not find History button for offer ${offerId}, skipping...`);
             continue;
           }
 
@@ -1292,120 +1672,13 @@ export class TransportScrapingService {
           }
 
           // ==========================================
-          // GO BACK TO OFFER LIST
+          // OFFER COMPLETED
           // ==========================================
-          console.log(`[B2PWeb] Closing popups and returning to offer list...`);
-
-          // Try clicking outside popup to close it (click on left side of screen)
-          await this.page.mouse.click(100, 300);
-          await delay(500);
-
-          // Close all popups with multiple Escape presses
-          await this.page.keyboard.press('Escape');
-          await delay(500);
-          await this.page.keyboard.press('Escape');
-          await delay(500);
-          await this.page.keyboard.press('Escape');
-          await delay(1000);
-
-          // Check if we're still on the offer detail page (URL contains offer ID)
-          const currentUrl = this.page.url();
-          const isOnOfferDetail = currentUrl.includes('/offer/') && currentUrl.match(/\/offer\/\d+/);
-
-          // Check if popup is still visible
-          const stillHasPopup = await this.page.evaluate(() => {
-            return document.body.innerText.includes('Consultants') ||
-                   document.body.innerText.includes('Historique') ||
-                   document.body.innerText.includes('Activités') ||
-                   document.body.innerText.includes('Active searches') ||
-                   document.body.innerText.includes('Recherches actives') ||
-                   document.body.innerText.includes('Utilisateurs ayant consulté');
-          });
-
-          console.log(`[B2PWeb] Current URL: ${currentUrl}, isOnOfferDetail: ${isOnOfferDetail}, stillHasPopup: ${stillHasPopup}`);
-
-          // If popup is still visible, try more aggressive closing
-          if (stillHasPopup) {
-            console.log(`[B2PWeb] Popup still visible, trying more clicks outside...`);
-            // Click multiple times in different positions to ensure popup closes
-            await this.page.mouse.click(50, 400);
-            await delay(300);
-            await this.page.mouse.click(50, 500);
-            await delay(300);
-            await this.page.keyboard.press('Escape');
-            await delay(500);
-          }
-
-          // Check if panel is still open and close it by clicking X button
-          const panelClosed = await this.page.evaluate(() => {
-            // Look for close button in panel
-            const closeSelectors = [
-              '[aria-label="Close"]',
-              '[aria-label="Fermer"]',
-              'button[class*="close"]',
-              '.close-button',
-              'button svg[class*="close"]',
-              '[class*="panel"] button:first-child'
-            ];
-            for (const sel of closeSelectors) {
-              const closeBtn = document.querySelector(sel);
-              if (closeBtn) {
-                (closeBtn as HTMLElement).click();
-                return `Closed via ${sel}`;
-              }
-            }
-            return null;
-          });
-
-          if (panelClosed) {
-            console.log(`[B2PWeb] ${panelClosed}`);
-            await delay(500);
-          }
-
-          // Final escape presses to ensure clean state
-          await this.page.keyboard.press('Escape');
-          await delay(300);
-          await this.page.keyboard.press('Escape');
-          await delay(500);
-
-          // Only navigate back if absolutely necessary (if we're on wrong URL)
-          const finalUrl = this.page.url();
-          const needsNavigation = !finalUrl.includes('/offer') || (finalUrl.includes('/offer/') && finalUrl.match(/\/offer\/\d+/));
-
-          if (needsNavigation) {
-            console.log(`[B2PWeb] URL changed, navigating back to offer list...`);
-            await this.page.goto('https://app.b2pweb.com/offer', {
-              waitUntil: 'networkidle2',
-              timeout: 60000
-            });
-            await delay(2000);
-
-            // Re-apply the Déposant filter after navigation
-            console.log(`[B2PWeb] Re-applying Déposant filter...`);
-            await this.setDeposantFilter();
-            await delay(1500);
-          } else {
-            console.log(`[B2PWeb] Still on offer list, no navigation needed`);
-          }
-
-          // Small delay before processing next offer
-          console.log(`[B2PWeb] Offer ${i + 1} completed. Moving to next offer...`);
-          await delay(1000);
+          console.log(`[B2PWeb] Offer ${i + 1}/${offerIds.length} (ID: ${offerId}) completed. Found ${consultants.length} transporters.`);
 
         } catch (err: any) {
-          console.log(`[B2PWeb] Error processing offer ${i + 1}: ${err.message}`);
-          // Try to recover by going back to offer list
-          try {
-            console.log(`[B2PWeb] Recovering - navigating to offer list...`);
-            await this.page.goto('https://app.b2pweb.com/offer', {
-              waitUntil: 'networkidle2',
-              timeout: 30000
-            });
-            await delay(2000);
-            // Re-apply filter after recovery
-            await this.setDeposantFilter();
-            await delay(1000);
-          } catch (e) { /* ignore */ }
+          console.log(`[B2PWeb] Error processing offer ${i + 1} (ID: ${offerId}): ${err.message}`);
+          // Continue to next offer
         }
       }
 
@@ -1441,7 +1714,7 @@ export class TransportScrapingService {
 
     let previousEmailCount = 0;
     let scrollAttempts = 0;
-    const maxScrollAttempts = 50; // Max 50 scrolls to avoid infinite loop
+    const maxScrollAttempts = 10; // Max 10 scrolls per offer to avoid cumulative scroll issues
 
     while (scrollAttempts < maxScrollAttempts) {
       // Scroll the transporters list container
