@@ -228,8 +228,8 @@ export class TransportScrapingService {
     const offerUrl = `https://app.b2pweb.com/offer/${offerId}`;
     console.log(`[Queue] Navigating to ${offerUrl}`);
 
-    await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    await delay(1500);
+    await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    await delay(2000);
 
     // Get offer info from the page
     const offerInfo = await this.page.evaluate(() => {
@@ -506,6 +506,30 @@ export class TransportScrapingService {
     for (const transporter of transporters) {
       await this.saveTransporterWithRoute(transporter, offerInfo.departureDept, offerInfo.deliveryDept);
     }
+
+    // ==========================================
+    // STEP 4: Close popup by clicking outside (same as continuous scraping)
+    // ==========================================
+    console.log(`[Queue] Closing History popup by clicking outside...`);
+    await this.page.evaluate(() => {
+      // Click outside the popup to close it
+      const overlay = document.querySelector('.v-overlay__scrim, .v-dialog__scrim, [class*="overlay"]');
+      if (overlay) {
+        (overlay as HTMLElement).click();
+        return 'overlay';
+      }
+      // Or click on the main content area
+      const mainArea = document.querySelector('.v-main, main, [class*="main-content"]');
+      if (mainArea) {
+        (mainArea as HTMLElement).click();
+        return 'main';
+      }
+      // Fallback: click at coordinates outside popup (left side of screen)
+      document.elementFromPoint(50, 300)?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return 'coordinates';
+    });
+    await delay(1000);
+    console.log(`[Queue] Offer ${offerId} completed. Found ${transporters.length} transporters.`);
   }
 
   // Sauvegarder un transporteur avec sa route
