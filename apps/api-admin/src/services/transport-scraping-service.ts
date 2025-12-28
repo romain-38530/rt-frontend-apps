@@ -511,23 +511,15 @@ export class TransportScrapingService {
     // STEP 4: Close popup by clicking outside (same as continuous scraping)
     // ==========================================
     console.log(`[Queue] Closing History popup by clicking outside...`);
-    await this.page.evaluate(() => {
-      // Click outside the popup to close it
-      const overlay = document.querySelector('.v-overlay__scrim, .v-dialog__scrim, [class*="overlay"]');
-      if (overlay) {
-        (overlay as HTMLElement).click();
-        return 'overlay';
-      }
-      // Or click on the main content area
-      const mainArea = document.querySelector('.v-main, main, [class*="main-content"]');
-      if (mainArea) {
-        (mainArea as HTMLElement).click();
-        return 'main';
-      }
-      // Fallback: click at coordinates outside popup (left side of screen)
-      document.elementFromPoint(50, 300)?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      return 'coordinates';
-    });
+    try {
+      // Use Puppeteer's mouse.click at coordinates on left side of screen (outside popup)
+      await this.page.mouse.click(50, 400);
+      await delay(500);
+      // Try pressing Escape as backup
+      await this.page.keyboard.press('Escape');
+    } catch (e) {
+      console.log(`[Queue] Error closing popup: ${(e as Error).message}`);
+    }
     await delay(1000);
     console.log(`[Queue] Offer ${offerId} completed. Found ${transporters.length} transporters.`);
   }
