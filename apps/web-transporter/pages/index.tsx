@@ -378,6 +378,66 @@ export default function HomePage() {
             </p>
           </div>
 
+          {/* Upgrade Banner for Free Users */}
+          {subscription?.tier === 'free' && (
+            <div
+              onClick={() => router.push('/upgrade')}
+              style={{
+                background: 'linear-gradient(135deg, rgba(249,115,22,0.95) 0%, rgba(220,38,38,0.95) 100%)',
+                borderRadius: '20px',
+                padding: '24px 32px',
+                marginBottom: '32px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '20px',
+                cursor: 'pointer',
+                border: '2px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 10px 40px rgba(249,115,22,0.3)',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 20px 60px rgba(249,115,22,0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 40px rgba(249,115,22,0.3)';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ fontSize: '40px' }}>&#9889;</span>
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800' }}>
+                    Passez a Premium et debloquez tout le potentiel !
+                  </h3>
+                  <p style={{ margin: 0, opacity: 0.9, fontSize: '14px' }}>
+                    Transports illimites, AFFRET.IA, KPIs avances, support prioritaire...
+                  </p>
+                </div>
+              </div>
+              <button
+                style={{
+                  padding: '14px 28px',
+                  background: 'white',
+                  color: '#f97316',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                Voir les offres &#8594;
+              </button>
+            </div>
+          )}
+
           {/* Features Grid */}
           <div style={{
             display: 'grid',
