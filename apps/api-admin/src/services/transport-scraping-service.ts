@@ -229,7 +229,36 @@ export class TransportScrapingService {
     console.log(`[Queue] Navigating to ${offerUrl}`);
 
     await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    await delay(2000);
+
+    // v2.65.0: Wait longer for page to fully load and panel to render
+    await delay(4000);
+
+    // Wait for page content to be ready (check for any B2PWeb specific elements)
+    let pageReady = false;
+    for (let i = 0; i < 10; i++) {
+      const hasContent = await this.page.evaluate(() => {
+        const text = document.body.innerText;
+        // Check for common B2PWeb elements
+        return text.length > 500 && (
+          text.includes('B2Pweb') ||
+          text.includes('Offer') ||
+          text.includes('offre') ||
+          text.includes('Déposant') ||
+          text.includes('Depositor') ||
+          document.querySelectorAll('button').length > 3
+        );
+      });
+      if (hasContent) {
+        pageReady = true;
+        console.log(`[Queue] Page ready after ${i + 1} checks`);
+        break;
+      }
+      await delay(1000);
+    }
+
+    if (!pageReady) {
+      console.log('[Queue] Warning: Page may not be fully loaded, continuing anyway...');
+    }
 
     // Get offer info from the page
     const offerInfo = await this.page.evaluate(() => {
@@ -264,17 +293,35 @@ export class TransportScrapingService {
 
     console.log(`[Queue] Route: ${offerInfo.departure} -> ${offerInfo.delivery}`);
 
-    // Check if Offer informations panel opened
-    const panelOpened = await this.page.evaluate(() => {
-      const body = document.body.innerText;
-      return body.includes('Offer informations') || body.includes('Informations de l\'offre') ||
-             body.includes('Offer details') || body.includes('Offer\'s contact') ||
-             body.includes('Depositor') || body.includes('Déposant');
-    });
+    // Check if Offer informations panel opened - v2.65.0: More flexible detection
+    let panelOpened = false;
+    for (let i = 0; i < 5; i++) {
+      panelOpened = await this.page.evaluate(() => {
+        const body = document.body.innerText.toLowerCase();
+        // More flexible checks - any of these indicates the offer page loaded
+        return body.includes('offer') ||
+               body.includes('offre') ||
+               body.includes('depositor') ||
+               body.includes('déposant') ||
+               body.includes('carrier') ||
+               body.includes('transporteur') ||
+               body.includes('history') ||
+               body.includes('historique') ||
+               document.querySelectorAll('button svg').length > 2; // Has icon buttons
+      });
+      if (panelOpened) break;
+      console.log(`[Queue] Waiting for panel... attempt ${i + 1}/5`);
+      await delay(2000);
+    }
     console.log(`[Queue] Offer informations panel opened: ${panelOpened}`);
 
     if (!panelOpened) {
       console.log(`[Queue] Panel did not open for offer ${offerId}, skipping...`);
+      // Take a screenshot for debugging
+      try {
+        const debugText = await this.page.evaluate(() => document.body.innerText.substring(0, 500));
+        console.log(`[Queue] Page content: ${debugText}`);
+      } catch (e) {}
       return;
     }
 
