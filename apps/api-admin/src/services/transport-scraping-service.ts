@@ -1866,47 +1866,145 @@ export class TransportScrapingService {
 
     let previousEmailCount = 0;
     let scrollAttempts = 0;
-    const maxScrollAttempts = 10; // Max 10 scrolls per offer to avoid cumulative scroll issues
+    let noNewEmailsCount = 0;
+    const maxScrollAttempts = 100; // Max 100 scrolls to load up to 500 transporters
 
+    // v2.64.3: Try multiple scroll strategies - keyboard, mouse wheel, and direct scroll
     while (scrollAttempts < maxScrollAttempts) {
-      // Scroll the transporters list container
-      const scrollResult = await this.page.evaluate(() => {
-        const logs: string[] = [];
-        let scrolled = false;
 
-        // Try ALL scrollable elements on the page
-        document.querySelectorAll('*').forEach(el => {
-          const htmlEl = el as HTMLElement;
-          // Check if element is scrollable (has more content than visible)
-          if (htmlEl.scrollHeight > htmlEl.clientHeight + 100) {
-            const prevScroll = htmlEl.scrollTop;
-            htmlEl.scrollTop += 500; // Scroll down 500px
-            if (htmlEl.scrollTop !== prevScroll) {
-              scrolled = true;
-              logs.push(`Scrolled ${el.tagName}.${el.className.split(' ')[0]}`);
+      // STRATEGY 1: Click on a table row FIRST to activate keyboard scroll (v2.64.4)
+      if (scrollAttempts === 0) {
+        console.log('[B2PWeb Extract] Clicking on table to activate keyboard scroll...');
+
+        // First try to click on a table row
+        const clickResult = await this.page.evaluate(() => {
+          // Try clicking on a table row first (most reliable)
+          const tableRow = document.querySelector('.v-data-table tbody tr, table tbody tr, [role="row"]');
+          if (tableRow) {
+            (tableRow as HTMLElement).click();
+            return 'clicked table row';
+          }
+
+          // Try vue-recycle-scroller
+          const scroller = document.querySelector('.vue-recycle-scroller, [class*="recycle-scroller"], [class*="virtual-scroll"]');
+          if (scroller) {
+            (scroller as HTMLElement).click();
+            return 'clicked scroller';
+          }
+
+          // Try any item inside the dialog's list/table
+          const dialog = document.querySelector('.v-dialog, [role="dialog"]');
+          if (dialog) {
+            const item = dialog.querySelector('.v-list-item, .v-data-table__wrapper, tr, [class*="item"]');
+            if (item) {
+              (item as HTMLElement).click();
+              return 'clicked dialog item';
             }
           }
+
+          return 'no clickable element found';
         });
 
-        // Count current emails visible
+        console.log(`[B2PWeb Extract] Click result: ${clickResult}`);
+        await delay(300);
+
+        // Also move mouse and click with Puppeteer for extra reliability
+        const firstRowPos = await this.page.evaluate(() => {
+          const row = document.querySelector('.v-data-table tbody tr, table tbody tr, [role="row"]');
+          if (row) {
+            const rect = row.getBoundingClientRect();
+            return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+          }
+          const dialog = document.querySelector('.v-dialog, [role="dialog"]');
+          if (dialog) {
+            const rect = dialog.getBoundingClientRect();
+            return { x: rect.x + rect.width / 2, y: rect.y + 200, found: true }; // Click lower in dialog
+          }
+          return { x: 0, y: 0, found: false };
+        });
+
+        if (firstRowPos.found) {
+          await this.page.mouse.click(firstRowPos.x, firstRowPos.y);
+          console.log(`[B2PWeb Extract] Mouse clicked at (${firstRowPos.x}, ${firstRowPos.y})`);
+          await delay(200);
+        }
+      }
+
+      // Get dialog position for mouse
+      const dialogBounds = await this.page.evaluate(() => {
+        const dialog = document.querySelector('.v-dialog, [role="dialog"], [class*="modal"]');
+        if (dialog) {
+          const rect = dialog.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+        }
+        return { x: window.innerWidth / 2, y: window.innerHeight / 2, found: false };
+      });
+
+      // Alternate between different scroll methods
+      const scrollMethod = scrollAttempts % 3;
+
+      if (scrollMethod === 0) {
+        // Method 1: Keyboard PageDown (works best with virtual scrollers)
+        await this.page.keyboard.press('PageDown');
+      } else if (scrollMethod === 1) {
+        // Method 2: Mouse wheel
+        await this.page.mouse.move(dialogBounds.x, dialogBounds.y);
+        await this.page.mouse.wheel({ deltaY: 500 });
+      } else {
+        // Method 3: Multiple ArrowDown keys (finer control)
+        for (let i = 0; i < 5; i++) {
+          await this.page.keyboard.press('ArrowDown');
+          await delay(50);
+        }
+      }
+
+      await delay(800); // v2.64.5: Wait longer for virtual scroller to render (800ms instead of 400ms)
+
+      // Also try direct scrollTop manipulation on the scroller
+      await this.page.evaluate((attempt) => {
+        const scrollAmount = 300;
+        // Try vue-recycle-scroller
+        const scroller = document.querySelector('.vue-recycle-scroller, [class*="recycle-scroller"]');
+        if (scroller) {
+          (scroller as HTMLElement).scrollTop += scrollAmount;
+        }
+        // Also try scrollable containers in dialog
+        const dialog = document.querySelector('.v-dialog, [role="dialog"]');
+        if (dialog) {
+          const scrollables = dialog.querySelectorAll('[style*="overflow"], .v-data-table__wrapper');
+          scrollables.forEach(el => {
+            (el as HTMLElement).scrollTop += scrollAmount;
+          });
+        }
+      }, scrollAttempts);
+
+      await delay(600); // v2.64.5: More time for data loading (600ms instead of 300ms)
+
+      // Count emails after scroll
+      const scrollResult = await this.page.evaluate(() => {
         const pageText = document.body.innerText;
         const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
         const uniqueEmails = new Set(emailMatches.map(e => e.toLowerCase()));
-
         return {
-          scrolled,
-          emailCount: uniqueEmails.size,
-          logs: logs.slice(0, 5)
+          emailCount: uniqueEmails.size
         };
       });
 
-      console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails, scrolled: ${scrollResult.scrolled}, logs: ${scrollResult.logs.join(', ')}`);
+      // Log every 5 scrolls to reduce noise
+      if (scrollAttempts % 5 === 0 || scrollResult.emailCount !== previousEmailCount) {
+        console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails (method: ${scrollMethod}, dialog: ${dialogBounds.found})`);
+      }
 
-      // If no new emails loaded after scroll, we've reached the end
-      // Wait for 5 consecutive scrolls with no new emails before stopping
-      if (scrollResult.emailCount === previousEmailCount && scrollAttempts > 10) {
-        console.log('[B2PWeb Extract] No new emails after multiple scrolls, stopping');
-        break;
+      // If no new emails loaded after scroll, count consecutive failures
+      if (scrollResult.emailCount === previousEmailCount) {
+        noNewEmailsCount++;
+        // Stop after 10 consecutive scrolls with no new emails (increased from 5)
+        if (noNewEmailsCount >= 10) {
+          console.log(`[B2PWeb Extract] No new emails after 10 consecutive scrolls, stopping at ${scrollResult.emailCount} emails`);
+          break;
+        }
+      } else {
+        noNewEmailsCount = 0; // Reset counter when we get new emails
       }
 
       previousEmailCount = scrollResult.emailCount;
@@ -1917,8 +2015,6 @@ export class TransportScrapingService {
         console.log(`[B2PWeb Extract] Reached max rows (${maxRows}), stopping scroll`);
         break;
       }
-
-      await delay(800); // Wait for virtual scroller to load more items (increased for network latency)
     }
 
     console.log(`[B2PWeb Extract] Finished scrolling after ${scrollAttempts} attempts, found ${previousEmailCount} emails`);
