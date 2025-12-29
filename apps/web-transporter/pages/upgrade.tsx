@@ -7,6 +7,12 @@ import { isAuthenticated, getUser, logout, getAuthToken } from '../lib/auth';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rt-api.symphonia-controltower.com';
 const STRIPE_API_URL = process.env.NEXT_PUBLIC_STRIPE_API_URL || 'https://d14f2cikqe2x8i.cloudfront.net/api/stripe';
 
+// Stripe Price IDs (Production)
+const STRIPE_PRICE_IDS = {
+  transporteur_premium: "price_1Sjaq3RvJiyzt2LnlyeWcUMb",
+  transporteur_business: "price_1Sjaq3RvJiyzt2LnGgCu0QPZ",
+};
+
 // Plans disponibles pour les transporteurs
 const transporterPlans = [
   {
@@ -16,47 +22,48 @@ const transporterPlans = [
     priceId: null,
     description: 'Pour demarrer',
     features: [
-      '10 transports/mois',
-      'Acces bourse de fret limite',
+      '5 reponses appels d\'offres/mois',
+      'Consultation marketplace',
       'Support email',
       '1 utilisateur'
     ],
     limitations: [
-      'Pas d\'AFFRET.IA',
-      'Pas de KPI avances',
-      'Pas de priorite matching'
+      'Pas de GPS Tracking',
+      'Pas d\'eCMR',
+      'Pas de facturation auto'
     ]
   },
   {
     id: 'transporteur_premium',
     name: 'Premium',
-    price: 299,
-    priceId: 'price_transporteur_premium_monthly',
+    price: 99,
+    priceId: STRIPE_PRICE_IDS.transporteur_premium,
     description: 'Pour les flottes en croissance',
     popular: true,
     features: [
-      'Transports illimites',
-      'Acces complet bourse de fret',
-      'AFFRET.IA inclus',
-      'KPI et analytics',
+      'Reponses illimitees aux appels d\'offres',
+      'GPS Tracking (10 vehicules)',
+      'eCMR electronique',
+      'Gestion de flotte',
+      'Facturation automatique',
+      'Palettes Europe',
+      'Statistiques avancees',
       'Support prioritaire',
-      '5 utilisateurs',
-      'Matching prioritaire',
-      'Notifications temps reel'
+      '3 utilisateurs'
     ]
   },
   {
-    id: 'transporteur_pro',
-    name: 'Pro',
-    price: 499,
-    priceId: 'price_transporteur_pro_monthly',
+    id: 'transporteur_business',
+    name: 'Business',
+    price: 299,
+    priceId: STRIPE_PRICE_IDS.transporteur_business,
     description: 'Pour les grandes flottes',
     features: [
       'Tout Premium inclus',
+      'GPS Tracking illimite',
+      'API acces complet',
       'Utilisateurs illimites',
-      'API et integrations TMS',
-      'e-CMR inclus',
-      'Geofencing avance',
+      'Marque blanche',
       'Support 24/7',
       'Gestionnaire dedie',
       'Formation personnalisee'
