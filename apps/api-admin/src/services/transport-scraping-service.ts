@@ -2159,82 +2159,107 @@ export class TransportScrapingService {
         return { x: window.innerWidth * 0.7, y: window.innerHeight / 2, found: false, width: 0, height: 0 };
       });
 
-      // v2.68.2: COMPREHENSIVE SCROLL with better element detection
-      const scrollResult2 = await this.page.evaluate(() => {
+      // v2.72.0: IMPROVED SCROLL for vue-recycle-scroller
+      // The vue-recycle-scroller doesn't respond to scrollTop changes directly
+      // We need to use wheel events and find the RIGHT scroller (the one inside the dialog with transporter data)
+
+      // First, find the correct scroller position for wheel events
+      const scrollerInfo = await this.page.evaluate(() => {
         const debug: string[] = [];
 
-        // Try multiple selectors to find the scroller
-        let scroller: HTMLElement | null = null;
-
-        // 1. Try exact selector from user's inspection
-        scroller = document.querySelector('div.vue-recycle-scroller.ready.direction-vertical') as HTMLElement;
-        if (scroller) debug.push('Found: exact selector');
-
-        // 2. Try any vue-recycle-scroller
-        if (!scroller) {
-          scroller = document.querySelector('div.vue-recycle-scroller') as HTMLElement;
-          if (scroller) debug.push('Found: div.vue-recycle-scroller');
-        }
-
-        // 3. Try within a dialog
-        if (!scroller) {
-          const dialog = document.querySelector('.v-dialog, [role="dialog"]');
-          if (dialog) {
-            scroller = dialog.querySelector('.vue-recycle-scroller') as HTMLElement;
-            if (scroller) debug.push('Found: in dialog');
-          }
-        }
-
-        // 4. Try any element with recycle-scroller in class
-        if (!scroller) {
-          scroller = document.querySelector('[class*="recycle-scroller"]') as HTMLElement;
-          if (scroller) debug.push('Found: class contains recycle-scroller');
-        }
-
-        // 5. Fallback: find the largest scrollable container
-        if (!scroller) {
-          const allScrollable = document.querySelectorAll('*');
-          let maxHeight = 0;
-          for (const el of Array.from(allScrollable)) {
-            const htmlEl = el as HTMLElement;
-            if (htmlEl.scrollHeight > htmlEl.clientHeight + 100 && htmlEl.scrollHeight > maxHeight) {
-              maxHeight = htmlEl.scrollHeight;
-              scroller = htmlEl;
-            }
-          }
-          if (scroller) debug.push(`Fallback: largest scrollable (${scroller.tagName}.${scroller.className.split(' ')[0]})`);
-        }
-
-        // Log what dialogs/popups we can see
-        const dialogs = document.querySelectorAll('.v-dialog, [role="dialog"], .modal');
-        debug.push(`Dialogs found: ${dialogs.length}`);
-
-        // Log all vue-recycle-scroller elements
+        // There are 2 vue-recycle-scroller elements - we need the one with transporter data (emails)
         const allScrollers = document.querySelectorAll('.vue-recycle-scroller');
-        debug.push(`vue-recycle-scroller elements: ${allScrollers.length}`);
+        debug.push(`Total vue-recycle-scroller: ${allScrollers.length}`);
 
-        if (!scroller) {
-          return { success: false, message: 'No scroller found', debug, scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
+        let targetScroller: HTMLElement | null = null;
+
+        for (let i = 0; i < allScrollers.length; i++) {
+          const scroller = allScrollers[i] as HTMLElement;
+          const text = scroller.innerText || '';
+          const hasEmail = text.includes('@');
+          const rect = scroller.getBoundingClientRect();
+          debug.push(`Scroller ${i}: hasEmail=${hasEmail}, pos=(${Math.round(rect.left)},${Math.round(rect.top)}), size=${Math.round(rect.width)}x${Math.round(rect.height)}, scrollH=${scroller.scrollHeight}`);
+
+          // The transporter scroller contains emails and is on the right side of the dialog
+          if (hasEmail && rect.left > 500) {
+            targetScroller = scroller;
+            debug.push(`Selected scroller ${i} (has emails, right side)`);
+          }
         }
 
-        const before = scroller.scrollTop;
-        const scrollAmount = scroller.clientHeight * 0.9;
-        scroller.scrollTop = scroller.scrollTop + scrollAmount;
-        const after = scroller.scrollTop;
+        if (!targetScroller && allScrollers.length > 0) {
+          // Fallback: use the last scroller (usually the data table)
+          targetScroller = allScrollers[allScrollers.length - 1] as HTMLElement;
+          debug.push(`Fallback: using last scroller`);
+        }
 
+        if (!targetScroller) {
+          return { found: false, debug, x: 0, y: 0, scrollTop: 0, scrollHeight: 0, clientHeight: 0 };
+        }
+
+        const rect = targetScroller.getBoundingClientRect();
         return {
-          success: true,
-          message: `Scrolled ${scroller.tagName}.${scroller.className.split(' ')[0]}: ${before} -> ${after}`,
+          found: true,
           debug,
-          scrollTop: after,
-          scrollHeight: scroller.scrollHeight,
-          clientHeight: scroller.clientHeight,
-          atBottom: after + scroller.clientHeight >= scroller.scrollHeight - 10
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          scrollTop: targetScroller.scrollTop,
+          scrollHeight: targetScroller.scrollHeight,
+          clientHeight: targetScroller.clientHeight
         };
       });
 
-      if (scrollAttempts % 5 === 0 || scrollAttempts === 0) {
-        console.log(`[B2PWeb Extract] v2.68.2 Scroll: ${JSON.stringify(scrollResult2)}`);
+      if (scrollAttempts === 0) {
+        console.log(`[B2PWeb Extract] v2.72.0 Scroller info: ${JSON.stringify(scrollerInfo)}`);
+      }
+
+      if (!scrollerInfo.found) {
+        console.log(`[B2PWeb Extract] No scroller found, stopping`);
+        break;
+      }
+
+      // Use Puppeteer mouse wheel to scroll the vue-recycle-scroller
+      await this.page.mouse.move(scrollerInfo.x, scrollerInfo.y);
+      await this.page.mouse.wheel({ deltaY: 500 }); // Scroll down 500px
+
+      // Also try keyboard scroll (PageDown)
+      await this.page.keyboard.press('PageDown');
+
+      // Get updated scroll position
+      const scrollResult2 = await this.page.evaluate(() => {
+        const scrollers = document.querySelectorAll('.vue-recycle-scroller');
+        let targetScroller: HTMLElement | null = null;
+
+        for (const scroller of Array.from(scrollers)) {
+          const text = (scroller as HTMLElement).innerText || '';
+          const rect = (scroller as HTMLElement).getBoundingClientRect();
+          if (text.includes('@') && rect.left > 500) {
+            targetScroller = scroller as HTMLElement;
+            break;
+          }
+        }
+
+        if (!targetScroller && scrollers.length > 0) {
+          targetScroller = scrollers[scrollers.length - 1] as HTMLElement;
+        }
+
+        if (!targetScroller) {
+          return { success: false, message: 'No scroller', debug: [], scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: true };
+        }
+
+        return {
+          success: true,
+          message: `Scroller at scrollTop=${targetScroller.scrollTop}`,
+          debug: [],
+          scrollTop: targetScroller.scrollTop,
+          scrollHeight: targetScroller.scrollHeight,
+          clientHeight: targetScroller.clientHeight,
+          atBottom: targetScroller.scrollTop + targetScroller.clientHeight >= targetScroller.scrollHeight - 50
+        };
+      });
+
+      if (scrollAttempts % 5 === 0) {
+        console.log(`[B2PWeb Extract] v2.72.0 Scroll ${scrollAttempts}: scrollTop=${scrollResult2.scrollTop}, atBottom=${scrollResult2.atBottom}`);
       }
 
       await delay(300); // Wait for vue-recycle-scroller to render new items
