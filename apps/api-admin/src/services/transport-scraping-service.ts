@@ -228,10 +228,15 @@ export class TransportScrapingService {
     const offerUrl = `https://app.b2pweb.com/offer/${offerId}`;
     console.log(`[Queue] Navigating to ${offerUrl}`);
 
-    await this.page.goto(offerUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    // v2.66.1: Use 'load' instead of 'networkidle2' to avoid timeout, with try/catch
+    try {
+      await this.page.goto(offerUrl, { waitUntil: 'load', timeout: 30000 });
+    } catch (navError: any) {
+      console.log(`[Queue] Navigation warning: ${navError.message}, continuing anyway...`);
+    }
 
-    // v2.65.0: Wait longer for page to fully load and panel to render
-    await delay(4000);
+    // Wait for Vue.js to render
+    await delay(5000);
 
     // Wait for page content to be ready (check for any B2PWeb specific elements)
     let pageReady = false;
@@ -1914,7 +1919,11 @@ export class TransportScrapingService {
     let previousEmailCount = 0;
     let scrollAttempts = 0;
     let noNewEmailsCount = 0;
-    const maxScrollAttempts = 100; // Max 100 scrolls to load up to 500 transporters
+    const maxScrollAttempts = 200; // v2.67.0: Max 200 scrolls to really try to load all transporters
+
+    // v2.68.0: ACCUMULATE emails during scroll (virtual scroller removes items from DOM)
+    const allCollectedEmails = new Set<string>();
+    const allCollectedData: Array<{ email: string; company: string; contact: string; phone: string; date: string }> = [];
 
     // v2.64.3: Try multiple scroll strategies - keyboard, mouse wheel, and direct scroll
     while (scrollAttempts < maxScrollAttempts) {
@@ -1977,206 +1986,252 @@ export class TransportScrapingService {
         }
       }
 
-      // Get dialog position for mouse
+      // v2.66.0: Get the RIGHT side of dialog where table is (History popup has menu on left, table on right)
       const dialogBounds = await this.page.evaluate(() => {
         const dialog = document.querySelector('.v-dialog, [role="dialog"], [class*="modal"]');
         if (dialog) {
           const rect = dialog.getBoundingClientRect();
-          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+          // Target the RIGHT 70% of the dialog where the table is
+          return { x: rect.x + rect.width * 0.7, y: rect.y + rect.height * 0.5, found: true, width: rect.width, height: rect.height };
         }
-        return { x: window.innerWidth / 2, y: window.innerHeight / 2, found: false };
+        return { x: window.innerWidth * 0.7, y: window.innerHeight / 2, found: false, width: 0, height: 0 };
       });
 
-      // Alternate between different scroll methods
-      const scrollMethod = scrollAttempts % 3;
+      // v2.68.2: COMPREHENSIVE SCROLL with better element detection
+      const scrollResult2 = await this.page.evaluate(() => {
+        const debug: string[] = [];
 
-      if (scrollMethod === 0) {
-        // Method 1: Keyboard PageDown (works best with virtual scrollers)
-        await this.page.keyboard.press('PageDown');
-      } else if (scrollMethod === 1) {
-        // Method 2: Mouse wheel
-        await this.page.mouse.move(dialogBounds.x, dialogBounds.y);
-        await this.page.mouse.wheel({ deltaY: 500 });
-      } else {
-        // Method 3: Multiple ArrowDown keys (finer control)
-        for (let i = 0; i < 5; i++) {
-          await this.page.keyboard.press('ArrowDown');
-          await delay(50);
+        // Try multiple selectors to find the scroller
+        let scroller: HTMLElement | null = null;
+
+        // 1. Try exact selector from user's inspection
+        scroller = document.querySelector('div.vue-recycle-scroller.ready.direction-vertical') as HTMLElement;
+        if (scroller) debug.push('Found: exact selector');
+
+        // 2. Try any vue-recycle-scroller
+        if (!scroller) {
+          scroller = document.querySelector('div.vue-recycle-scroller') as HTMLElement;
+          if (scroller) debug.push('Found: div.vue-recycle-scroller');
         }
-      }
 
-      await delay(800); // v2.64.5: Wait longer for virtual scroller to render (800ms instead of 400ms)
-
-      // Also try direct scrollTop manipulation on the scroller
-      await this.page.evaluate((attempt) => {
-        const scrollAmount = 300;
-        // Try vue-recycle-scroller
-        const scroller = document.querySelector('.vue-recycle-scroller, [class*="recycle-scroller"]');
-        if (scroller) {
-          (scroller as HTMLElement).scrollTop += scrollAmount;
+        // 3. Try within a dialog
+        if (!scroller) {
+          const dialog = document.querySelector('.v-dialog, [role="dialog"]');
+          if (dialog) {
+            scroller = dialog.querySelector('.vue-recycle-scroller') as HTMLElement;
+            if (scroller) debug.push('Found: in dialog');
+          }
         }
-        // Also try scrollable containers in dialog
-        const dialog = document.querySelector('.v-dialog, [role="dialog"]');
-        if (dialog) {
-          const scrollables = dialog.querySelectorAll('[style*="overflow"], .v-data-table__wrapper');
-          scrollables.forEach(el => {
-            (el as HTMLElement).scrollTop += scrollAmount;
-          });
+
+        // 4. Try any element with recycle-scroller in class
+        if (!scroller) {
+          scroller = document.querySelector('[class*="recycle-scroller"]') as HTMLElement;
+          if (scroller) debug.push('Found: class contains recycle-scroller');
         }
-      }, scrollAttempts);
 
-      await delay(600); // v2.64.5: More time for data loading (600ms instead of 300ms)
+        // 5. Fallback: find the largest scrollable container
+        if (!scroller) {
+          const allScrollable = document.querySelectorAll('*');
+          let maxHeight = 0;
+          for (const el of Array.from(allScrollable)) {
+            const htmlEl = el as HTMLElement;
+            if (htmlEl.scrollHeight > htmlEl.clientHeight + 100 && htmlEl.scrollHeight > maxHeight) {
+              maxHeight = htmlEl.scrollHeight;
+              scroller = htmlEl;
+            }
+          }
+          if (scroller) debug.push(`Fallback: largest scrollable (${scroller.tagName}.${scroller.className.split(' ')[0]})`);
+        }
 
-      // Count emails after scroll
-      const scrollResult = await this.page.evaluate(() => {
-        const pageText = document.body.innerText;
-        const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
-        const uniqueEmails = new Set(emailMatches.map(e => e.toLowerCase()));
+        // Log what dialogs/popups we can see
+        const dialogs = document.querySelectorAll('.v-dialog, [role="dialog"], .modal');
+        debug.push(`Dialogs found: ${dialogs.length}`);
+
+        // Log all vue-recycle-scroller elements
+        const allScrollers = document.querySelectorAll('.vue-recycle-scroller');
+        debug.push(`vue-recycle-scroller elements: ${allScrollers.length}`);
+
+        if (!scroller) {
+          return { success: false, message: 'No scroller found', debug, scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
+        }
+
+        const before = scroller.scrollTop;
+        const scrollAmount = scroller.clientHeight * 0.9;
+        scroller.scrollTop = scroller.scrollTop + scrollAmount;
+        const after = scroller.scrollTop;
+
         return {
-          emailCount: uniqueEmails.size
+          success: true,
+          message: `Scrolled ${scroller.tagName}.${scroller.className.split(' ')[0]}: ${before} -> ${after}`,
+          debug,
+          scrollTop: after,
+          scrollHeight: scroller.scrollHeight,
+          clientHeight: scroller.clientHeight,
+          atBottom: after + scroller.clientHeight >= scroller.scrollHeight - 10
         };
       });
 
-      // Log every 5 scrolls to reduce noise
-      if (scrollAttempts % 5 === 0 || scrollResult.emailCount !== previousEmailCount) {
-        console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: ${scrollResult.emailCount} emails (method: ${scrollMethod}, dialog: ${dialogBounds.found})`);
+      if (scrollAttempts % 5 === 0 || scrollAttempts === 0) {
+        console.log(`[B2PWeb Extract] v2.68.2 Scroll: ${JSON.stringify(scrollResult2)}`);
       }
 
-      // If no new emails loaded after scroll, count consecutive failures
-      if (scrollResult.emailCount === previousEmailCount) {
+      await delay(300); // Wait for vue-recycle-scroller to render new items
+
+      // v2.68.2: COLLECT visible data - try multiple methods
+      const visibleData = await this.page.evaluate((attemptNum) => {
+        const collected: Array<{ email: string; company: string; contact: string; phone: string; date: string; rawText: string }> = [];
+        const debug: string[] = [];
+
+        // METHOD 1: Try vue-recycle-scroller__item-view elements
+        const itemViews = document.querySelectorAll('.vue-recycle-scroller__item-view');
+        debug.push(`item-views: ${itemViews.length}`);
+
+        if (itemViews.length > 0) {
+          for (const itemView of Array.from(itemViews)) {
+            const text = (itemView as HTMLElement).innerText || '';
+
+            // Log first item for debug
+            if (collected.length === 0 && attemptNum === 0) {
+              debug.push(`First item: ${text.substring(0, 100).replace(/\n/g, ' | ')}`);
+            }
+
+            // Find email in this row
+            const emailMatch = text.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/i);
+            if (emailMatch) {
+              const email = emailMatch[0].toLowerCase();
+              if (email.includes('b2pweb') || email.includes('admin') || email.includes('support')) continue;
+
+              const phoneMatch = text.match(/(?:\+33\s?[1-9](?:[\s.-]?\d{2}){4}|\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/);
+              const dateMatch = text.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+              const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes('@') && !l.match(/^\+?\d/));
+
+              collected.push({
+                email,
+                company: lines[0] || '',
+                contact: lines[1] || '',
+                phone: phoneMatch ? phoneMatch[0] : '',
+                date: dateMatch ? dateMatch[0] : '',
+                rawText: text.substring(0, 200)
+              });
+            }
+          }
+        }
+
+        // METHOD 2: If no item-views found, try table rows
+        if (collected.length === 0) {
+          const tableRows = document.querySelectorAll('table tbody tr, .v-data-table tbody tr');
+          debug.push(`table rows: ${tableRows.length}`);
+
+          for (const row of Array.from(tableRows)) {
+            const text = (row as HTMLElement).innerText || '';
+            const emailMatch = text.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/i);
+            if (emailMatch) {
+              const email = emailMatch[0].toLowerCase();
+              if (email.includes('b2pweb') || email.includes('admin') || email.includes('support')) continue;
+
+              const phoneMatch = text.match(/(?:\+33\s?[1-9](?:[\s.-]?\d{2}){4}|\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/);
+              const dateMatch = text.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+              const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes('@') && !l.match(/^\+?\d/));
+
+              collected.push({
+                email,
+                company: lines[0] || '',
+                contact: lines[1] || '',
+                phone: phoneMatch ? phoneMatch[0] : '',
+                date: dateMatch ? dateMatch[0] : '',
+                rawText: text.substring(0, 200)
+              });
+            }
+          }
+        }
+
+        // METHOD 3: Fallback - search entire page for emails
+        if (collected.length === 0) {
+          const pageText = document.body.innerText;
+          const allEmails = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
+          debug.push(`Page emails: ${allEmails.length}`);
+
+          const seen = new Set<string>();
+          for (const email of allEmails) {
+            const lowerEmail = email.toLowerCase();
+            if (seen.has(lowerEmail)) continue;
+            if (lowerEmail.includes('b2pweb') || lowerEmail.includes('admin') || lowerEmail.includes('support')) continue;
+            seen.add(lowerEmail);
+
+            collected.push({
+              email: lowerEmail,
+              company: lowerEmail.split('@')[1]?.split('.')[0]?.toUpperCase() || '',
+              contact: '',
+              phone: '',
+              date: '',
+              rawText: ''
+            });
+          }
+        }
+
+        debug.push(`Total collected: ${collected.length}`);
+        return { collected, debug };
+      }, scrollAttempts);
+
+      // Log debug info on first scroll and every 10 scrolls
+      if (scrollAttempts === 0 || scrollAttempts % 10 === 0) {
+        console.log(`[B2PWeb Extract] v2.68.2 Collect: ${JSON.stringify(visibleData.debug)}`);
+      }
+
+      // Add to our accumulated collection (skip duplicates)
+      let newEmailsThisScroll = 0;
+      for (const item of visibleData.collected) {
+        if (!allCollectedEmails.has(item.email)) {
+          allCollectedEmails.add(item.email);
+          allCollectedData.push(item);
+          newEmailsThisScroll++;
+        }
+      }
+
+      const currentTotal = allCollectedEmails.size;
+
+      // Log every 5 scrolls or when we find new emails
+      if (scrollAttempts % 5 === 0 || newEmailsThisScroll > 0) {
+        console.log(`[B2PWeb Extract] Scroll ${scrollAttempts + 1}: +${newEmailsThisScroll} new, total ${currentTotal} emails (atBottom: ${scrollResult2.atBottom})`);
+      }
+
+      // If no new emails found, increment counter
+      if (newEmailsThisScroll === 0) {
         noNewEmailsCount++;
-        // Stop after 10 consecutive scrolls with no new emails (increased from 5)
-        if (noNewEmailsCount >= 10) {
-          console.log(`[B2PWeb Extract] No new emails after 10 consecutive scrolls, stopping at ${scrollResult.emailCount} emails`);
+        // v2.68.0: Stop after 5 consecutive scrolls with no new emails (since we're scrolling properly now)
+        if (noNewEmailsCount >= 5 && currentTotal > 5) {
+          console.log(`[B2PWeb Extract] No new emails after 5 scrolls, stopping at ${currentTotal} emails`);
+          break;
+        }
+        // Also stop if we've reached the bottom
+        if (scrollResult2.atBottom) {
+          console.log(`[B2PWeb Extract] Reached bottom of scroller with ${currentTotal} emails`);
           break;
         }
       } else {
         noNewEmailsCount = 0; // Reset counter when we get new emails
       }
 
-      previousEmailCount = scrollResult.emailCount;
+      previousEmailCount = currentTotal;
       scrollAttempts++;
 
       // Stop if we have enough
-      if (scrollResult.emailCount >= maxRows) {
+      if (currentTotal >= maxRows) {
         console.log(`[B2PWeb Extract] Reached max rows (${maxRows}), stopping scroll`);
         break;
       }
     }
 
-    console.log(`[B2PWeb Extract] Finished scrolling after ${scrollAttempts} attempts, found ${previousEmailCount} emails`);
+    console.log(`[B2PWeb Extract] Finished scrolling after ${scrollAttempts} attempts, collected ${allCollectedEmails.size} unique emails`);
 
-    // Now extract all the data
-    const debugInfo = await this.page.evaluate(() => {
-      const pageText = document.body.innerText;
-      const emailMatches = pageText.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
-      const phoneMatches = pageText.match(/(?:\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/g) || [];
-
-      return {
-        emailsFoundInPage: emailMatches.length,
-        phonesFoundInPage: phoneMatches.length,
-        pageTextLength: pageText.length
-      };
-    });
-
-    console.log('[B2PWeb Extract] Final count:', JSON.stringify(debugInfo));
-
-    const results = await this.page.evaluate((limit) => {
-      const extracted: any[] = [];
-      const seenEmails = new Set<string>();
-
-      // Get full page text to find emails
-      const pageText = document.body.innerText;
-
-      // Find ALL emails in the page using regex
-      const emailPattern = /[\w.-]+@[\w.-]+\.[a-z]{2,}/gi;
-      const allEmails = pageText.match(emailPattern) || [];
-
-      // For each email, try to find its surrounding context (row data)
-      for (const email of allEmails) {
-        if (extracted.length >= limit) break;
-        if (seenEmails.has(email.toLowerCase())) continue;
-        seenEmails.add(email.toLowerCase());
-
-        // Skip admin/system emails
-        if (email.includes('b2pweb') || email.includes('admin') || email.includes('support')) continue;
-
-        // Find the DOM element containing this email
-        const xpath = `//*[contains(text(), '${email}')]`;
-        const emailElements = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-
-        let companyName = '';
-        let contactName = '';
-        let phone = '';
-        let consultationDate = '';
-
-        if (emailElements.snapshotLength > 0) {
-          // Get the first element containing the email
-          const emailEl = emailElements.snapshotItem(0) as Element;
-
-          // Go up to find a row-like container
-          let container = emailEl.parentElement;
-          for (let i = 0; i < 5 && container; i++) {
-            const text = container.textContent || '';
-            // If container has phone and date, it's likely the row
-            if (text.match(/\+\d{2}/) && text.match(/\d{1,2}\/\d{1,2}\/\d{4}/)) {
-              break;
-            }
-            container = container.parentElement;
-          }
-
-          if (container) {
-            const rowText = container.textContent || '';
-
-            // Extract phone - support both international and French national formats
-            const phoneMatch = rowText.match(/(\+\d{2}\s?\d[\d\s]{8,}|0[1-9](?:[\s.-]?\d{2}){4})/);
-            phone = phoneMatch ? phoneMatch[1].replace(/[\s.-]+/g, ' ').trim() : '';
-
-            // Extract date
-            const dateMatch = rowText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-            consultationDate = dateMatch ? dateMatch[1] : '';
-
-            // Try to find company name - look for text blocks that look like company names
-            // Usually UPPERCASE or contains TRANSPORT, TRANS, LOGISTIC, etc.
-            const textBlocks = rowText.split(/[\s\n]+/).filter(t => t.length > 2);
-            for (const block of textBlocks) {
-              if (block === block.toUpperCase() && block.length > 3 && block.length < 40) {
-                if (!block.includes('@') && !block.match(/^\+?\d/) && !block.match(/^(Score|Company|Contact|E-mail|Telephone|Date)/i)) {
-                  if (!companyName) {
-                    companyName = block;
-                  }
-                }
-              }
-            }
-
-            // Look for contact name - B2PWeb format: "Prénom NOM" or "Prénom-Prénom NOM"
-            // Examples: "Mathis CHASSAT", "Jean-Michel SOUSA", "Émilie CHARLEMAGNE"
-            const contactMatch = rowText.match(/([A-ZÀ-Ü][a-zà-ÿ]+(?:-[A-ZÀ-Ü][a-zà-ÿ]+)?\s+[A-ZÀ-Ü]{2,})/);
-            if (contactMatch && !contactMatch[1].includes('@') && !contactMatch[1].match(/^(TRANSPORT|LOGISTIC|EXPRESS|SARL|SAS|EURL)/i)) {
-              contactName = contactMatch[1];
-            }
-          }
-        }
-
-        // If no company name found, use email domain as company identifier
-        if (!companyName && email) {
-          const domain = email.split('@')[1]?.split('.')[0];
-          if (domain && domain.length > 2) {
-            companyName = domain.toUpperCase();
-          }
-        }
-
-        extracted.push({
-          companyName: companyName || 'Unknown',
-          contactName,
-          email,
-          phone,
-          consultationDate
-        });
-      }
-
-      return extracted;
-    }, maxRows);
+    // v2.68.0: Return the data we accumulated during scrolling (instead of re-extracting from DOM which loses items)
+    const results = allCollectedData.slice(0, maxRows).map(item => ({
+      companyName: item.company || (item.email.split('@')[1]?.split('.')[0]?.toUpperCase() || 'Unknown'),
+      contactName: item.contact,
+      email: item.email,
+      phone: item.phone,
+      consultationDate: item.date
+    }));
 
     console.log(`[B2PWeb Extract] Found ${results.length} transporters`);
     if (results.length > 0) {
