@@ -1123,94 +1123,236 @@ export class TransportScrapingService {
   }
 
   // ============================================
-  // SET DÉPOSANT FILTER TO "TOUS"
+  // SET DÉPOSANT FILTER TO "TOUS" - v2.70.0
   // The Déposant dropdown has options: "Moi-même" (default), "Tous", etc.
-  // We need "Tous" to see all offers from all users
+  // We need "Tous" to see all offers from all users and have access to History button
   // ============================================
-  private async setDeposantFilter(): Promise<{ success: boolean; error?: string }> {
+  private async setDeposantFilter(): Promise<{ success: boolean; error?: string; logs?: string[] }> {
     if (!this.page) return { success: false, error: 'Page not initialized' };
 
+    const allLogs: string[] = [];
+    allLogs.push('[v2.70.0] Starting setDeposantFilter...');
+
     try {
-      // Step 1: Find and click the Déposant dropdown
+      // Step 1: Take screenshot of current page for debugging
+      allLogs.push(`Current URL: ${this.page.url()}`);
+
+      // Step 2: Find the Déposant filter - it's typically a dropdown or select element
+      const filterAnalysis = await this.page.evaluate(() => {
+        const logs: string[] = [];
+
+        // Analyze the page structure
+        const pageText = document.body.innerText;
+        logs.push(`Page contains 'Déposant': ${pageText.includes('Déposant')}`);
+        logs.push(`Page contains 'Moi-même': ${pageText.includes('Moi-même')}`);
+        logs.push(`Page contains 'Tous': ${pageText.includes('Tous')}`);
+
+        // Find all elements containing "Déposant" text
+        const deposantElements: { tag: string, text: string, x: number, y: number, className: string }[] = [];
+        document.querySelectorAll('*').forEach(el => {
+          const text = (el.textContent || '').trim();
+          if (text.toLowerCase().includes('déposant') && text.length < 100) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              deposantElements.push({
+                tag: el.tagName,
+                text: text.substring(0, 50),
+                x: Math.round(rect.left),
+                y: Math.round(rect.top),
+                className: (el.className || '').substring(0, 50)
+              });
+            }
+          }
+        });
+        logs.push(`Elements with "Déposant": ${JSON.stringify(deposantElements.slice(0, 5))}`);
+
+        // Find all select elements
+        const selects = Array.from(document.querySelectorAll('select'));
+        logs.push(`Found ${selects.length} <select> elements`);
+        selects.forEach((sel, i) => {
+          const rect = sel.getBoundingClientRect();
+          const options = Array.from(sel.options).map(o => o.text);
+          logs.push(`Select ${i}: pos=(${Math.round(rect.left)},${Math.round(rect.top)}), options=[${options.join(',')}]`);
+        });
+
+        // Find all dropdown-like elements (Vue/React often use divs)
+        const dropdownLike = Array.from(document.querySelectorAll('[class*="dropdown"], [class*="select"], [class*="filter"], [role="combobox"], [role="listbox"]'));
+        logs.push(`Found ${dropdownLike.length} dropdown-like elements`);
+
+        return { logs };
+      });
+
+      allLogs.push(...filterAnalysis.logs);
+      console.log(`[B2PWeb] Filter analysis:\n${filterAnalysis.logs.join('\n')}`);
+
+      // Step 3: Try multiple strategies to find and click the Déposant dropdown
       const dropdownOpened = await this.page.evaluate(() => {
         const logs: string[] = [];
 
-        // Log all dropdown-like elements for debugging
-        const dropdowns = Array.from(document.querySelectorAll('select, [role="combobox"], [role="listbox"], [class*="dropdown"], [class*="select"], [class*="filter"]'));
-        logs.push(`Found ${dropdowns.length} dropdown-like elements`);
+        // STRATEGY 1: Find <select> containing "Moi-même" option and change it
+        const selects = Array.from(document.querySelectorAll('select'));
+        for (const select of selects) {
+          const options = Array.from(select.options);
+          const moiMemeOption = options.find(o => o.text.includes('Moi-même') || o.text.includes('Myself'));
+          const tousOption = options.find(o => o.text === 'Tous' || o.text === 'All');
 
-        // Log visible filter labels
-        const filterLabels = Array.from(document.querySelectorAll('label, span, div')).filter(el => {
-          const text = (el.textContent || '').trim().toLowerCase();
-          return text.length > 0 && text.length < 30 && (text.includes('filter') || text.includes('déposant') || text.includes('depositor') || text.includes('myself') || text.includes('moi'));
-        }).map(el => (el.textContent || '').trim());
-        logs.push(`Filter-related labels: ${filterLabels.slice(0, 10).join(', ')}`);
+          if (moiMemeOption && tousOption) {
+            logs.push(`Found select with Moi-même and Tous options!`);
+            select.value = tousOption.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            logs.push(`Changed select value to: ${tousOption.value} (${tousOption.text})`);
+            return { found: true, method: 'select-change', logs };
+          }
+        }
 
-        // Look for dropdown/select with label "Déposant" or "Depositor"
+        // STRATEGY 2: Look for a clickable element showing "Moi-même"
+        const allElements = Array.from(document.querySelectorAll('button, div, span, a'));
+        for (const el of allElements) {
+          const text = (el.textContent || '').trim();
+          // Exact match or very close match to "Moi-même"
+          if (text === 'Moi-même' || text === 'Myself') {
+            const rect = el.getBoundingClientRect();
+            logs.push(`Found "Moi-même" element at (${Math.round(rect.left)}, ${Math.round(rect.top)}), tag=${el.tagName}`);
+            (el as HTMLElement).click();
+            return { found: true, method: 'moi-meme-click', x: rect.left, y: rect.top, logs };
+          }
+        }
+
+        // STRATEGY 3: Look for the dropdown container near "Déposant" label
         const labels = Array.from(document.querySelectorAll('label, span, div'));
         for (const label of labels) {
-          const text = (label.textContent || '').trim().toLowerCase();
-          if (text.includes('déposant') || text.includes('deposant') || text.includes('depositor') || text.includes('submitter')) {
-            // Find nearby dropdown or clickable element
-            const parent = label.closest('div');
-            if (parent) {
-              // Look for select, dropdown button, or clickable div
-              const clickable = parent.querySelector('select, [role="combobox"], [role="listbox"], button, [class*="dropdown"], [class*="select"]');
-              if (clickable) {
-                (clickable as HTMLElement).click();
-                return { found: true, element: 'dropdown', logs };
+          const text = (label.textContent || '').trim();
+          // Look for labels that say exactly "Déposant" (not longer strings)
+          if ((text === 'Déposant' || text === 'Depositor' || text === 'Deposant') && text.length < 15) {
+            logs.push(`Found "Déposant" label: "${text}"`);
+            // Look for next sibling or parent's next child that might be the dropdown
+            let nextEl = label.nextElementSibling;
+            while (nextEl) {
+              const nextText = (nextEl.textContent || '').trim();
+              if (nextText.includes('Moi-même') || nextText.includes('Tous')) {
+                logs.push(`Found dropdown next to label: "${nextText.substring(0, 30)}"`);
+                (nextEl as HTMLElement).click();
+                return { found: true, method: 'label-sibling', logs };
               }
-              // Try clicking the parent itself
-              (parent as HTMLElement).click();
-              return { found: true, element: 'parent', logs };
+              nextEl = nextEl.nextElementSibling;
+            }
+            // Try parent container
+            const parent = label.parentElement;
+            if (parent) {
+              const children = Array.from(parent.children);
+              for (const child of children) {
+                if (child !== label) {
+                  const childText = (child.textContent || '').trim();
+                  if (childText.includes('Moi-même') || childText.includes('Tous')) {
+                    logs.push(`Found dropdown in parent: "${childText.substring(0, 30)}"`);
+                    (child as HTMLElement).click();
+                    return { found: true, method: 'label-parent-child', logs };
+                  }
+                }
+              }
             }
           }
         }
 
-        // Alternative: look for any dropdown showing "Moi-même" or "Myself"
-        const allElements = Array.from(document.querySelectorAll('button, div, span'));
-        for (const el of allElements) {
-          const text = (el.textContent || '').trim();
-          if (text === 'Moi-même' || text === 'Myself' || text.toLowerCase().includes('moi-même') || text.toLowerCase() === 'myself') {
-            (el as HTMLElement).click();
-            return { found: true, element: 'moi-meme-button', text, logs };
+        // STRATEGY 4: Find any element in filter area with Moi-même
+        const filterArea = document.querySelector('[class*="filter"], [class*="toolbar"], header');
+        if (filterArea) {
+          const filterElements = filterArea.querySelectorAll('button, div, span, select');
+          for (const el of Array.from(filterElements)) {
+            const text = (el.textContent || '').trim();
+            if (text.includes('Moi-même')) {
+              logs.push(`Found in filter area: "${text.substring(0, 30)}"`);
+              (el as HTMLElement).click();
+              return { found: true, method: 'filter-area', logs };
+            }
           }
         }
 
+        logs.push('No dropdown found with any strategy');
         return { found: false, logs };
       });
 
-      console.log(`[B2PWeb] Déposant dropdown open result: ${JSON.stringify(dropdownOpened)}`);
+      allLogs.push(...(dropdownOpened.logs || []));
+      console.log(`[B2PWeb] Dropdown open result: ${JSON.stringify(dropdownOpened)}`);
+
+      if (dropdownOpened.method === 'select-change') {
+        // Already changed via <select>, no need to click option
+        allLogs.push('Filter changed via <select> element directly');
+        await delay(1500);
+        return { success: true, logs: allLogs };
+      }
 
       if (!dropdownOpened.found) {
-        return { success: false, error: 'Could not find Déposant dropdown' };
+        allLogs.push('ERROR: Could not find Déposant dropdown');
+        return { success: false, error: 'Could not find Déposant dropdown', logs: allLogs };
       }
 
       await delay(1000);
 
-      // Step 2: Select "Tous" option
+      // Step 4: Select "Tous" option from opened dropdown
       const optionSelected = await this.page.evaluate(() => {
-        // Look for option "Tous" or "All" in the dropdown/menu
-        const options = Array.from(document.querySelectorAll('li, option, [role="option"], [role="menuitem"], div, span, button'));
-        for (const opt of options) {
+        const logs: string[] = [];
+
+        // Look for dropdown menu that appeared
+        const dropdownMenus = document.querySelectorAll('[class*="dropdown-menu"], [class*="menu"], [role="listbox"], [role="menu"], ul, .v-list');
+        logs.push(`Found ${dropdownMenus.length} potential dropdown menus`);
+
+        // Look for "Tous" or "All" option
+        const allClickables = Array.from(document.querySelectorAll('li, option, [role="option"], [role="menuitem"], div, span, button, a'));
+        logs.push(`Searching ${allClickables.length} clickable elements for "Tous"`);
+
+        // Find elements visible on screen (dropdown should be open)
+        for (const opt of allClickables) {
           const text = (opt.textContent || '').trim();
-          if (text === 'Tous' || text === 'All' || text.toLowerCase() === 'tous') {
-            (opt as HTMLElement).click();
-            return { selected: true, text: text };
+          const rect = (opt as HTMLElement).getBoundingClientRect();
+
+          // Only consider visible elements
+          if (rect.width > 0 && rect.height > 0 && rect.top > 0 && rect.top < window.innerHeight) {
+            // Exact match for "Tous" or "All"
+            if (text === 'Tous' || text === 'All') {
+              logs.push(`Found exact "Tous" at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+              (opt as HTMLElement).click();
+              return { selected: true, text: text, logs };
+            }
           }
         }
-        return { selected: false };
+
+        // Log what we found for debugging
+        const visibleTexts = allClickables
+          .filter(el => {
+            const rect = (el as HTMLElement).getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && rect.top > 0 && rect.top < 500;
+          })
+          .map(el => (el.textContent || '').trim())
+          .filter(t => t.length > 0 && t.length < 30);
+        logs.push(`Visible texts (top 500px): ${visibleTexts.slice(0, 20).join(', ')}`);
+
+        return { selected: false, logs };
       });
 
-      console.log(`[B2PWeb] Tous option select result: ${JSON.stringify(optionSelected)}`);
+      allLogs.push(...(optionSelected.logs || []));
+      console.log(`[B2PWeb] Option select result: ${JSON.stringify(optionSelected)}`);
 
       if (!optionSelected.selected) {
-        return { success: false, error: 'Could not select Tous option' };
+        allLogs.push('ERROR: Could not select Tous option');
+        return { success: false, error: 'Could not select Tous option', logs: allLogs };
       }
 
-      return { success: true };
+      await delay(1500);
+
+      // Step 5: Verify the filter was applied
+      const verifyFilter = await this.page.evaluate(() => {
+        const pageText = document.body.innerText;
+        // Check if "Tous" is now visible and "Moi-même" dropdown is changed
+        const hasTousVisible = pageText.includes('Tous');
+        return { hasTousVisible };
+      });
+      allLogs.push(`Filter verification: ${JSON.stringify(verifyFilter)}`);
+
+      return { success: true, logs: allLogs };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      allLogs.push(`ERROR: ${error.message}`);
+      return { success: false, error: error.message, logs: allLogs };
     }
   }
 
