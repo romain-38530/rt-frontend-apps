@@ -1706,7 +1706,7 @@ export class TransportScrapingService {
       await delay(2000);
       const results: any[] = [];
       const maxOffers = Math.min(10, scrapingConfig.maxOffersPerRun); // Limit to 10 offers per run for testing
-      const maxTransportersPerSection = 50; // Limit to 50 transporters per offer (10 scrolls * ~5 new emails per scroll)
+      const maxTransportersPerSection = 500; // v2.71.0: Increased from 50 to 500 transporters per offer
 
       // Get offer rows count
       const offerCount = await this.page.evaluate(() => {
