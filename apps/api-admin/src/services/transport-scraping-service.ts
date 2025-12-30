@@ -404,16 +404,23 @@ export class TransportScrapingService {
       }
 
       // STRATEGY 3: Find SVGs directly and click their parent
+      // v2.69.0: IMPORTANT - The panel toolbar icons are at X > 1500, Y < 100
+      // The offer list "schedule" icons are at X ~ 1299, Y = 135, 190, 245... (in rows)
+      // We must click the PANEL toolbar history button, not the row schedule icons!
       for (const iconName of historyIconNames) {
         const svgs = document.querySelectorAll(`svg[data-icon="${iconName}"]`);
         logs.push(`Found ${svgs.length} SVGs with data-icon=${iconName}`);
 
         for (const svg of Array.from(svgs)) {
           const rect = svg.getBoundingClientRect();
-          // Skip icons in the offer list rows (they are at y=135, 190, 245, etc - spaced by ~55px)
-          // The panel toolbar should be at a unique Y position
-          if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
-            logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+          // v2.69.0: Only accept icons in the PANEL TOOLBAR area:
+          // - X > 1500 (right side of screen, in the detail panel toolbar)
+          // - Y < 100 (top toolbar row)
+          // This excludes schedule icons in the offer list rows (X ~1299, Y=135+)
+          const isPanelToolbar = rect.left > 1500 && rect.top < 100 && rect.top > 30;
+
+          if (isPanelToolbar && rect.width > 5) {
+            logs.push(`${iconName} SVG at PANEL TOOLBAR (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
 
             // Find closest clickable parent
             const parent = svg.closest('button, [role="button"], .cursor-pointer, div') as HTMLElement;
@@ -423,6 +430,9 @@ export class TransportScrapingService {
               parent.click();
               return { success: true, method: 'svg-parent', icon: iconName, logs };
             }
+          } else if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
+            // Log but skip non-toolbar icons
+            logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)}) - SKIPPED (not in panel toolbar)`);
           }
         }
       }
@@ -1724,16 +1734,23 @@ export class TransportScrapingService {
             }
 
             // STRATEGY 3: Find SVGs directly and click their parent
+            // v2.69.0: IMPORTANT - The panel toolbar icons are at X > 1500, Y < 100
+            // The offer list "schedule" icons are at X ~ 1299, Y = 135, 190, 245... (in rows)
+            // We must click the PANEL toolbar history button, not the row schedule icons!
             for (const iconName of historyIconNames) {
               const svgs = document.querySelectorAll(`svg[data-icon="${iconName}"]`);
               logs.push(`Found ${svgs.length} SVGs with data-icon=${iconName}`);
 
               for (const svg of Array.from(svgs)) {
                 const rect = svg.getBoundingClientRect();
-                // Skip icons in the offer list rows (they are at y=135, 190, 245, etc - spaced by ~55px)
-                // The panel toolbar should be at a unique Y position
-                if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
-                  logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
+                // v2.69.0: Only accept icons in the PANEL TOOLBAR area:
+                // - X > 1500 (right side of screen, in the detail panel toolbar)
+                // - Y < 100 (top toolbar row)
+                // This excludes schedule icons in the offer list rows (X ~1299, Y=135+)
+                const isPanelToolbar = rect.left > 1500 && rect.top < 100 && rect.top > 30;
+
+                if (isPanelToolbar && rect.width > 5) {
+                  logs.push(`${iconName} SVG at PANEL TOOLBAR (${Math.round(rect.left)}, ${Math.round(rect.top)})`);
 
                   // Find closest clickable parent
                   const parent = svg.closest('button, [role="button"], .cursor-pointer, div') as HTMLElement;
@@ -1743,6 +1760,9 @@ export class TransportScrapingService {
                     parent.click();
                     return { success: true, method: 'svg-parent', icon: iconName, logs };
                   }
+                } else if (rect.top > 50 && rect.top < 800 && rect.width > 5) {
+                  // Log but skip non-toolbar icons
+                  logs.push(`${iconName} SVG at (${Math.round(rect.left)}, ${Math.round(rect.top)}) - SKIPPED (not in panel toolbar)`);
                 }
               }
             }
