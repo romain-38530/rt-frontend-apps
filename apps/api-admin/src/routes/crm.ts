@@ -344,7 +344,7 @@ router.post('/enrich-pool', async (req: Request, res: Response) => {
     }
 
     // Lancer Puppeteer pour l'enrichissement (utiliser Chrome systeme sur EB)
-    const puppeteer = await import('puppeteer');
+    const puppeteer = await import('puppeteer-core');
     const launchOptions: any = {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
@@ -926,7 +926,7 @@ router.post('/companies/:id/enrich', async (req: Request, res: Response) => {
     // 2. Si site web disponible, scraper pour plus d'infos
     if (company.siteWeb) {
       try {
-        const puppeteer = await import('puppeteer');
+        const puppeteer = await import('puppeteer-core');
         const launchOptions: any = {
           headless: true,
           args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -1169,7 +1169,7 @@ router.post('/companies/:id/enrich-free', async (req: Request, res: Response) =>
     // 2. Si site web disponible, scraper pour plus d'infos
     if (company.siteWeb) {
       try {
-        const puppeteer = await import('puppeteer');
+        const puppeteer = await import('puppeteer-core');
         const launchOptions: any = {
           headless: true,
           args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']

@@ -11,7 +11,7 @@ type Page = any;
 async function loadPuppeteer(): Promise<any> {
   if (!puppeteerModule) {
     try {
-      puppeteerModule = await import('puppeteer');
+      puppeteerModule = await import('puppeteer-core');
     } catch (e) {
       console.warn('Puppeteer not available - salon discovery features disabled');
       throw new Error('Puppeteer not installed. Salon discovery features are not available.');

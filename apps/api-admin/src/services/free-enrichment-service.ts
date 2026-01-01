@@ -41,7 +41,7 @@ class FreeEnrichmentService {
     }
 
     try {
-      const puppeteer = await import('puppeteer');
+      const puppeteer = await import('puppeteer-core');
       const launchOptions: any = {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -266,7 +266,7 @@ class FreeEnrichmentService {
     }
 
     try {
-      const puppeteer = await import('puppeteer');
+      const puppeteer = await import('puppeteer-core');
       const launchOptions: any = {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']

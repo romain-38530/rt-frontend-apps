@@ -1,12 +1,25 @@
 /**
  * API Admin Gateway - SYMPHONI.A
  * Administration centralisee de la plateforme
+ * Version 3.0.0 - Sécurisée avec monitoring complet
  */
 
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import swaggerUi from 'swagger-ui-express';
+
+// Configuration
+import { corsOptions } from './config/cors';
+import { initSentry, sentryErrorHandler } from './config/sentry';
+import { logger, initCloudWatchTransport } from './config/logger';
+import { swaggerSpec } from './config/swagger';
+
+// Middleware
+import { authenticateAdmin } from './middleware/auth';
+import { globalRateLimiter } from './middleware/rate-limiter';
+import requestLogger from './middleware/request-logger';
 
 // Routes
 import usersRoutes from './routes/users';
@@ -22,183 +35,74 @@ import authRoutes from './routes/auth';
 import commercialPortalRoutes from './routes/commercial-portal';
 import managerRoutes, { publicInstallationRoutes } from './routes/manager';
 import transportScrapingRoutes from './routes/transport-scraping';
+import healthRoutes from './routes/health';
+import notificationsRoutes from './routes/notifications';
+import gdprRoutes from './routes/gdpr';
 
-// Middleware
-import { authenticateAdmin } from './middleware/auth';
-// Background scraping imports
+// Background services
 import ScrapingServiceInstance from './services/scraping-service';
 import LeadSalon from './models/LeadSalon';
 import LeadCompany from './models/LeadCompany';
-
+import { metricsService } from './services/metrics-service';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3020;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-admin';
+const APP_VERSION = process.env.APP_VERSION || '3.0.0';
 
-// Middleware - CORS configuration
-const corsOrigin = process.env.CORS_ORIGIN;
-app.use(cors({
-  origin: corsOrigin === '*' || !corsOrigin ? true : corsOrigin.split(','),
-  credentials: true
-}));
+// Initialiser Sentry (avant les autres middlewares)
+initSentry(app);
+
+// Middleware - CORS sécurisé
+app.use(cors(corsOptions));
+
+// Rate limiting global
+app.use(globalRateLimiter);
+
+// Parser JSON
 app.use(express.json({ limit: '10mb' }));
 
 // Request logging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
+app.use(requestLogger);
+
+// API Documentation - Swagger UI
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'RT Admin API Documentation'
+}));
+
+// Swagger JSON spec
+app.get('/api/docs.json', (req, res) => {
+  res.json(swaggerSpec);
 });
 
-// API Documentation
+// API Documentation root
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Admin Gateway API',
-    version: '1.0.0',
+    version: APP_VERSION,
     description: 'Administration centralisee SYMPHONI.A',
+    documentation: '/api/docs',
+    health: '/health',
     endpoints: {
-      health: '/health',
-
-      // User Management
-      users: {
-        list: 'GET /api/v1/admin/users',
-        create: 'POST /api/v1/admin/users',
-        get: 'GET /api/v1/admin/users/:id',
-        update: 'PUT /api/v1/admin/users/:id',
-        delete: 'DELETE /api/v1/admin/users/:id',
-        activate: 'POST /api/v1/admin/users/:id/activate',
-        deactivate: 'POST /api/v1/admin/users/:id/deactivate',
-        resetPassword: 'POST /api/v1/admin/users/:id/reset-password',
-        activity: 'GET /api/v1/admin/users/:id/activity',
-        roles: 'PUT /api/v1/admin/users/:id/roles'
-      },
-
-      // Company Management
-      companies: {
-        list: 'GET /api/v1/admin/companies',
-        create: 'POST /api/v1/admin/companies',
-        get: 'GET /api/v1/admin/companies/:id',
-        update: 'PUT /api/v1/admin/companies/:id',
-        delete: 'DELETE /api/v1/admin/companies/:id',
-        verify: 'POST /api/v1/admin/companies/:id/verify',
-        suspend: 'POST /api/v1/admin/companies/:id/suspend',
-        billing: 'GET /api/v1/admin/companies/:id/billing',
-        subscription: 'PUT /api/v1/admin/companies/:id/subscription',
-        modules: 'PUT /api/v1/admin/companies/:id/modules'
-      },
-
-      // Subscriptions & Billing
-      subscriptions: {
-        list: 'GET /api/v1/admin/subscriptions',
-        get: 'GET /api/v1/admin/subscriptions/:id',
-        update: 'PUT /api/v1/admin/subscriptions/:id',
-        cancel: 'POST /api/v1/admin/subscriptions/:id/cancel'
-      },
-      invoices: {
-        list: 'GET /api/v1/admin/invoices',
-        refund: 'POST /api/v1/admin/invoices/:id/refund'
-      },
-
-      // Platform Monitoring
-      dashboard: 'GET /api/v1/admin/dashboard',
-      servicesHealth: 'GET /api/v1/admin/services/health',
-      metrics: 'GET /api/v1/admin/metrics',
-      logs: 'GET /api/v1/admin/logs',
-      errors: 'GET /api/v1/admin/errors',
-
-      // Module Management
-      modules: {
-        list: 'GET /api/v1/admin/modules',
-        toggle: 'PUT /api/v1/admin/modules/:id/toggle',
-        usage: 'GET /api/v1/admin/modules/:id/usage'
-      },
-
-      // API Keys
-      apiKeys: {
-        list: 'GET /api/v1/admin/api-keys',
-        create: 'POST /api/v1/admin/api-keys',
-        revoke: 'DELETE /api/v1/admin/api-keys/:id'
-      },
-
-      // Integrations
-      integrations: {
-        list: 'GET /api/v1/admin/integrations',
-        configure: 'PUT /api/v1/admin/integrations/:id'
-      },
-
-      // Audit & Compliance
-      audit: {
-        list: 'GET /api/v1/admin/audit',
-        export: 'GET /api/v1/admin/audit/export'
-      },
-      gdpr: {
-        requests: 'GET /api/v1/admin/gdpr/requests',
-        process: 'POST /api/v1/admin/gdpr/requests/:id/process'
-      },
-
-      // Notifications & Announcements
-      notifications: {
-        broadcast: 'POST /api/v1/admin/notifications/broadcast'
-      },
-      announcements: {
-        list: 'GET /api/v1/admin/announcements',
-        create: 'POST /api/v1/admin/announcements',
-        update: 'PUT /api/v1/admin/announcements/:id',
-        delete: 'DELETE /api/v1/admin/announcements/:id'
-      },
-
-      // CRM Lead Generation
-      crm: {
-        dashboard: 'GET /api/v1/admin/crm/dashboard',
-        salons: {
-          list: 'GET /api/v1/admin/crm/salons',
-          create: 'POST /api/v1/admin/crm/salons',
-          get: 'GET /api/v1/admin/crm/salons/:id',
-          update: 'PUT /api/v1/admin/crm/salons/:id'
-        },
-        companies: {
-          list: 'GET /api/v1/admin/crm/companies',
-          create: 'POST /api/v1/admin/crm/companies',
-          get: 'GET /api/v1/admin/crm/companies/:id',
-          update: 'PUT /api/v1/admin/crm/companies/:id',
-          enrich: 'POST /api/v1/admin/crm/companies/:id/enrich',
-          assign: 'POST /api/v1/admin/crm/companies/:id/assign'
-        },
-        contacts: {
-          list: 'GET /api/v1/admin/crm/contacts',
-          create: 'POST /api/v1/admin/crm/contacts',
-          get: 'GET /api/v1/admin/crm/contacts/:id',
-          update: 'PUT /api/v1/admin/crm/contacts/:id',
-          verifyEmail: 'POST /api/v1/admin/crm/contacts/:id/verify-email'
-        },
-        emails: {
-          list: 'GET /api/v1/admin/crm/emails',
-          send: 'POST /api/v1/admin/crm/emails/send',
-          webhook: 'POST /api/v1/admin/crm/emails/webhook'
-        },
-        templates: {
-          list: 'GET /api/v1/admin/crm/templates',
-          create: 'POST /api/v1/admin/crm/templates',
-          update: 'PUT /api/v1/admin/crm/templates/:id'
-        }
-      }
+      auth: '/auth',
+      users: '/api/v1/admin/users',
+      companies: '/api/v1/admin/companies',
+      crm: '/api/v1/admin/crm',
+      scraping: '/api/v1/admin/transport-scraping',
+      notifications: '/api/v1/admin/notifications',
+      gdpr: '/api/v1/admin/gdpr'
     }
   });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'RT Admin Gateway API is running',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
+// Health check routes (publiques)
+app.use('/health', healthRoutes);
 
-// Auth routes (public)
+// Auth routes (publiques avec rate limiting interne)
 app.use('/auth', authRoutes);
 
 // Public debug endpoint for Chrome check
@@ -207,7 +111,6 @@ app.get('/debug/chrome', (req, res) => {
     const { execSync } = require('child_process');
     const checks: Record<string, string> = {};
 
-    // Check Chrome paths
     const paths = ['/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
     for (const p of paths) {
       try {
@@ -226,10 +129,6 @@ app.get('/debug/chrome', (req, res) => {
       checks['chrome version'] = execSync('google-chrome-stable --version 2>/dev/null', { encoding: 'utf-8' }).trim();
     } catch (e: any) { checks['chrome version'] = `ERROR: ${e.message}`; }
 
-    try {
-      checks['dnf list'] = execSync('dnf list installed google-chrome-stable 2>/dev/null | head -3', { encoding: 'utf-8' }).trim() || 'NOT INSTALLED';
-    } catch { checks['dnf list'] = 'NOT INSTALLED'; }
-
     checks['CHROME_PATH env'] = process.env.CHROME_PATH || 'NOT SET';
 
     res.json({ success: true, data: checks });
@@ -246,19 +145,30 @@ app.use('/api/v1/admin/modules', authenticateAdmin, modulesRoutes);
 app.use('/api/v1/admin/api-keys', authenticateAdmin, apiKeysRoutes);
 app.use('/api/v1/admin/audit', authenticateAdmin, auditRoutes);
 app.use('/api/v1/admin/announcements', authenticateAdmin, announcementsRoutes);
-app.use('/api/v1/admin/crm', crmRoutes); // CRM routes (auth handled internally, webhook needs to be public)
-app.use('/api/v1/commercial', commercialPortalRoutes); // Commercial portal (auth handled internally)
-app.use('/api/v1/admin/manager', managerRoutes); // Manager routes (pricing, packs, promos, contracts, installations)
-app.use('/api/v1/installation', publicInstallationRoutes); // Public installation validation routes
-app.use('/api/v1/admin/transport-scraping', authenticateAdmin, transportScrapingRoutes); // Transport scraping for Affret IA
+app.use('/api/v1/admin/crm', crmRoutes);
+app.use('/api/v1/commercial', commercialPortalRoutes);
+app.use('/api/v1/admin/manager', managerRoutes);
+app.use('/api/v1/installation', publicInstallationRoutes);
+app.use('/api/v1/admin/transport-scraping', authenticateAdmin, transportScrapingRoutes);
+app.use('/api/v1/admin/notifications', notificationsRoutes);
+app.use('/api/v1/admin/gdpr', gdprRoutes);
 app.use('/api/v1/admin', authenticateAdmin, dashboardRoutes);
+
+// Sentry error handler (avant le handler d'erreur personnalisé)
+app.use(sentryErrorHandler);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  logger.error('Unhandled error', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
   res.status(err.status || 500).json({
     success: false,
-    error: err.message || 'Internal Server Error'
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
   });
 });
 
@@ -273,52 +183,66 @@ app.use((req, res) => {
 
 // Connect to MongoDB and start server
 mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
+  .then(async () => {
+    logger.info('Connected to MongoDB');
+
+    // Initialiser CloudWatch transport si configuré
+    await initCloudWatchTransport();
+
     app.listen(PORT, () => {
-      console.log(`RT Admin Gateway API running on port ${PORT}`);
-      console.log(`Documentation: http://localhost:${PORT}/`);
+      logger.info(`RT Admin Gateway API v${APP_VERSION} running on port ${PORT}`);
+      logger.info(`Documentation: http://localhost:${PORT}/api/docs`);
+      logger.info(`Health check: http://localhost:${PORT}/health`);
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    logger.error('MongoDB connection error', { error: error.message });
     process.exit(1);
   });
 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  await metricsService.shutdown();
+  await mongoose.connection.close();
+  logger.info('Shutdown complete');
+  process.exit(0);
+});
 
-// Tache de fond pour scraper les salons actifs
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  await metricsService.shutdown();
+  await mongoose.connection.close();
+  process.exit(0);
+});
+
+// Background scraping task
 async function startBackgroundScraping() {
-  console.log('[Background] Starting background scraping service...');
-  
-  // Attendre 30 secondes avant de demarrer (laisser le serveur demarrer)
+  logger.info('[Background] Starting background scraping service...');
+
   await new Promise(r => setTimeout(r, 30000));
-  
-  // Fonction de scraping
+
   const runScraping = async () => {
     try {
-      // Trouver les salons avec statut A_SCRAPER ou TERMINE (pour refresh)
       const salonsToScrape = await LeadSalon.find({
         statutScraping: { $in: ['A_SCRAPER', 'TERMINE'] },
         urlListeExposants: { $exists: true, $ne: null }
-      }).limit(1); // Un salon a la fois
+      }).limit(1);
 
       for (const salon of salonsToScrape) {
-        console.log('[Background] Scraping salon:', salon.nom);
-        
+        logger.info('[Background] Scraping salon', { nom: salon.nom });
+
         try {
-          // Mettre a jour le statut
           salon.statutScraping = 'EN_COURS';
           salon.derniereExecution = new Date();
           await salon.save();
 
-          // Determiner l'adaptateur
           let adapterName = 'Generic';
           const url = salon.urlListeExposants || '';
           if (url.includes('sialparis') || url.includes('sial')) adapterName = 'SIAL';
           else if (url.includes('sitl')) adapterName = 'SITL';
           else if (url.includes('transportlogistic')) adapterName = 'TransportLogistic';
 
-          // Lancer le scraping
           const result = await ScrapingServiceInstance.scrapeUrl(salon.urlListeExposants!, adapterName);
 
           if (result.success && result.companies.length > 0) {
@@ -368,31 +292,27 @@ async function startBackgroundScraping() {
               }
             }
 
-            // Mettre a jour le salon
             salon.statutScraping = 'TERMINE';
             salon.nbExposantsCollectes = (salon.nbExposantsCollectes || 0) + created;
             await salon.save();
 
-            console.log('[Background] Scraping ' + salon.nom + ': ' + created + ' nouvelles, ' + duplicates + ' doublons');
+            logger.info('[Background] Scraping completed', { salon: salon.nom, created, duplicates });
           } else {
             salon.statutScraping = 'TERMINE';
             await salon.save();
           }
         } catch (error: any) {
-          console.error('[Background] Scraping error for ' + salon.nom + ':', error.message);
+          logger.error('[Background] Scraping error', { salon: salon.nom, error: error.message });
           salon.statutScraping = 'ERREUR';
           await salon.save();
         }
       }
     } catch (error: any) {
-      console.error('[Background] Background scraping error:', error.message);
+      logger.error('[Background] Background scraping error', { error: error.message });
     }
   };
 
-  // Executer toutes les 10 minutes
   setInterval(runScraping, 10 * 60 * 1000);
-  
-  // Executer immediatement au demarrage
   runScraping();
 }
 
