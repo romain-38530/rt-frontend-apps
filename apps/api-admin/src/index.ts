@@ -31,7 +31,7 @@ import auditRoutes from './routes/audit';
 import announcementsRoutes from './routes/announcements';
 import dashboardRoutes from './routes/dashboard';
 import crmRoutes from './routes/crm';
-import authRoutes from './routes/auth';
+import authRoutes, { seedAdminUsers } from './routes/auth';
 import commercialPortalRoutes from './routes/commercial-portal';
 import managerRoutes, { publicInstallationRoutes } from './routes/manager';
 import transportScrapingRoutes from './routes/transport-scraping';
@@ -185,6 +185,10 @@ app.use((req, res) => {
 mongoose.connect(MONGODB_URI)
   .then(async () => {
     logger.info('Connected to MongoDB');
+
+    // Seed des utilisateurs admin par défaut
+    await seedAdminUsers();
+    logger.info('Admin users seeded');
 
     // Initialiser CloudWatch transport si configuré
     await initCloudWatchTransport();

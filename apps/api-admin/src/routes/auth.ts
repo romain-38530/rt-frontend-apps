@@ -18,27 +18,58 @@ import { JWT_CONFIG } from '../config/jwt';
 
 const router = Router();
 
-// Admin users pour fallback (en prod utiliser la DB)
-const ADMIN_USERS = [
-  {
-    id: '1',
-    email: 'admin@rt-technologie.com',
-    adminKey: 'admin123',
-    roles: ['super_admin', 'admin']
-  },
-  {
-    id: '2',
-    email: 'pricing@rt-technologie.com',
-    adminKey: 'pricing123',
-    roles: ['admin', 'manager']
-  },
-  {
-    id: '3',
-    email: 'commercial@rt-technologie.com',
-    adminKey: 'commercial123',
-    roles: ['manager']
+/**
+ * Seed des utilisateurs admin par défaut
+ * Appelé au démarrage pour s'assurer que les admins existent en DB
+ */
+export async function seedAdminUsers(): Promise<void> {
+  const defaultAdmins = [
+    {
+      email: 'admin@rt-technologie.com',
+      password: 'admin123',
+      firstName: 'Admin',
+      lastName: 'RT',
+      roles: ['super_admin', 'admin'],
+      status: 'active' as const,
+      isActive: true
+    },
+    {
+      email: 'pricing@rt-technologie.com',
+      password: 'pricing123',
+      firstName: 'Pricing',
+      lastName: 'Manager',
+      roles: ['admin', 'manager'],
+      status: 'active' as const,
+      isActive: true
+    },
+    {
+      email: 'commercial@rt-technologie.com',
+      password: 'commercial123',
+      firstName: 'Commercial',
+      lastName: 'Agent',
+      roles: ['manager', 'commercial'],
+      status: 'active' as const,
+      isActive: true
+    }
+  ];
+
+  for (const admin of defaultAdmins) {
+    try {
+      const existing = await User.findOne({ email: admin.email });
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash(admin.password, 10);
+        await User.create({
+          ...admin,
+          password: hashedPassword,
+          permissions: []
+        });
+        authLogger.info('Admin user created', { email: admin.email });
+      }
+    } catch (error) {
+      authLogger.error('Failed to seed admin user', { email: admin.email, error });
+    }
   }
-];
+}
 
 /**
  * POST /auth/login
@@ -187,47 +218,52 @@ router.post('/activate', async (req: Request, res: Response) => {
 
 /**
  * POST /auth/admin/login
- * Authentification admin avec email + clé admin
+ * Authentification admin avec email + clé admin (password)
  */
 router.post('/admin/login', authRateLimiter, async (req: Request, res: Response) => {
-  const { email, adminKey } = req.body;
+  const { email, adminKey, password } = req.body;
+  const pwd = adminKey || password; // Support both field names
 
-  if (!email || !adminKey) {
+  if (!email || !pwd) {
     return res.status(400).json({
       success: false,
-      error: 'Email et clé d\'administration requis'
+      error: 'Email et mot de passe requis'
     });
   }
 
-  // D'abord chercher dans la base de données
-  let user = await User.findOne({ email, isActive: true });
-  let isValidPassword = false;
+  // Chercher l'utilisateur dans la base de données
+  const user = await User.findOne({ email, isActive: true });
 
-  if (user && user.password) {
-    isValidPassword = await bcrypt.compare(adminKey, user.password);
-  }
-
-  // Fallback aux utilisateurs statiques (à supprimer en prod)
-  if (!isValidPassword) {
-    const staticUser = ADMIN_USERS.find(u => u.email === email && u.adminKey === adminKey);
-    if (staticUser) {
-      user = {
-        _id: staticUser.id,
-        id: staticUser.id,
-        email: staticUser.email,
-        roles: staticUser.roles
-      } as any;
-      isValidPassword = true;
-    }
-  }
-
-  if (!user || !isValidPassword) {
-    authLogger.warn('Login failed', { email, ip: req.ip });
+  if (!user || !user.password) {
+    authLogger.warn('Admin login failed - user not found', { email, ip: req.ip });
     metricsService.recordLogin(false);
-
     return res.status(401).json({
       success: false,
       error: 'Identifiants invalides'
+    });
+  }
+
+  // Vérifier le mot de passe
+  const isValidPassword = await bcrypt.compare(pwd, user.password);
+
+  if (!isValidPassword) {
+    authLogger.warn('Admin login failed - wrong password', { email, ip: req.ip });
+    metricsService.recordLogin(false);
+    return res.status(401).json({
+      success: false,
+      error: 'Identifiants invalides'
+    });
+  }
+
+  // Vérifier que l'utilisateur a un rôle admin
+  const adminRoles = ['super_admin', 'admin', 'manager'];
+  const hasAdminRole = user.roles?.some(role => adminRoles.includes(role));
+
+  if (!hasAdminRole) {
+    authLogger.warn('Admin login failed - no admin role', { email, ip: req.ip });
+    return res.status(403).json({
+      success: false,
+      error: 'Accès non autorisé'
     });
   }
 
