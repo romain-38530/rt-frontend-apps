@@ -283,7 +283,7 @@ export default function Team() {
               </button>
               <button
                 onClick={openAddModal}
-                disabled={limit && !limit.canAdd}
+                disabled={!!(limit && !limit.canAdd)}
                 style={{
                   padding: '12px 24px',
                   background: limit && !limit.canAdd ? '#94a3b8' : '#667eea',
