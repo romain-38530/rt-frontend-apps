@@ -104,6 +104,13 @@ export default function HomePage() {
       desc: 'Support IA 24/7 pour vos questions',
       locked: false,
       route: '/chatbot'
+    },
+    {
+      icon: '👥',
+      title: 'Équipe',
+      desc: 'Gérez les membres de votre équipe et leurs accès',
+      locked: false,
+      route: '/team'
     }
   ];
 

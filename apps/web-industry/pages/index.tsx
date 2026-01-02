@@ -180,6 +180,13 @@ export default function HomePage() {
       desc: 'Économie circulaire et gestion des palettes',
       locked: false,
       route: '/palettes'
+    },
+    {
+      icon: '👥',
+      title: 'Équipe',
+      desc: 'Gérez les membres de votre équipe et leurs accès',
+      locked: false,
+      route: '/team'
     }
   ];
 

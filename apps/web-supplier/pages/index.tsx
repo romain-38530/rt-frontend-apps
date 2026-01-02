@@ -103,6 +103,13 @@ export default function HomePage() {
       desc: 'Accédez aux modules de formation pour vos équipes',
       locked: subscription?.tier === 'free',
       route: '/training'
+    },
+    {
+      icon: '👥',
+      title: 'Équipe',
+      desc: 'Gérez les membres de votre équipe et leurs accès',
+      locked: false,
+      route: '/team'
     }
   ];
 

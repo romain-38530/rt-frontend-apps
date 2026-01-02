@@ -131,6 +131,13 @@ export default function HomePage() {
       desc: 'Supervision préfacturations, litiges et blocages',
       locked: false,
       route: '/billing'
+    },
+    {
+      icon: '👥',
+      title: 'Équipe',
+      desc: 'Gérez les membres de votre équipe et leurs accès',
+      locked: false,
+      route: '/team'
     }
   ];
 

@@ -238,6 +238,13 @@ export default function HomePage() {
       route: '/grille-tarifaire',
       highlight: isCompliant,
       requiresCompliance: true
+    },
+    {
+      icon: '👥',
+      title: 'Équipe',
+      desc: 'Gérez les membres de votre équipe et leurs accès',
+      locked: false,
+      route: '/team'
     }
   ];
 
