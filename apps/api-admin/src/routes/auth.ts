@@ -12,6 +12,7 @@ import { authRateLimiter, passwordResetRateLimiter } from '../middleware/rate-li
 import { authLogger } from '../config/logger';
 import { metricsService } from '../services/metrics-service';
 import User from '../models/User';
+import SubUser from '../models/SubUser';
 import PasswordResetToken from '../models/PasswordResetToken';
 import RefreshToken from '../models/RefreshToken';
 import { JWT_CONFIG } from '../config/jwt';
@@ -73,10 +74,10 @@ export async function seedAdminUsers(): Promise<void> {
 
 /**
  * POST /auth/login
- * Authentification standard (utilisateurs normaux)
+ * Authentification standard (utilisateurs normaux et sous-utilisateurs)
  */
 router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, universe } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({
@@ -86,9 +87,102 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
   }
 
   try {
-    // Chercher l'utilisateur
-    const user = await User.findOne({ email, isActive: true });
+    // D'abord chercher dans les utilisateurs principaux
+    let user = await User.findOne({ email: email.toLowerCase(), isActive: true });
+    let isSubUser = false;
+    let subUserData: any = null;
 
+    // Si pas trouvé, chercher dans les sous-utilisateurs
+    if (!user) {
+      const subUser = await SubUser.findOne({
+        email: email.toLowerCase(),
+        status: 'active'
+      });
+
+      if (subUser && subUser.password) {
+        // Vérifier le mot de passe du sous-utilisateur
+        const isValidPassword = await bcrypt.compare(password, subUser.password);
+
+        if (!isValidPassword) {
+          authLogger.warn('Login failed - wrong password (subuser)', { email, ip: req.ip });
+          metricsService.recordLogin(false);
+          return res.status(401).json({
+            success: false,
+            error: 'Identifiants invalides'
+          });
+        }
+
+        // Vérifier l'accès à l'univers demandé
+        if (universe && !subUser.universes.includes(universe)) {
+          return res.status(403).json({
+            success: false,
+            error: 'Accès non autorisé à cet univers'
+          });
+        }
+
+        isSubUser = true;
+        subUserData = subUser;
+
+        // Mettre à jour lastLoginAt
+        subUser.lastLoginAt = new Date();
+        await subUser.save();
+
+        // Créer le payload JWT pour sous-utilisateur
+        const tokenPayload = {
+          id: subUser._id.toString(),
+          email: subUser.email,
+          roles: [], // Les sous-utilisateurs n'ont pas de roles, ils ont accessLevel
+          parentUserId: subUser.parentUserId.toString(),
+          accessLevel: subUser.accessLevel,
+          universes: subUser.universes,
+          isSubUser: true
+        };
+
+        const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+        const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
+          expiresIn: JWT_CONFIG.accessToken.expiresIn
+        });
+
+        // Créer un refresh token
+        const refreshTokenValue = crypto.randomBytes(64).toString('hex');
+        const refreshTokenHash = await bcrypt.hash(refreshTokenValue, 10);
+
+        await RefreshToken.create({
+          userId: subUser._id,
+          token: refreshTokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          userAgent: req.get('user-agent'),
+          ipAddress: req.ip
+        });
+
+        authLogger.info('SubUser login successful', {
+          email,
+          subUserId: subUser._id,
+          parentUserId: subUser.parentUserId
+        });
+        metricsService.recordLogin(true);
+
+        return res.json({
+          success: true,
+          token: accessToken,
+          accessToken,
+          refreshToken: refreshTokenValue,
+          expiresIn: JWT_CONFIG.accessToken.expiresIn,
+          user: {
+            id: subUser._id.toString(),
+            email: subUser.email,
+            firstName: subUser.firstName,
+            lastName: subUser.lastName,
+            accessLevel: subUser.accessLevel,
+            universes: subUser.universes,
+            isSubUser: true,
+            parentUserId: subUser.parentUserId.toString()
+          }
+        });
+      }
+    }
+
+    // Utilisateur principal non trouvé ou sous-utilisateur non trouvé
     if (!user || !user.password) {
       authLogger.warn('Login failed - user not found', { email, ip: req.ip });
       metricsService.recordLogin(false);
@@ -98,6 +192,7 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
       });
     }
 
+    // Vérifier le mot de passe de l'utilisateur principal
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -108,6 +203,10 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
         error: 'Identifiants invalides'
       });
     }
+
+    // Mettre à jour lastLoginAt
+    user.lastLoginAt = new Date();
+    await user.save();
 
     const tokenPayload: AdminUser = {
       id: user._id.toString(),
@@ -144,7 +243,8 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
         firstName: user.firstName,
         lastName: user.lastName,
         roles: user.roles || [],
-        companyId: user.companyId
+        companyId: user.companyId,
+        isSubUser: false
       }
     });
   } catch (error) {

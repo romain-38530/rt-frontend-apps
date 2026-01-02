@@ -38,6 +38,7 @@ import transportScrapingRoutes from './routes/transport-scraping';
 import healthRoutes from './routes/health';
 import notificationsRoutes from './routes/notifications';
 import gdprRoutes from './routes/gdpr';
+import subusersRoutes from './routes/subusers';
 
 // Background services
 import ScrapingServiceInstance from './services/scraping-service';
@@ -156,6 +157,7 @@ app.use('/api/v1/installation', publicInstallationRoutes);
 app.use('/api/v1/admin/transport-scraping', authenticateAdmin, transportScrapingRoutes);
 app.use('/api/v1/admin/notifications', notificationsRoutes);
 app.use('/api/v1/admin/gdpr', gdprRoutes);
+app.use('/api/subusers', subusersRoutes);
 app.use('/api/v1/admin', authenticateAdmin, dashboardRoutes);
 
 // Sentry error handler (avant le handler d'erreur personnalisé)
