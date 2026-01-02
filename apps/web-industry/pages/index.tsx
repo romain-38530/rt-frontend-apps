@@ -16,7 +16,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (!isAuthenticated()) { router.push('/login'); return; }
+    if (!isAuthenticated()) { window.location.href = '/login'; return; }
 
     // Load user data
     const userData = getUser();
