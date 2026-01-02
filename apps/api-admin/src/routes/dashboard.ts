@@ -5,6 +5,8 @@ import Subscription from '../models/Subscription';
 import Invoice from '../models/Invoice';
 import AuditLog from '../models/AuditLog';
 import { AuthRequest } from '../middleware/auth';
+import { analyticsService } from '../services/analytics-service';
+import { logger } from '../config/logger';
 
 const router = Router();
 
@@ -203,50 +205,154 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
-// System logs
+// System logs - from AuditLog
 router.get('/logs', async (req, res) => {
   try {
     const { page = 1, limit = 100, level, service, from, to } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    // In a real implementation, this would fetch from a logging service
+    const query: any = {};
+    if (level) query.action = { $regex: level, $options: 'i' };
+    if (service) query.resource = service;
+    if (from || to) {
+      query.timestamp = {};
+      if (from) query.timestamp.$gte = new Date(String(from));
+      if (to) query.timestamp.$lte = new Date(String(to));
+    }
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find(query)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('userId', 'firstName lastName email')
+        .lean(),
+      AuditLog.countDocuments(query)
+    ]);
+
     res.json({
       success: true,
-      data: [],
-      message: 'System logs - connect to logging service (ELK, CloudWatch, etc.)'
+      data: logs.map(log => ({
+        id: log._id,
+        timestamp: log.timestamp,
+        level: log.action?.includes('error') ? 'error' : log.action?.includes('delete') ? 'warn' : 'info',
+        service: log.resource || 'api-admin',
+        action: log.action,
+        user: log.userId ? `${(log.userId as any).firstName} ${(log.userId as any).lastName}` : 'System',
+        details: log.newValue || log.oldValue || null,
+        ip: log.ipAddress
+      })),
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
     });
   } catch (error) {
+    logger.error('Error fetching logs', { error: String(error) });
     res.status(500).json({ success: false, error: String(error) });
   }
 });
 
-// Error tracking
+// Error tracking - from AuditLog with error actions
 router.get('/errors', async (req, res) => {
   try {
     const { page = 1, limit = 50, resolved } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    // In a real implementation, this would fetch from an error tracking service
+    const query: any = {
+      $or: [
+        { action: { $regex: 'error', $options: 'i' } },
+        { action: { $regex: 'fail', $options: 'i' } },
+        { 'newValue.error': { $exists: true } }
+      ]
+    };
+
+    const [errors, total] = await Promise.all([
+      AuditLog.find(query)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      AuditLog.countDocuments(query)
+    ]);
+
     res.json({
       success: true,
-      data: [],
-      message: 'Error tracking - connect to error tracking service (Sentry, etc.)'
+      data: errors.map(err => ({
+        id: err._id,
+        timestamp: err.timestamp,
+        action: err.action,
+        resource: err.resource,
+        details: err.newValue || err.oldValue || null,
+        ipAddress: err.ipAddress,
+        resolved: false
+      })),
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
     });
   } catch (error) {
+    logger.error('Error fetching errors', { error: String(error) });
     res.status(500).json({ success: false, error: String(error) });
   }
 });
 
-// Integrations
+// Integrations - list configured integrations from companies
 router.get('/integrations', async (req, res) => {
   try {
     const { companyId, type } = req.query;
 
-    // In a real implementation, this would be a separate model
+    const query: any = {};
+    if (companyId) query._id = companyId;
+
+    const companies = await Company.find(query)
+      .select('name settings integrations status')
+      .lean();
+
+    const integrations = companies.flatMap(company => {
+      const companyIntegrations = [];
+
+      // Check for common integrations
+      if ((company as any).settings?.apiEnabled) {
+        companyIntegrations.push({
+          companyId: company._id,
+          companyName: company.name,
+          type: 'api',
+          status: 'active',
+          lastSync: new Date()
+        });
+      }
+
+      if ((company as any).integrations) {
+        for (const [key, value] of Object.entries((company as any).integrations)) {
+          if (value && typeof value === 'object') {
+            companyIntegrations.push({
+              companyId: company._id,
+              companyName: company.name,
+              type: key,
+              status: (value as any).active ? 'active' : 'inactive',
+              config: value,
+              lastSync: (value as any).lastSync
+            });
+          }
+        }
+      }
+
+      return companyIntegrations;
+    });
+
     res.json({
       success: true,
-      data: [],
-      message: 'Integrations management - implementation pending'
+      data: integrations,
+      total: integrations.length
     });
   } catch (error) {
+    logger.error('Error fetching integrations', { error: String(error) });
     res.status(500).json({ success: false, error: String(error) });
   }
 });
@@ -260,6 +366,150 @@ router.put('/integrations/:id', async (req: AuthRequest, res) => {
       message: 'Integration configuration updated'
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// ==================== ANALYTICS ENDPOINTS ====================
+
+// Full analytics dashboard
+router.get('/analytics', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const dashboard = await analyticsService.getFullDashboard(period);
+
+    res.json({
+      success: true,
+      data: dashboard
+    });
+  } catch (error) {
+    logger.error('Error fetching analytics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Lead generation metrics
+router.get('/analytics/leads', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getLeadGenerationMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching lead metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Contact metrics
+router.get('/analytics/contacts', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getContactMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching contact metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Email campaign metrics
+router.get('/analytics/emails', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getEmailCampaignMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching email metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Pipeline metrics
+router.get('/analytics/pipeline', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getPipelineMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching pipeline metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Commercial performance metrics
+router.get('/analytics/commercial', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getCommercialPerformanceMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching commercial metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Salon/source metrics
+router.get('/analytics/salons', async (req, res) => {
+  try {
+    const metrics = await analyticsService.getSalonMetrics();
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching salon metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Interaction metrics
+router.get('/analytics/interactions', async (req, res) => {
+  try {
+    const period = (req.query.period as 'today' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+    const metrics = await analyticsService.getInteractionMetrics(period);
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching interaction metrics', { error: String(error) });
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// Data quality metrics
+router.get('/analytics/data-quality', async (req, res) => {
+  try {
+    const metrics = await analyticsService.getDataQualityMetrics();
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    logger.error('Error fetching data quality metrics', { error: String(error) });
     res.status(500).json({ success: false, error: String(error) });
   }
 });

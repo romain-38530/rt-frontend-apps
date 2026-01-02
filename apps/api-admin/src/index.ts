@@ -50,7 +50,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3020;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rt-admin';
-const APP_VERSION = process.env.APP_VERSION || '3.0.0';
+const APP_VERSION = process.env.APP_VERSION || '3.0.4';
 
 // Initialiser Sentry (avant les autres middlewares)
 initSentry(app);
@@ -94,7 +94,11 @@ app.get('/', (req, res) => {
       crm: '/api/v1/admin/crm',
       scraping: '/api/v1/admin/transport-scraping',
       notifications: '/api/v1/admin/notifications',
-      gdpr: '/api/v1/admin/gdpr'
+      gdpr: '/api/v1/admin/gdpr',
+      dashboard: '/api/v1/admin/dashboard',
+      analytics: '/api/v1/admin/analytics',
+      logs: '/api/v1/admin/logs',
+      errors: '/api/v1/admin/errors'
     }
   });
 });
