@@ -12,6 +12,27 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://d2swp5s4jfg8ri.cloudfront.net'}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      setForgotSuccess(true);
+    } catch (err) {
+      setForgotSuccess(true);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,13 +65,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Connexion de test (à supprimer en production)
-  const handleTestLogin = () => {
-    localStorage.setItem('authToken', 'demo-token');
-    localStorage.setItem('user', JSON.stringify({ email: 'test@symphoni-a.com', role: 'admin' }));
-    router.push('/');
   };
 
   return (
@@ -302,39 +316,65 @@ export default function Login() {
               }}>
               {loading ? t.logging : t.login}
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#22c1c3',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                {t.forgotPassword}
+              </button>
+            </div>
           </form>
 
-          <div style={{
-            marginTop: '20px',
-            paddingTop: '20px',
-            borderTop: '1px solid #e2e8f0'
-          }}>
-            <button
-              onClick={handleTestLogin}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: '#48bb78',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              {t.testLogin}
-            </button>
-            <p style={{
-              fontSize: '12px',
-              color: '#a0aec0',
-              textAlign: 'center',
-              marginTop: '8px'
-            }}>
-              {t.testLoginDesc}
-            </p>
-          </div>
         </div>
+
+        {showForgotPassword && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '40px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}>
+              <h2 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '24px' }}>{t.forgotPasswordTitle}</h2>
+              <p style={{ margin: '0 0 24px 0', color: '#718096', fontSize: '14px' }}>{t.forgotPasswordDesc}</p>
+              {forgotSuccess ? (
+                <div>
+                  <div style={{ padding: '16px', background: '#c6f6d5', color: '#276749', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>{t.resetEmailSent}</div>
+                  <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(''); }} style={{ width: '100%', padding: '12px', background: '#22c1c3', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{t.backToLogin}</button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword}>
+                  <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder={t.email} required style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', marginBottom: '16px', outline: 'none' }} />
+                  <button type="submit" disabled={forgotLoading} style={{ width: '100%', padding: '12px', background: forgotLoading ? '#a0aec0' : '#22c1c3', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: forgotLoading ? 'not-allowed' : 'pointer', marginBottom: '12px' }}>{forgotLoading ? t.sending : t.sendResetLink}</button>
+                  <button type="button" onClick={() => { setShowForgotPassword(false); setForgotEmail(''); }} style={{ width: '100%', padding: '12px', background: 'transparent', color: '#718096', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>{t.backToLogin}</button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
 
           {/* Ligne inférieure: 3 cartes */}
           <div style={{
