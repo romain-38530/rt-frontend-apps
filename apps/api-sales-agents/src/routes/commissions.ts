@@ -2,11 +2,12 @@ import express from 'express';
 import Commission from '../models/Commission';
 import { calculateMonthlyCommissions, calculateAgentCommission } from '../services/commission-calculator';
 import { sendCommissionNotification } from '../services/email-service';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // POST /commissions/calculate - Calculate monthly commissions for all agents
-router.post('/calculate', async (req, res) => {
+router.post('/calculate', authenticateAdmin, async (req, res) => {
   try {
     const { month, year } = req.body;
 
@@ -36,7 +37,7 @@ router.post('/calculate', async (req, res) => {
 });
 
 // GET /commissions - List all commissions with filters
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { agentId, status, month, year, page = 1, limit = 50 } = req.query;
     const query: any = {};
@@ -68,8 +69,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /commissions/export - Export CSV for accounting
+router.get('/export', authenticateAdmin, async (req, res) => {
+  try {
+    const { month, year, status = 'validated' } = req.query;
+
+    const query: any = { status };
+    if (month) query['period.month'] = Number(month);
+    if (year) query['period.year'] = Number(year);
+
+    const commissions = await Commission.find(query)
+      .populate('agentId')
+      .sort({ 'period.year': -1, 'period.month': -1 });
+
+    // Generate CSV
+    const csvHeader = 'Commission ID,Agent ID,Agent Name,Period,Total Clients,Total Amount,Status,Validated At,Payment Reference\n';
+    const csvRows = commissions.map(c => {
+      const agent = c.agentId as any;
+      return `${c.commissionId},${agent.agentId},"${agent.firstName} ${agent.lastName}",${c.period.month}/${c.period.year},${c.totalClients},${c.totalAmount},${c.status},${c.validatedAt ? c.validatedAt.toISOString() : ''},${c.paymentReference || ''}`;
+    }).join('\n');
+
+    const csv = csvHeader + csvRows;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=commissions-${year}-${month}.csv`);
+    res.send(csv);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /commissions/:id - Get commission details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateAdmin, async (req, res) => {
   try {
     const commission = await Commission.findById(req.params.id)
       .populate('agentId')
@@ -86,7 +117,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /commissions/:id/validate - Validate commission
-router.put('/:id/validate', async (req, res) => {
+router.put('/:id/validate', authenticateAdmin, async (req, res) => {
   try {
     const { validatedBy } = req.body;
 
@@ -119,7 +150,7 @@ router.put('/:id/validate', async (req, res) => {
 });
 
 // PUT /commissions/:id/pay - Mark as paid
-router.put('/:id/pay', async (req, res) => {
+router.put('/:id/pay', authenticateAdmin, async (req, res) => {
   try {
     const { paymentReference } = req.body;
 
@@ -145,38 +176,8 @@ router.put('/:id/pay', async (req, res) => {
   }
 });
 
-// GET /commissions/export - Export CSV for accounting
-router.get('/export', async (req, res) => {
-  try {
-    const { month, year, status = 'validated' } = req.query;
-
-    const query: any = { status };
-    if (month) query['period.month'] = Number(month);
-    if (year) query['period.year'] = Number(year);
-
-    const commissions = await Commission.find(query)
-      .populate('agentId')
-      .sort({ 'period.year': -1, 'period.month': -1 });
-
-    // Generate CSV
-    const csvHeader = 'Commission ID,Agent ID,Agent Name,Period,Total Clients,Total Amount,Status,Validated At,Payment Reference\n';
-    const csvRows = commissions.map(c => {
-      const agent = c.agentId as any;
-      return `${c.commissionId},${agent.agentId},"${agent.firstName} ${agent.lastName}",${c.period.month}/${c.period.year},${c.totalClients},${c.totalAmount},${c.status},${c.validatedAt ? c.validatedAt.toISOString() : ''},${c.paymentReference || ''}`;
-    }).join('\n');
-
-    const csv = csvHeader + csvRows;
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=commissions-${year}-${month}.csv`);
-    res.send(csv);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // GET /commissions/:id/statement - Generate statement PDF
-router.get('/:id/statement', async (req, res) => {
+router.get('/:id/statement', authenticateAdmin, async (req, res) => {
   try {
     const commission = await Commission.findById(req.params.id)
       .populate('agentId')

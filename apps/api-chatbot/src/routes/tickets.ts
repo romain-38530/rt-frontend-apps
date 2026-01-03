@@ -8,11 +8,12 @@ import {
   getTicketsByCriteria,
   getSLAStatus,
 } from '../services/ticketing-service';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // POST /tickets - Créer un nouveau ticket
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       conversationId,
@@ -56,7 +57,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // GET /tickets - Liste des tickets avec filtres
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       userId,
@@ -97,7 +98,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /tickets/:id - Détail d'un ticket
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -129,7 +130,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // PUT /tickets/:id - Mettre à jour un ticket
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -165,7 +166,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /tickets/:id/assign - Assigner un ticket à un technicien
-router.post('/:id/assign', async (req: Request, res: Response) => {
+router.post('/:id/assign', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { technicianId } = req.body;
@@ -192,7 +193,7 @@ router.post('/:id/assign', async (req: Request, res: Response) => {
 });
 
 // POST /tickets/:id/resolve - Résoudre un ticket
-router.post('/:id/resolve', async (req: Request, res: Response) => {
+router.post('/:id/resolve', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { resolution, resolvedBy } = req.body;
@@ -234,7 +235,7 @@ router.post('/:id/resolve', async (req: Request, res: Response) => {
 });
 
 // POST /tickets/:id/comments - Ajouter un commentaire
-router.post('/:id/comments', async (req: Request, res: Response) => {
+router.post('/:id/comments', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { userId, content } = req.body;
@@ -261,7 +262,7 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
 });
 
 // GET /tickets/:id/sla - Récupérer le statut SLA
-router.get('/:id/sla', async (req: Request, res: Response) => {
+router.get('/:id/sla', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

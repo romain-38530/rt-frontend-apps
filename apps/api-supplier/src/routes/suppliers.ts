@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import Supplier from '../models/Supplier';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -7,13 +8,12 @@ const router = Router();
  * GET /suppliers/me
  * Récupérer le profil du fournisseur connecté
  */
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    // Dans un cas réel, on récupérerait le supplierId depuis le JWT
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const supplier = await Supplier.findOne({ supplierId });
@@ -44,12 +44,12 @@ router.get('/me', async (req: Request, res: Response) => {
  * PUT /suppliers/me
  * Mettre à jour le profil du fournisseur
  */
-router.put('/me', async (req: Request, res: Response) => {
+router.put('/me', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { companyName, address, contacts } = req.body;
@@ -96,12 +96,12 @@ router.put('/me', async (req: Request, res: Response) => {
  * GET /suppliers/me/industrials
  * Liste des industriels liés au fournisseur
  */
-router.get('/me/industrials', async (req: Request, res: Response) => {
+router.get('/me/industrials', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const supplier = await Supplier.findOne({ supplierId });
@@ -132,12 +132,12 @@ router.get('/me/industrials', async (req: Request, res: Response) => {
  * PUT /suppliers/me/settings
  * Mettre à jour les paramètres du fournisseur
  */
-router.put('/me/settings', async (req: Request, res: Response) => {
+router.put('/me/settings', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { notifications, language } = req.body;
@@ -173,7 +173,7 @@ router.put('/me/settings', async (req: Request, res: Response) => {
  * GET /suppliers/:supplierId
  * Récupérer un fournisseur par son ID (pour les industriels)
  */
-router.get('/:supplierId', async (req: Request, res: Response) => {
+router.get('/:supplierId', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
     const { supplierId } = req.params;
 
@@ -202,7 +202,7 @@ router.get('/:supplierId', async (req: Request, res: Response) => {
  * GET /suppliers
  * Liste des fournisseurs (pour les industriels)
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
     const industrialId = req.query.industrialId as string;
     const status = req.query.status as string;

@@ -3,11 +3,12 @@ import Agent from '../models/Agent';
 import Commission from '../models/Commission';
 import AgentClient from '../models/AgentClient';
 import Challenge from '../models/Challenge';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // GET /dashboard/overview - Direction overview (national stats)
-router.get('/overview', async (req, res) => {
+router.get('/overview', authenticateAdmin, async (req, res) => {
   try {
     // Agent statistics
     const totalAgents = await Agent.countDocuments();
@@ -90,7 +91,7 @@ router.get('/overview', async (req, res) => {
 });
 
 // GET /dashboard/agents/:id - Agent detail view
-router.get('/agents/:id', async (req, res) => {
+router.get('/agents/:id', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id).populate('contractId');
 
@@ -164,7 +165,7 @@ router.get('/agents/:id', async (req, res) => {
 });
 
 // GET /dashboard/regions - Regional statistics
-router.get('/regions', async (req, res) => {
+router.get('/regions', authenticateAdmin, async (req, res) => {
   try {
     // Get agent count by region
     const agentsByRegion = await Agent.aggregate([
@@ -260,7 +261,7 @@ router.get('/regions', async (req, res) => {
 });
 
 // GET /dashboard/kpis - Key performance indicators
-router.get('/kpis', async (req, res) => {
+router.get('/kpis', authenticateAdmin, async (req, res) => {
   try {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;

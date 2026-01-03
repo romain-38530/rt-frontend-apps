@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
 import Conversation from '../models/Conversation';
 import Message from '../models/Message';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // POST /conversations - Créer une nouvelle conversation
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { userId, botType, context } = req.body;
 
@@ -45,7 +46,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // GET /conversations - Liste des conversations de l'utilisateur
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { userId, status, botType, limit = 20, offset = 0 } = req.query;
 
@@ -92,7 +93,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /conversations/:id - Détail d'une conversation
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -124,7 +125,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /conversations/:id/close - Fermer une conversation
-router.post('/:id/close', async (req: Request, res: Response) => {
+router.post('/:id/close', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -154,7 +155,7 @@ router.post('/:id/close', async (req: Request, res: Response) => {
 });
 
 // POST /conversations/:id/feedback - Ajouter un feedback
-router.post('/:id/feedback', async (req: Request, res: Response) => {
+router.post('/:id/feedback', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { rating, feedback } = req.body;
@@ -191,7 +192,7 @@ router.post('/:id/feedback', async (req: Request, res: Response) => {
 });
 
 // POST /conversations/:id/escalate - Escalader vers technicien
-router.post('/:id/escalate', async (req: Request, res: Response) => {
+router.post('/:id/escalate', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason, priority } = req.body;

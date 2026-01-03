@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import SupplierOrder from '../models/SupplierOrder';
 import axios from 'axios';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -8,12 +9,12 @@ const router = Router();
  * GET /orders
  * Liste des commandes avec filtres
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const {
@@ -86,13 +87,13 @@ router.get('/', async (req: Request, res: Response) => {
  * GET /orders/:id
  * Détail d'une commande
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const order = await SupplierOrder.findOne({
@@ -127,14 +128,14 @@ router.get('/:id', async (req: Request, res: Response) => {
  * PUT /orders/:id/status
  * Mettre à jour le statut d'une commande
  */
-router.put('/:id/status', async (req: Request, res: Response) => {
+router.put('/:id/status', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { status, notes } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const validStatuses = ['to_prepare', 'ready', 'in_progress', 'loaded', 'dispute'];
@@ -196,14 +197,14 @@ router.put('/:id/status', async (req: Request, res: Response) => {
  * POST /orders/:id/documents
  * Upload un document pour une commande
  */
-router.post('/:id/documents', async (req: Request, res: Response) => {
+router.post('/:id/documents', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { type, filename, url } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!type || !filename || !url) {
@@ -256,13 +257,13 @@ router.post('/:id/documents', async (req: Request, res: Response) => {
  * GET /orders/:id/documents
  * Liste des documents d'une commande
  */
-router.get('/:id/documents', async (req: Request, res: Response) => {
+router.get('/:id/documents', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const order = await SupplierOrder.findOne({
@@ -290,13 +291,13 @@ router.get('/:id/documents', async (req: Request, res: Response) => {
  * GET /orders/:id/timeline
  * Historique des événements d'une commande
  */
-router.get('/:id/timeline', async (req: Request, res: Response) => {
+router.get('/:id/timeline', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const order = await SupplierOrder.findOne({

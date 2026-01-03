@@ -4,11 +4,12 @@ import {
   getFAQByBotType,
   markFAQHelpful,
 } from '../services/knowledge-service';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // GET /faq - Liste des FAQ par botType
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { botType, category, limit = 50, offset = 0 } = req.query;
 
@@ -44,7 +45,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /faq/search - Rechercher dans les FAQ
-router.get('/search', async (req: Request, res: Response) => {
+router.get('/search', authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       query,
@@ -87,7 +88,7 @@ router.get('/search', async (req: Request, res: Response) => {
 });
 
 // GET /faq/grouped/:botType - FAQ groupées par catégorie
-router.get('/grouped/:botType', async (req: Request, res: Response) => {
+router.get('/grouped/:botType', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { botType } = req.params;
 
@@ -107,7 +108,7 @@ router.get('/grouped/:botType', async (req: Request, res: Response) => {
 });
 
 // POST /faq/:id/helpful - Marquer une FAQ comme utile ou non
-router.post('/:id/helpful', async (req: Request, res: Response) => {
+router.post('/:id/helpful', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { helpful } = req.body;

@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import Conversation from '../models/Conversation';
 import Ticket from '../models/Ticket';
 import Message from '../models/Message';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // GET /stats/conversations - Statistiques des conversations
-router.get('/conversations', async (req: Request, res: Response) => {
+router.get('/conversations', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { botType, userId, startDate, endDate } = req.query;
 
@@ -111,7 +112,7 @@ router.get('/conversations', async (req: Request, res: Response) => {
 });
 
 // GET /stats/resolution - Taux de résolution
-router.get('/resolution', async (req: Request, res: Response) => {
+router.get('/resolution', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { botType, startDate, endDate } = req.query;
 
@@ -200,7 +201,7 @@ router.get('/resolution', async (req: Request, res: Response) => {
 });
 
 // GET /stats/tickets - Statistiques des tickets
-router.get('/tickets', async (req: Request, res: Response) => {
+router.get('/tickets', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { assignedTo, priority, status, startDate, endDate } = req.query;
 
@@ -347,7 +348,7 @@ router.get('/tickets', async (req: Request, res: Response) => {
 });
 
 // GET /stats/messages - Statistiques des messages
-router.get('/messages', async (req: Request, res: Response) => {
+router.get('/messages', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 

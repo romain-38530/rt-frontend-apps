@@ -2,11 +2,12 @@ import express from 'express';
 import Agent from '../models/Agent';
 import AgentContract from '../models/AgentContract';
 import bcrypt from 'bcryptjs';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // POST /agents - Create agent
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const agent = new Agent(req.body);
     await agent.save();
@@ -17,7 +18,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /agents - List with filters
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { status, region, page = 1, limit = 50 } = req.query;
     const query: any = {};
@@ -48,7 +49,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /agents/:id - Get details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id).populate('contractId');
     if (!agent) {
@@ -61,7 +62,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /agents/:id - Update agent
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findByIdAndUpdate(
       req.params.id,
@@ -78,7 +79,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // PUT /agents/:id/status - Change status
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const agent = await Agent.findById(req.params.id);
@@ -101,7 +102,7 @@ router.put('/:id/status', async (req, res) => {
 });
 
 // POST /agents/:id/documents - Upload document
-router.post('/:id/documents', async (req, res) => {
+router.post('/:id/documents', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id);
 
@@ -142,7 +143,7 @@ router.post('/:id/documents', async (req, res) => {
 });
 
 // PUT /agents/:id/documents/:docType/verify - Verify document
-router.put('/:id/documents/:docType/verify', async (req, res) => {
+router.put('/:id/documents/:docType/verify', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id);
 
@@ -179,7 +180,7 @@ router.put('/:id/documents/:docType/verify', async (req, res) => {
 });
 
 // POST /agents/:id/activate - Activate agent
-router.post('/:id/activate', async (req, res) => {
+router.post('/:id/activate', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id).populate('contractId');
 
@@ -216,7 +217,7 @@ router.post('/:id/activate', async (req, res) => {
 });
 
 // DELETE /agents/:id - Soft delete (terminate)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id);
 

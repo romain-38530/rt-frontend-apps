@@ -1,19 +1,34 @@
 import { Router, Request, Response } from 'express';
 import SupplierChat from '../models/SupplierChat';
 import notificationService from '../services/notification-service';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+
+/**
+ * GET /chats/templates
+ * Liste des templates de messages disponibles
+ */
+router.get('/templates', async (_req: Request, res: Response) => {
+  try {
+    const templates = notificationService.getMessageTemplates();
+    res.json({ templates });
+  } catch (error: any) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 /**
  * GET /chats
  * Liste des conversations
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const {
@@ -71,12 +86,12 @@ router.get('/', async (req: Request, res: Response) => {
  * POST /chats
  * Créer une nouvelle conversation
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { participants, orderId, initialMessage } = req.body;
@@ -142,14 +157,14 @@ router.post('/', async (req: Request, res: Response) => {
  * GET /chats/:id
  * Détail d'une conversation
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { limit = '50', offset = '0' } = req.query;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const chat = await SupplierChat.findOne({
@@ -190,14 +205,14 @@ router.get('/:id', async (req: Request, res: Response) => {
  * POST /chats/:id/messages
  * Envoyer un message dans une conversation
  */
-router.post('/:id/messages', async (req: Request, res: Response) => {
+router.post('/:id/messages', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { content, attachments } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!content) {
@@ -254,14 +269,14 @@ router.post('/:id/messages', async (req: Request, res: Response) => {
  * POST /chats/:id/template
  * Envoyer un message template prédéfini
  */
-router.post('/:id/template', async (req: Request, res: Response) => {
+router.post('/:id/template', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { templateType, additionalInfo } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!templateType) {
@@ -319,13 +334,13 @@ router.post('/:id/template', async (req: Request, res: Response) => {
  * PUT /chats/:id/read
  * Marquer les messages comme lus
  */
-router.put('/:id/read', async (req: Request, res: Response) => {
+router.put('/:id/read', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const chat = await SupplierChat.findOne({
@@ -362,13 +377,13 @@ router.put('/:id/read', async (req: Request, res: Response) => {
  * PUT /chats/:id/archive
  * Archiver une conversation
  */
-router.put('/:id/archive', async (req: Request, res: Response) => {
+router.put('/:id/archive', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const chat = await SupplierChat.findOne({
@@ -389,20 +404,6 @@ router.put('/:id/archive', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error archiving chat:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /chats/templates
- * Liste des templates de messages disponibles
- */
-router.get('/templates', async (_req: Request, res: Response) => {
-  try {
-    const templates = notificationService.getMessageTemplates();
-    res.json({ templates });
-  } catch (error: any) {
-    console.error('Error fetching templates:', error);
     res.status(500).json({ error: error.message });
   }
 });

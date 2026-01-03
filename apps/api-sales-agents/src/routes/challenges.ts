@@ -2,11 +2,12 @@ import express from 'express';
 import Challenge from '../models/Challenge';
 import AgentClient from '../models/AgentClient';
 import Agent from '../models/Agent';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // POST /challenges - Create challenge
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const challenge = new Challenge(req.body);
     await challenge.save();
@@ -17,7 +18,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /challenges - List challenges
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     const query: any = {};
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /challenges/:id - Get challenge details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateAdmin, async (req, res) => {
   try {
     const challenge = await Challenge.findById(req.params.id)
       .populate('ranking.agentId');
@@ -62,7 +63,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /challenges/:id - Update challenge
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
     const challenge = await Challenge.findByIdAndUpdate(
       req.params.id,
@@ -81,7 +82,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // POST /challenges/:id/refresh-ranking - Recalculate rankings
-router.post('/:id/refresh-ranking', async (req, res) => {
+router.post('/:id/refresh-ranking', authenticateAdmin, async (req, res) => {
   try {
     const challenge = await Challenge.findById(req.params.id);
 
@@ -129,7 +130,7 @@ router.post('/:id/refresh-ranking', async (req, res) => {
 });
 
 // GET /challenges/:id/leaderboard - Get leaderboard
-router.get('/:id/leaderboard', async (req, res) => {
+router.get('/:id/leaderboard', authenticateAdmin, async (req, res) => {
   try {
     const challenge = await Challenge.findById(req.params.id)
       .populate('ranking.agentId');

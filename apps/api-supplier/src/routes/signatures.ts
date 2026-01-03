@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import signatureService from '../services/signature-service';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -7,12 +8,12 @@ const router = Router();
  * POST /signatures/loading
  * Signer un bon de chargement
  */
-router.post('/loading', async (req: Request, res: Response) => {
+router.post('/loading', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const {
@@ -73,12 +74,12 @@ router.post('/loading', async (req: Request, res: Response) => {
  * POST /signatures/qrcode/generate
  * Générer un QR code pour signature
  */
-router.post('/qrcode/generate', async (req: Request, res: Response) => {
+router.post('/qrcode/generate', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { orderId, type } = req.body;
@@ -168,13 +169,13 @@ router.post('/qrcode/scan', async (req: Request, res: Response) => {
  * GET /signatures/:orderId
  * Récupérer toutes les signatures pour une commande
  */
-router.get('/:orderId', async (req: Request, res: Response) => {
+router.get('/:orderId', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { orderId } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const signatures = await signatureService.getOrderSignatures(orderId);
@@ -236,13 +237,13 @@ router.post('/verify', async (req: Request, res: Response) => {
  * GET /signatures/:orderId/status
  * Vérifier le statut des signatures requises pour une commande
  */
-router.get('/:orderId/status', async (req: Request, res: Response) => {
+router.get('/:orderId/status', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { orderId } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const status = await signatureService.checkRequiredSignatures(orderId);
@@ -268,14 +269,14 @@ router.get('/:orderId/status', async (req: Request, res: Response) => {
  * GET /signatures/:orderId/loading-note
  * Générer le bon de chargement signé
  */
-router.get('/:orderId/loading-note', async (req: Request, res: Response) => {
+router.get('/:orderId/loading-note', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { orderId } = req.params;
     const { signatureId } = req.query;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!signatureId) {

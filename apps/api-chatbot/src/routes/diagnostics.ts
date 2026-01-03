@@ -5,6 +5,7 @@ import {
   getServiceStatus,
   getAllServicesStatus,
 } from '../services/diagnostics-service';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 

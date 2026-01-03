@@ -4,6 +4,7 @@ import {
   getArticleById,
   markArticleHelpful,
 } from '../services/knowledge-service';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 

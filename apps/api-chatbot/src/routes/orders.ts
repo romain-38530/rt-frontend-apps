@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import Order from '../models/Order';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // Get all orders
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
     res.json(orders);
@@ -14,7 +15,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Get single order
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) {
@@ -27,7 +28,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Create order
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const order = await Order.create(req.body);
     res.status(201).json(order);
@@ -37,7 +38,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Update order
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.id,
@@ -54,7 +55,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // Delete order
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
     if (!order) {

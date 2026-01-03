@@ -57,9 +57,6 @@ class CrmEmailService {
         auth: {
           user: this.config.user,
           pass: this.config.password
-        },
-        tls: {
-          rejectUnauthorized: false
         }
       });
       console.log(`[CrmEmailService] SMTP configure: ${this.config.host}:${this.config.port} (${this.config.fromEmail})`);

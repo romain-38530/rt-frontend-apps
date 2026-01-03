@@ -3,11 +3,12 @@ import AgentContract from '../models/AgentContract';
 import Agent from '../models/Agent';
 import { generateContract } from '../services/contract-generator';
 import { sendContractEmail } from '../services/email-service';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // POST /contracts/generate - Generate PDF contract for agent
-router.post('/generate', async (req, res) => {
+router.post('/generate', authenticateAdmin, async (req, res) => {
   try {
     const { agentId, region, duration = 'unlimited', clauses = [] } = req.body;
 
@@ -43,7 +44,7 @@ router.post('/generate', async (req, res) => {
 });
 
 // GET /contracts/:id - Get contract details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateAdmin, async (req, res) => {
   try {
     const contract = await AgentContract.findById(req.params.id).populate('agentId');
     if (!contract) {
@@ -56,7 +57,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /contracts/:id/send - Send for signature
-router.post('/:id/send', async (req, res) => {
+router.post('/:id/send', authenticateAdmin, async (req, res) => {
   try {
     const contract = await AgentContract.findById(req.params.id).populate('agentId');
 
@@ -122,7 +123,7 @@ router.post('/:id/sign', async (req, res) => {
 });
 
 // GET /contracts/:id/pdf - Download PDF
-router.get('/:id/pdf', async (req, res) => {
+router.get('/:id/pdf', authenticateAdmin, async (req, res) => {
   try {
     const contract = await AgentContract.findById(req.params.id);
 

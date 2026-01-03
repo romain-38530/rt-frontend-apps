@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Supplier from '../models/Supplier';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -23,12 +24,12 @@ const notificationsStore: Notification[] = [];
  * GET /notifications
  * Liste des notifications pour le fournisseur
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const {
@@ -88,13 +89,13 @@ router.get('/', async (req: Request, res: Response) => {
  * PUT /notifications/:id/read
  * Marquer une notification comme lue
  */
-router.put('/:id/read', async (req: Request, res: Response) => {
+router.put('/:id/read', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const notification = notificationsStore.find(
@@ -122,12 +123,12 @@ router.put('/:id/read', async (req: Request, res: Response) => {
  * PUT /notifications/read-all
  * Marquer toutes les notifications comme lues
  */
-router.put('/read-all', async (req: Request, res: Response) => {
+router.put('/read-all', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     let count = 0;
@@ -153,13 +154,13 @@ router.put('/read-all', async (req: Request, res: Response) => {
  * DELETE /notifications/:id
  * Supprimer une notification
  */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const index = notificationsStore.findIndex(
@@ -186,12 +187,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
  * GET /notifications/settings
  * Récupérer les paramètres de notification
  */
-router.get('/settings', async (req: Request, res: Response) => {
+router.get('/settings', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const supplier = await Supplier.findOne({ supplierId });
@@ -227,12 +228,12 @@ router.get('/settings', async (req: Request, res: Response) => {
  * POST /notifications/settings
  * Mettre à jour les paramètres de notification
  */
-router.post('/settings', async (req: Request, res: Response) => {
+router.post('/settings', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { notificationsEnabled, channels, preferences } = req.body;
@@ -271,12 +272,12 @@ router.post('/settings', async (req: Request, res: Response) => {
  * POST /notifications/test
  * Envoyer une notification de test
  */
-router.post('/test', async (req: Request, res: Response) => {
+router.post('/test', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const testNotification: Notification = {

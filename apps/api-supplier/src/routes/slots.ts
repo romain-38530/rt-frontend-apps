@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import slotService from '../services/slot-service';
 import LoadingSlot from '../models/LoadingSlot';
+import { authenticateSupplier, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -8,12 +9,12 @@ const router = Router();
  * GET /slots
  * Liste des créneaux proposés pour le fournisseur
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const {
@@ -75,13 +76,13 @@ router.get('/', async (req: Request, res: Response) => {
  * GET /slots/:orderId
  * Récupérer le créneau pour une commande spécifique
  */
-router.get('/:orderId', async (req: Request, res: Response) => {
+router.get('/:orderId', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { orderId } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const slots = await LoadingSlot.find({
@@ -108,13 +109,13 @@ router.get('/:orderId', async (req: Request, res: Response) => {
  * POST /slots/:id/accept
  * Accepter un créneau proposé
  */
-router.post('/:id/accept', async (req: Request, res: Response) => {
+router.post('/:id/accept', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const slot = await slotService.acceptSlot(id, supplierId);
@@ -141,14 +142,14 @@ router.post('/:id/accept', async (req: Request, res: Response) => {
  * POST /slots/:id/modify
  * Proposer une modification de créneau
  */
-router.post('/:id/modify', async (req: Request, res: Response) => {
+router.post('/:id/modify', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { alternativeSlot, reason } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!alternativeSlot || !reason) {
@@ -202,14 +203,14 @@ router.post('/:id/modify', async (req: Request, res: Response) => {
  * POST /slots/:id/reject
  * Refuser un créneau proposé
  */
-router.post('/:id/reject', async (req: Request, res: Response) => {
+router.post('/:id/reject', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { id } = req.params;
     const { reason } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!reason) {
@@ -239,13 +240,13 @@ router.post('/:id/reject', async (req: Request, res: Response) => {
  * GET /slots/availability
  * Récupérer les disponibilités
  */
-router.get('/availability', async (req: Request, res: Response) => {
+router.get('/availability', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { date } = req.query;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     const queryDate = date ? new Date(date as string) : undefined;
@@ -282,13 +283,13 @@ router.get('/availability', async (req: Request, res: Response) => {
  * POST /slots/propose
  * Proposer un nouveau créneau (par le fournisseur)
  */
-router.post('/propose', async (req: Request, res: Response) => {
+router.post('/propose', authenticateSupplier, async (req: AuthRequest, res: Response) => {
   try {
-    const supplierId = req.headers['x-supplier-id'] as string;
+    const supplierId = req.supplierId;
     const { orderId, date, startTime, endTime, dockId } = req.body;
 
     if (!supplierId) {
-      return res.status(401).json({ error: 'Supplier ID is required' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!orderId || !date || !startTime || !endTime) {

@@ -3,10 +3,9 @@ import Agent from '../models/Agent';
 import Commission from '../models/Commission';
 import AgentClient from '../models/AgentClient';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateAgentToken, authenticateAgent, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // POST /portal/login - Agent login
 router.post('/login', async (req, res) => {
@@ -38,11 +37,7 @@ router.post('/login', async (req, res) => {
     await agent.save();
 
     // Generate JWT token
-    const token = jwt.sign(
-      { agentId: agent._id, email: agent.email },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = generateAgentToken(agent._id.toString(), { email: agent.email });
 
     res.json({
       token,
@@ -61,27 +56,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Middleware to verify JWT token
-const authenticateAgent = (req: any, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.agentId = decoded.agentId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
 // GET /portal/dashboard - Agent dashboard
-router.get('/dashboard', authenticateAgent, async (req: any, res) => {
+router.get('/dashboard', authenticateAgent, async (req: AuthRequest, res) => {
   try {
     const agent = await Agent.findById(req.agentId).populate('contractId');
 
@@ -136,7 +112,7 @@ router.get('/dashboard', authenticateAgent, async (req: any, res) => {
 });
 
 // GET /portal/commissions - Agent commission history
-router.get('/commissions', authenticateAgent, async (req: any, res) => {
+router.get('/commissions', authenticateAgent, async (req: AuthRequest, res) => {
   try {
     const { page = 1, limit = 12 } = req.query;
 
@@ -162,7 +138,7 @@ router.get('/commissions', authenticateAgent, async (req: any, res) => {
 });
 
 // GET /portal/clients - Agent's clients
-router.get('/clients', authenticateAgent, async (req: any, res) => {
+router.get('/clients', authenticateAgent, async (req: AuthRequest, res) => {
   try {
     const { status, page = 1, limit = 50 } = req.query;
 
@@ -191,7 +167,7 @@ router.get('/clients', authenticateAgent, async (req: any, res) => {
 });
 
 // PUT /portal/profile - Update profile
-router.put('/profile', authenticateAgent, async (req: any, res) => {
+router.put('/profile', authenticateAgent, async (req: AuthRequest, res) => {
   try {
     const { phone, address, bankDetails } = req.body;
 
@@ -214,7 +190,7 @@ router.put('/profile', authenticateAgent, async (req: any, res) => {
 });
 
 // PUT /portal/password - Change password
-router.put('/password', authenticateAgent, async (req: any, res) => {
+router.put('/password', authenticateAgent, async (req: AuthRequest, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 

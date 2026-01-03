@@ -1,11 +1,12 @@
 import express from 'express';
 import AgentClient from '../models/AgentClient';
 import Agent from '../models/Agent';
+import { authenticateAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // POST /clients - Add client for agent
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { agentId } = req.body;
 
@@ -29,7 +30,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /clients - List clients with filters
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { agentId, status, page = 1, limit = 50 } = req.query;
     const query: any = {};
@@ -60,7 +61,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /clients/:id - Get client details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateAdmin, async (req, res) => {
   try {
     const client = await AgentClient.findById(req.params.id).populate('agentId');
 
@@ -75,7 +76,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /clients/:id - Update client
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
     const client = await AgentClient.findByIdAndUpdate(
       req.params.id,
@@ -94,7 +95,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // PUT /clients/:id/activate - Activate client
-router.put('/:id/activate', async (req, res) => {
+router.put('/:id/activate', authenticateAdmin, async (req, res) => {
   try {
     const client = await AgentClient.findById(req.params.id);
 
@@ -118,7 +119,7 @@ router.put('/:id/activate', async (req, res) => {
 });
 
 // PUT /clients/:id/churn - Mark as churned
-router.put('/:id/churn', async (req, res) => {
+router.put('/:id/churn', authenticateAdmin, async (req, res) => {
   try {
     const client = await AgentClient.findById(req.params.id);
 

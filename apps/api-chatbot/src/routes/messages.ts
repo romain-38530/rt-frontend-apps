@@ -3,11 +3,12 @@ import Conversation from '../models/Conversation';
 import Message from '../models/Message';
 import { generateContextualResponse } from '../services/claude-service';
 import { getRecommendedContent } from '../services/knowledge-service';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // POST /conversations/:id/messages - Envoyer un message et recevoir réponse IA
-router.post('/:id/messages', async (req: Request, res: Response) => {
+router.post('/:id/messages', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { content, attachments } = req.body;
@@ -138,7 +139,7 @@ router.post('/:id/messages', async (req: Request, res: Response) => {
 });
 
 // GET /conversations/:id/messages - Récupérer l'historique des messages
-router.get('/:id/messages', async (req: Request, res: Response) => {
+router.get('/:id/messages', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { limit = 50, offset = 0 } = req.query;
