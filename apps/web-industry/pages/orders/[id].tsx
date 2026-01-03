@@ -104,12 +104,12 @@ export default function OrderDetailPage() {
   };
 
   // eCMR functions
-  const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
+  const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
 
   const loadEcmrData = async () => {
     if (!orderId) return;
     try {
-      const response = await fetch(`${ORDERS_API_URL}/orders/${orderId}/ecmr`);
+      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr`);
       const result = await response.json();
       if (result.success) {
         setEcmrData(result.data);
@@ -126,7 +126,7 @@ export default function OrderDetailPage() {
     if (!orderId) return;
     setEcmrLoading(true);
     try {
-      const response = await fetch(`${ORDERS_API_URL}/orders/${orderId}/ecmr`, {
+      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -147,7 +147,7 @@ export default function OrderDetailPage() {
 
   const handleDownloadEcmrPdf = () => {
     if (!orderId) return;
-    window.open(`${ORDERS_API_URL}/orders/${orderId}/ecmr/pdf`, '_blank');
+    window.open(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr/pdf`, '_blank');
   };
 
   // Extract order ID from URL path
