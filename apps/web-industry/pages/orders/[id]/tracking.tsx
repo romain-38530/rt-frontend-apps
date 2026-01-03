@@ -195,7 +195,7 @@ export default function TrackingPage() {
   const loadEcmrData = async () => {
     if (!id || typeof id !== 'string') return;
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${id}/ecmr`);
+      const response = await fetch(`${ORDERS_API_URL}/api/orders/${id}/ecmr`);
       const result = await response.json();
       if (result.success) {
         setEcmrData(result.data);
@@ -212,7 +212,7 @@ export default function TrackingPage() {
     if (!id || typeof id !== 'string') return;
     setEcmrLoading(true);
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${id}/ecmr`, {
+      const response = await fetch(`${ORDERS_API_URL}/api/orders/${id}/ecmr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -233,7 +233,7 @@ export default function TrackingPage() {
 
   const handleDownloadEcmrPdf = () => {
     if (!id) return;
-    window.open(`${ORDERS_API_URL}/api/v1/orders/${id}/ecmr/pdf`, '_blank');
+    window.open(`${ORDERS_API_URL}/api/orders/${id}/ecmr/pdf`, '_blank');
   };
 
   // Load eCMR data on mount

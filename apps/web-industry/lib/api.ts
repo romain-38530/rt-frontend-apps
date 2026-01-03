@@ -561,21 +561,21 @@ export const chatbotApi = {
 export const ordersApi = {
   list: async (filters?: { status?: string; date?: string; clientId?: string }) => {
     const params = new URLSearchParams(filters as any);
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders?${params}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   get: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   create: async (data: any) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -584,7 +584,7 @@ export const ordersApi = {
   },
 
   update: async (id: string, data: any) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -593,7 +593,7 @@ export const ordersApi = {
   },
 
   delete: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
@@ -609,7 +609,7 @@ export const ordersApi = {
 
   // ===== Order Events =====
   getEvents: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -617,7 +617,7 @@ export const ordersApi = {
 
   // ===== Documents Management =====
   getDocuments: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${orderId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -625,7 +625,7 @@ export const ordersApi = {
 
   validateDocument: async (documentId: string) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/validate`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${documentId}/validate`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -641,7 +641,7 @@ export const ordersApi = {
 
   rejectDocument: async (documentId: string, reason: string) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/reject`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${documentId}/reject`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -657,14 +657,14 @@ export const ordersApi = {
   },
 
   getDocumentDownloadUrl: async (documentId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/download-url`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${documentId}/download-url`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   checkDocuments: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/check`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${orderId}/check`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -672,7 +672,7 @@ export const ordersApi = {
 
   // ===== Closure Management =====
   checkClosureEligibility: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/${orderId}/check`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/closure/${orderId}/check`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -680,7 +680,7 @@ export const ordersApi = {
 
   closeOrder: async (orderId: string) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/${orderId}/close`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/closure/${orderId}/close`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -695,7 +695,7 @@ export const ordersApi = {
 
   getClosureStats: async () => {
     const industrialId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').industrialId : '';
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/closure/stats?industrialId=${industrialId}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/closure/stats?industrialId=${industrialId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -704,7 +704,7 @@ export const ordersApi = {
   // ===== Delivery Stats =====
   getDeliveryStats: async () => {
     const industrialId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').industrialId : '';
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/stats?industrialId=${industrialId}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/delivery/stats?industrialId=${industrialId}`, {
       headers: getAuthHeaders()
     });
     return res.json();

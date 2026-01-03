@@ -109,7 +109,7 @@ export default function OrderDetailPage() {
   const loadEcmrData = async () => {
     if (!orderId) return;
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr`);
+      const response = await fetch(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr`);
       const result = await response.json();
       if (result.success) {
         setEcmrData(result.data);
@@ -126,7 +126,7 @@ export default function OrderDetailPage() {
     if (!orderId) return;
     setEcmrLoading(true);
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr`, {
+      const response = await fetch(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -147,7 +147,7 @@ export default function OrderDetailPage() {
 
   const handleDownloadEcmrPdf = () => {
     if (!orderId) return;
-    window.open(`${ORDERS_API_URL}/api/v1/orders/${orderId}/ecmr/pdf`, '_blank');
+    window.open(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr/pdf`, '_blank');
   };
 
   // Extract order ID from URL path
@@ -287,7 +287,7 @@ export default function OrderDetailPage() {
     if (!orderId || !newComment.trim()) return;
 
     try {
-      const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+      const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1148,7 +1148,7 @@ export default function OrderDetailPage() {
                           <button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${order.id}/send-supplier-invitation`, {
+                                const response = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${order.id}/send-supplier-invitation`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ email: orderAny.senderEmail, name: orderAny.senderName }),
