@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { ECMR, Booking, DriverCheckin } from '../models';
+import { generateECMRPDFBuffer } from '../services/ecmr-pdf';
 
 const router = Router();
 
@@ -331,23 +332,97 @@ router.get('/:id/download', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'eCMR non trouvée' });
     }
 
-    // Générer un PDF (simulation - en production utiliser puppeteer/pdfkit)
-    const pdfContent = generateECMRPDF(ecmr);
+    // Générer le PDF avec le vrai template CMR
+    const pdfBuffer = await generateECMRPDFBuffer(ecmr.toObject() as any);
 
     // Mettre à jour l'eCMR
     ecmr.pdfUrl = `/api/v1/ecmr/${ecmr._id}/pdf`;
     ecmr.pdfGeneratedAt = new Date();
     await ecmr.save();
 
-    res.json({
-      success: true,
-      data: {
-        pdfUrl: ecmr.pdfUrl,
-        generatedAt: ecmr.pdfGeneratedAt,
-        content: pdfContent // En production, retourner le vrai PDF
-      }
-    });
+    // Retourner le PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="eCMR-${ecmr.reference}.pdf"`);
+    res.send(pdfBuffer);
   } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /ecmr/:id/pdf - Télécharger le PDF (alias)
+router.get('/:id/pdf', async (req: Request, res: Response) => {
+  try {
+    const ecmr = await ECMR.findById(req.params.id);
+    if (!ecmr) {
+      return res.status(404).json({ success: false, error: 'eCMR non trouvée' });
+    }
+
+    // Générer le PDF avec le vrai template CMR
+    const pdfBuffer = await generateECMRPDFBuffer(ecmr.toObject() as any);
+
+    // Retourner le PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="eCMR-${ecmr.reference}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /ecmr/generate-pdf - Générer un PDF à partir des données eCMR
+router.post('/generate-pdf', async (req: Request, res: Response) => {
+  try {
+    const ecmrData = req.body;
+
+    // Si on a un ID, charger depuis la base
+    if (ecmrData._id || ecmrData.id) {
+      const ecmr = await ECMR.findById(ecmrData._id || ecmrData.id);
+      if (ecmr) {
+        const pdfBuffer = await generateECMRPDFBuffer(ecmr.toObject() as any);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="eCMR-${ecmr.reference}.pdf"`);
+        return res.send(pdfBuffer);
+      }
+    }
+
+    // Sinon, générer à partir des données fournies
+    // S'assurer qu'on a une référence
+    if (!ecmrData.reference) {
+      ecmrData.reference = `ECMR-${Date.now()}`;
+    }
+
+    // Valeurs par défaut pour les champs manquants
+    const completeData = {
+      reference: ecmrData.reference,
+      bookingReference: ecmrData.bookingReference || '',
+      orderReference: ecmrData.orderReference || '',
+      sender: ecmrData.sender || { name: 'N/A', address: 'N/A', city: 'N/A', postalCode: '', country: 'France' },
+      carrier: ecmrData.carrier || { name: 'N/A', address: 'N/A', city: 'N/A', postalCode: '', country: 'France' },
+      recipient: ecmrData.recipient || { name: 'N/A', address: 'N/A', city: 'N/A', postalCode: '', country: 'France' },
+      loadingPlace: ecmrData.loadingPlace || { address: 'N/A', city: 'N/A', country: 'France' },
+      deliveryPlace: ecmrData.deliveryPlace || { address: 'N/A', city: 'N/A', country: 'France' },
+      goods: ecmrData.goods || [],
+      totalWeight: ecmrData.totalWeight || 0,
+      totalPackages: ecmrData.totalPackages || 0,
+      vehiclePlate: ecmrData.vehiclePlate || 'N/A',
+      trailerPlate: ecmrData.trailerPlate,
+      signatures: ecmrData.signatures || [],
+      status: ecmrData.status || 'draft',
+      eidasCompliant: ecmrData.eidasCompliant || false,
+      senderReserves: ecmrData.senderReserves,
+      carrierReserves: ecmrData.carrierReserves,
+      recipientReserves: ecmrData.recipientReserves,
+      createdAt: ecmrData.createdAt || new Date(),
+      validatedAt: ecmrData.validatedAt,
+      timestampToken: ecmrData.timestampToken
+    };
+
+    const pdfBuffer = await generateECMRPDFBuffer(completeData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="eCMR-${completeData.reference}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('Erreur génération PDF:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -416,42 +491,5 @@ router.post('/:id/photo', async (req: Request, res: Response) => {
     res.status(400).json({ success: false, error: error.message });
   }
 });
-
-// Fonction utilitaire: générer contenu PDF (simulation)
-function generateECMRPDF(ecmr: any): string {
-  return `
-=== LETTRE DE VOITURE ELECTRONIQUE (eCMR) ===
-Référence: ${ecmr.reference}
-
-EXPEDITEUR:
-${ecmr.sender.name}
-${ecmr.sender.address}
-${ecmr.sender.postalCode} ${ecmr.sender.city}
-${ecmr.sender.country}
-
-TRANSPORTEUR:
-${ecmr.carrier.name}
-${ecmr.carrier.address}
-${ecmr.carrier.postalCode} ${ecmr.carrier.city}
-
-DESTINATAIRE:
-${ecmr.recipient.name}
-${ecmr.recipient.address}
-${ecmr.recipient.postalCode} ${ecmr.recipient.city}
-
-MARCHANDISES:
-${ecmr.goods.map((g: any) => `- ${g.description}: ${g.quantity} ${g.packaging} (${g.weight} kg)`).join('\n')}
-
-Total: ${ecmr.totalPackages} colis, ${ecmr.totalWeight} kg
-
-VEHICULE: ${ecmr.vehiclePlate} ${ecmr.trailerPlate ? `/ ${ecmr.trailerPlate}` : ''}
-
-SIGNATURES:
-${ecmr.signatures.map((s: any) => `${s.party}: ${s.signedBy} le ${s.signedAt}`).join('\n')}
-
-Statut: ${ecmr.status}
-${ecmr.eidasCompliant ? 'Document conforme eIDAS' : ''}
-  `.trim();
-}
 
 export default router;
