@@ -1,5 +1,8 @@
 import { MetadataRoute } from 'next';
 
+// Required for static export
+export const dynamic = 'force-static';
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://symphonia-controltower.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
