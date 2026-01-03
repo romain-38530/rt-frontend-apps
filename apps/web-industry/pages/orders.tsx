@@ -385,42 +385,47 @@ export default function OrdersPage() {
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={() => setIsAffretMode(true)}
-                    style={{
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                      border: 'none',
-                      color: 'white',
-                      padding: '12px 20px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}>
-                    🚀 Mode Planification Auto
-                  </button>
-                  <button
-                    onClick={() => router.push('/affret-ia')}
-                    style={{
-                      background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                      border: 'none',
-                      color: 'white',
-                      padding: '12px 20px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}>
-                    🤖 Affret.IA
-                  </button>
+                  {/* Afficher les boutons Affret uniquement s'il y a des commandes sans transporteur */}
+                  {getEligibleOrders().length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setIsAffretMode(true)}
+                        style={{
+                          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                          border: 'none',
+                          color: 'white',
+                          padding: '12px 20px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '700',
+                          boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}>
+                        🚀 Mode Planification Auto
+                      </button>
+                      <button
+                        onClick={() => router.push('/affret-ia')}
+                        style={{
+                          background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                          border: 'none',
+                          color: 'white',
+                          padding: '12px 20px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '700',
+                          boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}>
+                        🤖 Affret.IA
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => setView('create')}
                     style={{
