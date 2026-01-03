@@ -86,10 +86,12 @@ export default function OrderDetailPage() {
   // API URLs
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr';
 
-  // Load delegation config (logistics partners)
+  // Load delegation config (logistics partners) - Optional feature
+  const SUBSCRIPTIONS_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTIONS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net';
+
   const loadDelegationConfig = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/logistics-delegation/routing-config`, {
+      const response = await fetch(`${SUBSCRIPTIONS_API_URL}/api/logistics-delegation/routing-config`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -97,43 +99,63 @@ export default function OrderDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setDelegationConfig(data.routingConfig);
+      } else {
+        // Delegation not configured - this is optional
+        setDelegationConfig(null);
       }
     } catch (err) {
-      console.error('Error loading delegation config:', err);
+      // Silently handle - delegation is optional
+      setDelegationConfig(null);
     }
   };
 
-  // eCMR functions
-  const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
+  // eCMR functions - Use dedicated eCMR service (optional feature)
+  const ECMR_API_URL = process.env.NEXT_PUBLIC_ECMR_API || 'https://d28q05cx5hmg9q.cloudfront.net';
 
   const loadEcmrData = async () => {
     if (!orderId) return;
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr`);
+      const response = await fetch(`${ECMR_API_URL}/api/v1/ecmr/order/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (!response.ok) {
+        // No eCMR found for this order - that's normal, eCMR is optional
+        setEcmrData(null);
+        return;
+      }
       const result = await response.json();
-      if (result.success) {
-        setEcmrData(result.data);
+      if (result.success || result.data) {
+        setEcmrData(result.data || result);
       } else {
         setEcmrData(null);
       }
     } catch (err) {
-      console.error('Error loading eCMR:', err);
+      // Silently handle - eCMR service may not be available or configured
       setEcmrData(null);
     }
   };
 
   const handleCreateEcmr = async () => {
-    if (!orderId) return;
+    if (!orderId || !order) return;
     setEcmrLoading(true);
     try {
-      const response = await fetch(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr`, {
+      const response = await fetch(`${ECMR_API_URL}/api/v1/ecmr`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+          orderReference: order.reference,
+        }),
       });
       const result = await response.json();
-      if (result.success) {
+      if (result.success || result.data) {
         toast.success('eCMR créée avec succès');
-        setEcmrData(result.data);
+        setEcmrData(result.data || result);
         await loadEcmrData();
       } else {
         toast.error(result.error || "Erreur lors de la création de l'eCMR");
@@ -146,8 +168,8 @@ export default function OrderDetailPage() {
   };
 
   const handleDownloadEcmrPdf = () => {
-    if (!orderId) return;
-    window.open(`${ORDERS_API_URL}/api/orders/${orderId}/ecmr/pdf`, '_blank');
+    if (!ecmrData?._id) return;
+    window.open(`${ECMR_API_URL}/api/v1/ecmr/${ecmrData._id}/pdf`, '_blank');
   };
 
   // Extract order ID from URL path
@@ -318,8 +340,11 @@ export default function OrderDetailPage() {
       router.push('/login');
       return;
     }
+    if (!orderId) return;
+
     loadOrder();
     loadAppointmentRequests();
+    // Optional features - load silently
     loadEcmrData();
     loadDelegationConfig();
   }, [orderId]);
