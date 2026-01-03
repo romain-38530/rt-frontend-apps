@@ -38,6 +38,7 @@ export default function OrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [isAffretMode, setIsAffretMode] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
+  const [directAffretIA, setDirectAffretIA] = useState(false); // true = skip auto-dispatch, go direct to Affret.IA
 
   // Charger les commandes
   const loadOrders = async (newFilters?: OrderFilters) => {
@@ -149,13 +150,26 @@ export default function OrdersPage() {
     }
   };
 
-  // Lancer la planification automatique
-  const handleLaunchAffretIA = () => {
+  // Lancer la planification automatique (avec dispatch chain)
+  const handleLaunchAutoPlanning = () => {
     if (selectedOrders.size === 0) {
       toast.error('Sélectionnez au moins une commande pour la planification automatique');
       return;
     }
+    setDirectAffretIA(false);
     setShowPlanningModal(true);
+  };
+
+  // Lancer Affret.IA directement (sans passer par la chaîne de dispatch)
+  const handleLaunchDirectAffretIA = () => {
+    if (selectedOrders.size === 0) {
+      toast.error('Sélectionnez au moins une commande pour Affret.IA');
+      return;
+    }
+    // Envoyer directement vers Affret.IA
+    const ordersToSend = orders.filter(o => selectedOrders.has(o.id));
+    sessionStorage.setItem('affretia_orders', JSON.stringify(ordersToSend));
+    router.push('/affret-ia?mode=direct');
   };
 
   // Valider une commande avec un transporteur
@@ -308,25 +322,46 @@ export default function OrdersPage() {
                     {selectedOrders.size === orders.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                   </button>
                   <button
-                    onClick={handleLaunchAffretIA}
+                    onClick={handleLaunchAutoPlanning}
                     disabled={selectedOrders.size === 0}
                     style={{
                       background: selectedOrders.size > 0
-                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
                         : 'rgba(255,255,255,0.1)',
                       border: 'none',
                       color: 'white',
-                      padding: '12px 24px',
+                      padding: '12px 20px',
                       borderRadius: '8px',
                       cursor: selectedOrders.size > 0 ? 'pointer' : 'not-allowed',
                       fontSize: '14px',
                       fontWeight: '700',
-                      boxShadow: selectedOrders.size > 0 ? '0 4px 12px rgba(245, 158, 11, 0.4)' : 'none',
+                      boxShadow: selectedOrders.size > 0 ? '0 4px 12px rgba(139, 92, 246, 0.4)' : 'none',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
                     }}>
-                    🤖 Lancer Affret.IA
+                    🚀 Planification Auto
+                  </button>
+                  <button
+                    onClick={handleLaunchDirectAffretIA}
+                    disabled={selectedOrders.size === 0}
+                    style={{
+                      background: selectedOrders.size > 0
+                        ? 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)'
+                        : 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      cursor: selectedOrders.size > 0 ? 'pointer' : 'not-allowed',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxShadow: selectedOrders.size > 0 ? '0 4px 12px rgba(236, 72, 153, 0.4)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                    🤖 Affret.IA Direct
                   </button>
                   <button
                     onClick={handleExitAffretMode}
@@ -348,7 +383,7 @@ export default function OrdersPage() {
                   <button
                     onClick={() => setIsAffretMode(true)}
                     style={{
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                       border: 'none',
                       color: 'white',
                       padding: '12px 20px',
@@ -356,12 +391,30 @@ export default function OrdersPage() {
                       cursor: 'pointer',
                       fontSize: '14px',
                       fontWeight: '700',
-                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
                     }}>
-                    🤖 Planification Auto
+                    🚀 Mode Planification Auto
+                  </button>
+                  <button
+                    onClick={() => router.push('/affret-ia')}
+                    style={{
+                      background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                    🤖 Affret.IA
                   </button>
                   <button
                     onClick={() => setView('create')}

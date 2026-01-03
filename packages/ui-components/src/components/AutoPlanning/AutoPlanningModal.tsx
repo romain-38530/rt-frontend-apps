@@ -33,6 +33,7 @@ export interface AutoPlanningModalProps {
   onClose: () => void;
   onValidate: (orderId: string, carrierId: string) => Promise<void>;
   onEscalateToAffretIA: (orderIds: string[]) => void;
+  /** Base URL for orders API - should NOT include /api/v1 suffix */
   ordersApiUrl?: string;
 }
 
@@ -43,8 +44,15 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
   onClose,
   onValidate,
   onEscalateToAffretIA,
-  ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1',
+  ordersApiUrl,
 }) => {
+  // Normalize the API URL - remove trailing /api/v1 if present since we add /api/orders/...
+  const getBaseUrl = () => {
+    const envUrl = ordersApiUrl || process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
+    // Remove /api/v1 or /api suffix if present
+    return envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/api\/?$/, '');
+  };
+  const baseApiUrl = getBaseUrl();
   const [step, setStep] = useState<PlanningStep>('starting');
   const [dispatchChain, setDispatchChain] = useState<DispatchCarrier[]>([]);
   const [events, setEvents] = useState<DispatchEvent[]>([]);
@@ -63,7 +71,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
       setStep('starting');
       setError(null);
 
-      const response = await fetch(`${ordersApiUrl}/orders/${orderId}/auto-dispatch`, {
+      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/auto-dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -82,14 +90,14 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
       setError(err.message);
       setStep('failed');
     }
-  }, [orderId, ordersApiUrl]);
+  }, [orderId, baseApiUrl]);
 
   // Poll for dispatch status
   const pollDispatchStatus = useCallback(async () => {
     if (!orderId) return;
 
     try {
-      const response = await fetch(`${ordersApiUrl}/orders/${orderId}/dispatch-status`);
+      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/dispatch-status`);
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -112,7 +120,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
     } catch (err: any) {
       console.error('Poll error:', err);
     }
-  }, [orderId, ordersApiUrl]);
+  }, [orderId, baseApiUrl]);
 
   // Start dispatch on mount
   useEffect(() => {
