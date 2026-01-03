@@ -3,6 +3,16 @@
  */
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface ISiteGeofence {
+  type: 'circle' | 'polygon';
+  center?: { lat: number; lng: number };
+  radius?: number; // in meters
+  radiusMeters?: number; // alias for radius
+  latitude?: number; // shorthand for center.lat
+  longitude?: number; // shorthand for center.lng
+  coordinates?: { lat: number; lng: number }[];
+}
+
 export interface ISite extends Document {
   siteId: string;
   name: string;
@@ -19,6 +29,13 @@ export interface ISite extends Document {
     openTime: string;  // "08:00"
     closeTime: string; // "18:00"
   }[];
+  // Extended properties for driver app
+  geofence?: ISiteGeofence;
+  accessInstructions?: string;
+  securityInstructions?: string;
+  parkingInstructions?: string;
+  contactPhone?: string;
+  contactEmail?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,7 +55,28 @@ const SiteSchema = new Schema<ISite>({
     dayOfWeek: { type: Number, min: 0, max: 6 },
     openTime: { type: String },
     closeTime: { type: String }
-  }]
+  }],
+  // Extended properties for driver app
+  geofence: {
+    type: { type: String, enum: ['circle', 'polygon'] },
+    center: {
+      lat: { type: Number },
+      lng: { type: Number }
+    },
+    radius: { type: Number },
+    radiusMeters: { type: Number },
+    latitude: { type: Number },
+    longitude: { type: Number },
+    coordinates: [{
+      lat: { type: Number },
+      lng: { type: Number }
+    }]
+  },
+  accessInstructions: { type: String },
+  securityInstructions: { type: String },
+  parkingInstructions: { type: String },
+  contactPhone: { type: String },
+  contactEmail: { type: String }
 }, {
   timestamps: true
 });
