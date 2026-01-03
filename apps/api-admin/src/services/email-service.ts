@@ -1,9 +1,9 @@
 /**
- * CRM Email Service - OVH SMTP
- * Envoi d'emails commerciaux via SMTP OVH
+ * CRM Email Service - AWS SES
+ * Envoi d'emails commerciaux via AWS Simple Email Service
  */
 
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 
 interface EmailSendOptions {
   to: string;
@@ -23,45 +23,40 @@ interface EmailSendResult {
 }
 
 class CrmEmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private sesClient: SESClient | null = null;
   private config: {
-    host: string;
-    port: number;
-    secure: boolean;
-    user: string;
-    password: string;
+    region: string;
     fromEmail: string;
     fromName: string;
+    replyTo: string;
   };
 
   constructor() {
     this.config = {
-      host: process.env.CRM_SMTP_HOST || process.env.SMTP_HOST || 'ssl0.ovh.net',
-      port: Number(process.env.CRM_SMTP_PORT || process.env.SMTP_PORT || 465),
-      secure: process.env.CRM_SMTP_SECURE !== 'false',
-      user: process.env.CRM_SMTP_USER || '',
-      password: process.env.CRM_SMTP_PASSWORD || '',
-      fromEmail: process.env.CRM_FROM_EMAIL || 'commerciaux@symphonia-controltower.com',
-      fromName: process.env.CRM_FROM_NAME || 'Equipe Commerciale SYMPHONI.A'
+      region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+      fromEmail: process.env.CRM_FROM_EMAIL || process.env.SES_FROM_EMAIL || 'commerciaux@symphonia-controltower.com',
+      fromName: process.env.CRM_FROM_NAME || process.env.SES_FROM_NAME || 'Equipe Commerciale SYMPHONI.A',
+      replyTo: process.env.CRM_REPLY_TO || process.env.SES_REPLY_TO || 'commerce@symphonia-controltower.com'
     };
 
-    this.initTransporter();
+    this.initClient();
   }
 
-  private initTransporter(): void {
-    if (this.config.user && this.config.password) {
-      this.transporter = nodemailer.createTransport({
-        host: this.config.host,
-        port: this.config.port,
-        secure: this.config.secure,
-        auth: {
-          user: this.config.user,
-          pass: this.config.password
-        }
+  private initClient(): void {
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (accessKeyId && secretAccessKey) {
+      this.sesClient = new SESClient({
+        region: this.config.region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
       });
-      console.log(`[CrmEmailService] SMTP configure: ${this.config.host}:${this.config.port} (${this.config.fromEmail})`);
+      console.log(`[CrmEmailService] AWS SES configured for region: ${this.config.region} (${this.config.fromEmail})`);
     } else {
-      console.warn('[CrmEmailService] SMTP credentials not configured - emails will be logged only');
+      console.warn('[CrmEmailService] AWS credentials not configured - emails will be logged only');
     }
   }
 
@@ -71,41 +66,62 @@ class CrmEmailService {
   async sendEmail(options: EmailSendOptions): Promise<EmailSendResult | null> {
     const fromEmail = options.from || this.config.fromEmail;
     const fromName = options.fromName || this.config.fromName;
+    const fromAddress = `${fromName} <${fromEmail}>`;
 
-    // Si pas de transporter, log seulement
-    if (!this.transporter) {
+    // Si pas de client SES, log seulement
+    if (!this.sesClient) {
       console.log(`[CrmEmailService] MOCK EMAIL:
         To: ${options.to}
-        From: ${fromName} <${fromEmail}>
+        From: ${fromAddress}
         Subject: ${options.subject}
         Content: ${options.html.substring(0, 200)}...`);
 
       return {
         id: `mock-${Date.now()}`,
-        message: 'Email logged (SMTP not configured)',
+        message: 'Email logged (AWS SES not configured)',
         success: true
       };
     }
 
-    try {
-      const info = await this.transporter.sendMail({
-        from: `${fromName} <${fromEmail}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text,
-        replyTo: options.replyTo
-      });
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: {
+        ToAddresses: [options.to],
+      },
+      Message: {
+        Subject: {
+          Data: options.subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: options.html,
+            Charset: 'UTF-8',
+          },
+          ...(options.text && {
+            Text: {
+              Data: options.text,
+              Charset: 'UTF-8',
+            },
+          }),
+        },
+      },
+      ReplyToAddresses: [options.replyTo || this.config.replyTo],
+    };
 
-      console.log(`[CrmEmailService] Email sent to ${options.to}: ${info.messageId}`);
+    try {
+      const command = new SendEmailCommand(params);
+      const response = await this.sesClient.send(command);
+
+      console.log(`[CrmEmailService] Email sent to ${options.to}: ${response.MessageId}`);
 
       return {
-        id: info.messageId,
-        message: 'Email sent successfully',
+        id: response.MessageId || `ses-${Date.now()}`,
+        message: 'Email sent successfully via AWS SES',
         success: true
       };
     } catch (error: any) {
-      console.error('[CrmEmailService] Send failed:', error.message);
+      console.error('[CrmEmailService] AWS SES send failed:', error.message);
       return null;
     }
   }
@@ -207,20 +223,19 @@ class CrmEmailService {
    * Verifier la configuration
    */
   isConfigured(): boolean {
-    return this.transporter !== null;
+    return this.sesClient !== null;
   }
 
   /**
-   * Obtenir la configuration (sans password)
+   * Obtenir la configuration (sans secrets)
    */
   getConfig(): Record<string, unknown> {
     return {
-      host: this.config.host,
-      port: this.config.port,
-      secure: this.config.secure,
-      user: this.config.user ? '***configured***' : 'not set',
+      provider: 'AWS SES',
+      region: this.config.region,
       fromEmail: this.config.fromEmail,
       fromName: this.config.fromName,
+      replyTo: this.config.replyTo,
       configured: this.isConfigured()
     };
   }

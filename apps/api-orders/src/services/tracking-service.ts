@@ -6,20 +6,28 @@ import Order, { IOrder, OrderStatus } from '../models/Order';
 import EventService from './event-service';
 import NotificationService from './notification-service';
 import PortalInvitation from '../models/PortalInvitation';
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
+import EmailActionService from './email-action-service';
 
-// Configuration email
-const smtpConfig = {
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE !== 'false',
-  auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
 };
 
-const transporter = smtpConfig.auth.user ? nodemailer.createTransport(smtpConfig) : null;
+let sesClient: SESClient | null = null;
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({ region: SES_CONFIG.region, credentials: { accessKeyId, secretAccessKey } });
+    return sesClient;
+  }
+  return null;
+}
 
 // Transitions de statut autorisées pour le tracking
 const TRACKING_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -374,11 +382,59 @@ class TrackingService {
       'logistician': 'Mise à jour transport'
     };
 
-    const portalUrls: Record<string, string> = {
-      'supplier': process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphonia-controltower.com',
-      'recipient': process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphonia-controltower.com',
-      'logistician': process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphonia-controltower.com'
-    };
+    // Creer un token d'action pour le suivi
+    let trackingUrl = '';
+    try {
+      const { url } = await EmailActionService.createAction({
+        orderId: order.orderId,
+        actionType: 'view_tracking',
+        targetEmail: email,
+        targetRole: role,
+        targetName: contactName,
+        expiresInHours: 168 // 7 jours
+      });
+      trackingUrl = url;
+    } catch (error: any) {
+      // Fallback
+      const portalUrls: Record<string, string> = {
+        'supplier': process.env.SUPPLIER_PORTAL_URL || 'https://supplier.symphonia-controltower.com',
+        'recipient': process.env.RECIPIENT_PORTAL_URL || 'https://recipient.symphonia-controltower.com',
+        'logistician': process.env.LOGISTICIAN_PORTAL_URL || 'https://logistician.symphonia-controltower.com'
+      };
+      trackingUrl = `${portalUrls[role]}/tracking/${order.orderId}`;
+    }
+
+    // Pour les destinataires, ajouter bouton de confirmation si statut = arrived_delivery
+    let additionalButtons = '';
+    if (role === 'recipient' && order.status === 'arrived_delivery') {
+      try {
+        const { url: confirmUrl } = await EmailActionService.createAction({
+          orderId: order.orderId,
+          actionType: 'confirm_delivery',
+          targetEmail: email,
+          targetRole: 'recipient',
+          targetName: contactName,
+          expiresInHours: 72
+        });
+        const { url: issueUrl } = await EmailActionService.createAction({
+          orderId: order.orderId,
+          actionType: 'report_issue',
+          targetEmail: email,
+          targetRole: 'recipient',
+          targetName: contactName,
+          expiresInHours: 72
+        });
+        additionalButtons = `
+          <div style="text-align: center; margin-top: 20px;">
+            <p style="margin-bottom: 15px;"><strong>Le transporteur est arrive. Confirmez la reception:</strong></p>
+            <a href="${confirmUrl}" style="display: inline-block; background: #38a169; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 5px;">&#10003; Confirmer la livraison</a>
+            <a href="${issueUrl}" style="display: inline-block; background: #e53e3e; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 5px;">&#9888; Signaler un probleme</a>
+          </div>
+        `;
+      } catch (e) {
+        // Ignore si echec de creation des actions
+      }
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -418,32 +474,45 @@ class TrackingService {
             </div>
 
             <p style="text-align: center;">
-              <a href="${portalUrls[role]}/tracking/${order.orderId}" class="button">Suivre en temps réel</a>
+              <a href="${trackingUrl}" class="button">Suivre en temps reel</a>
             </p>
+
+            ${additionalButtons}
           </div>
           <div class="footer">
             <p>SYMPHONI.A - Plateforme de gestion logistique<br>
-            RT Technologie - Tous droits réservés</p>
+            RT Technologie - Tous droits reserves</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    if (transporter) {
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'SYMPHONI.A <tracking@symphonia-controltower.com>',
-          to: email,
-          subject: `[SYMPHONI.A] ${statusInfo.emoji} ${statusInfo.fr} - ${order.reference}`,
-          html
-        });
-        console.log(`[TrackingService] Status notification sent to ${email}`);
-      } catch (error: any) {
-        console.error(`[TrackingService] Failed to send notification to ${email}:`, error.message);
-      }
-    } else {
-      console.log(`[TrackingService] [MOCK] Status notification to ${email}: ${statusInfo.fr}`);
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+    const subject = `[SYMPHONI.A] ${statusInfo.emoji} ${statusInfo.fr} - ${order.reference}`;
+
+    if (!client) {
+      console.log(`[TrackingService] MOCK EMAIL - To: ${email}, Subject: ${subject}`);
+      return;
+    }
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: { Html: { Data: html, Charset: 'UTF-8' } }
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo]
+    };
+
+    try {
+      const command = new SendEmailCommand(params);
+      const response = await client.send(command);
+      console.log(`[TrackingService] Status notification sent to ${email}: ${response.MessageId}`);
+    } catch (error: any) {
+      console.error(`[TrackingService] AWS SES error to ${email}:`, error.message);
     }
   }
 
@@ -494,17 +563,31 @@ class TrackingService {
         </html>
       `;
 
-      if (transporter) {
-        try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'SYMPHONI.A <tracking@symphonia-controltower.com>',
-            to: invitation.email,
-            subject: `[SYMPHONI.A] ⏰ ETA ${direction} - ${order.reference}`,
-            html
-          });
-        } catch (error: any) {
-          console.error(`[TrackingService] Failed to send ETA notification:`, error.message);
-        }
+      const client = getSESClient();
+      const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+      const subject = `[SYMPHONI.A] ⏰ ETA ${direction} - ${order.reference}`;
+
+      if (!client) {
+        console.log(`[TrackingService] MOCK EMAIL - To: ${invitation.email}, Subject: ${subject}`);
+        continue;
+      }
+
+      const params: SendEmailCommandInput = {
+        Source: fromAddress,
+        Destination: { ToAddresses: [invitation.email] },
+        Message: {
+          Subject: { Data: subject, Charset: 'UTF-8' },
+          Body: { Html: { Data: html, Charset: 'UTF-8' } }
+        },
+        ReplyToAddresses: [SES_CONFIG.replyTo]
+      };
+
+      try {
+        const command = new SendEmailCommand(params);
+        const response = await client.send(command);
+        console.log(`[TrackingService] ETA notification sent to ${invitation.email}: ${response.MessageId}`);
+      } catch (error: any) {
+        console.error(`[TrackingService] AWS SES error:`, error.message);
       }
     }
   }
@@ -606,20 +689,38 @@ class TrackingService {
     const DispatchChain = (await import('../models/DispatchChain')).default;
     const chain = await DispatchChain.findOne({ orderId, status: 'completed' });
 
-    let carrierEmail = '';
+    let carrierEmail = order.carrierEmail || '';
     let carrierName = order.carrierName || 'Transporteur';
 
     if (chain) {
       const acceptedAttempt = chain.attempts.find(a => a.status === 'accepted');
       if (acceptedAttempt) {
-        // Email via notificationsSent ou API externe
         carrierName = acceptedAttempt.carrierName;
+        // L'email du transporteur est deja dans order.carrierEmail s'il a ete assigne
       }
     }
 
-    // URL de mise à jour rapide
-    const carrierPortalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
-    const updateUrl = `${carrierPortalUrl}/orders/${order.orderId}/update-position?ping=true`;
+    // Creer un token d'action pour le bouton
+    let updateUrl = '';
+    if (carrierEmail) {
+      try {
+        const { url } = await EmailActionService.createAction({
+          orderId,
+          actionType: 'update_position',
+          targetEmail: carrierEmail,
+          targetRole: 'carrier',
+          targetName: carrierName,
+          metadata: { carrierId: order.carrierId, requestedBy },
+          expiresInHours: 24
+        });
+        updateUrl = url;
+      } catch (error: any) {
+        console.error('[TrackingService] Failed to create action token:', error.message);
+        // Fallback vers l'ancienne URL
+        const carrierPortalUrl = process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com';
+        updateUrl = `${carrierPortalUrl}/orders/${order.orderId}/update-position?ping=true`;
+      }
+    }
 
     // Envoyer notification au transporteur
     const html = `
@@ -673,20 +774,34 @@ class TrackingService {
     `;
 
     // Envoyer l'email
-    if (carrierEmail && transporter) {
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'SYMPHONI.A <tracking@symphonia-controltower.com>',
-          to: carrierEmail,
-          subject: `[SYMPHONI.A] 📍 Demande de pointage - ${order.reference}`,
-          html
-        });
-        console.log(`[TrackingService] Ping request sent to carrier ${carrierEmail}`);
-      } catch (error: any) {
-        console.error(`[TrackingService] Failed to send ping request:`, error.message);
+    if (carrierEmail) {
+      const client = getSESClient();
+      const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+      const subject = `[SYMPHONI.A] 📍 Demande de pointage - ${order.reference}`;
+
+      if (!client) {
+        console.log(`[TrackingService] MOCK EMAIL - To: ${carrierEmail}, Subject: ${subject}`);
+      } else {
+        const params: SendEmailCommandInput = {
+          Source: fromAddress,
+          Destination: { ToAddresses: [carrierEmail] },
+          Message: {
+            Subject: { Data: subject, Charset: 'UTF-8' },
+            Body: { Html: { Data: html, Charset: 'UTF-8' } }
+          },
+          ReplyToAddresses: [SES_CONFIG.replyTo]
+        };
+
+        try {
+          const command = new SendEmailCommand(params);
+          const response = await client.send(command);
+          console.log(`[TrackingService] Ping request sent to carrier ${carrierEmail}: ${response.MessageId}`);
+        } catch (error: any) {
+          console.error(`[TrackingService] AWS SES error:`, error.message);
+        }
       }
     } else {
-      console.log(`[TrackingService] [MOCK] Ping request to carrier for ${order.reference}`);
+      console.log(`[TrackingService] No carrier email for ping request: ${order.reference}`);
     }
 
     // Logger l'événement
@@ -754,14 +869,24 @@ class TrackingService {
         </html>
       `;
 
-      if (transporter) {
+      const client = getSESClient();
+      const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+      const subject = `[SYMPHONI.A] 📍 Pointage demandé - ${order.reference}`;
+
+      if (client) {
+        const params: SendEmailCommandInput = {
+          Source: fromAddress,
+          Destination: { ToAddresses: [invitation.email] },
+          Message: {
+            Subject: { Data: subject, Charset: 'UTF-8' },
+            Body: { Html: { Data: html, Charset: 'UTF-8' } }
+          },
+          ReplyToAddresses: [SES_CONFIG.replyTo]
+        };
+
         try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'SYMPHONI.A <tracking@symphonia-controltower.com>',
-            to: invitation.email,
-            subject: `[SYMPHONI.A] 📍 Pointage demandé - ${order.reference}`,
-            html
-          });
+          const command = new SendEmailCommand(params);
+          await client.send(command);
         } catch (error: any) {
           // Silently fail for notifications
         }

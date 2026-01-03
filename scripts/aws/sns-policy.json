@@ -1,0 +1,19 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowSESPublish",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ses.amazonaws.com"
+            },
+            "Action": "sns:Publish",
+            "Resource": "arn:aws:sns:eu-central-1:004843574253:symphonia-inbound-emails",
+            "Condition": {
+                "StringEquals": {
+                    "AWS:SourceAccount": "004843574253"
+                }
+            }
+        }
+    ]
+}

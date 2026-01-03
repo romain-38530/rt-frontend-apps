@@ -1,176 +1,62 @@
 /**
- * Service d'email multi-provider pour les invitations logisticien
- * Supporte: OVH, SMTP (nodemailer), et mock pour dev
+ * Email Service - AWS SES
+ * Service d'email pour les invitations logisticien via AWS SES
  */
 
-import nodemailer from 'nodemailer';
-import crypto from 'crypto';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 
-export type EmailProvider = 'ovh' | 'smtp' | 'mock';
+export type EmailProvider = 'ses' | 'mock';
 
 export interface EmailConfig {
   provider: EmailProvider;
-  // SMTP (nodemailer)
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpSecure?: boolean;
-  smtpUser?: string;
-  smtpPassword?: string;
-  // OVH
-  ovhApplicationKey?: string;
-  ovhApplicationSecret?: string;
-  ovhConsumerKey?: string;
-  ovhDomain?: string;
-  // Commun
-  fromEmail?: string;
-  fromName?: string;
+  region: string;
+  fromEmail: string;
+  fromName: string;
+  replyTo: string;
 }
 
 export class EmailService {
+  private sesClient: SESClient | null = null;
   private config: EmailConfig;
-  private smtpTransporter: nodemailer.Transporter | null = null;
 
-  constructor(config?: Partial<EmailConfig>) {
-    // Configuration par défaut pour OVH SMTP
-    const defaultSmtpHost = 'ssl0.ovh.net';
-    const defaultSmtpPort = 465;
-    const defaultSmtpSecure = true;
-
+  constructor() {
     this.config = {
-      // Par défaut on utilise SMTP (OVH)
-      provider: (process.env.EMAIL_PROVIDER as EmailProvider) || config?.provider || 'smtp',
-      // SMTP OVH par défaut
-      smtpHost: config?.smtpHost || process.env.SMTP_HOST || defaultSmtpHost,
-      smtpPort: config?.smtpPort || Number(process.env.SMTP_PORT) || defaultSmtpPort,
-      smtpSecure: config?.smtpSecure ?? (process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === undefined),
-      smtpUser: config?.smtpUser || process.env.SMTP_USER || process.env.OVH_EMAIL_USER,
-      smtpPassword: config?.smtpPassword || process.env.SMTP_PASSWORD || process.env.OVH_EMAIL_PASSWORD,
-      // OVH API (pour référence)
-      ovhApplicationKey: config?.ovhApplicationKey || process.env.OVH_APP_KEY,
-      ovhApplicationSecret: config?.ovhApplicationSecret || process.env.OVH_APP_SECRET,
-      ovhConsumerKey: config?.ovhConsumerKey || process.env.OVH_CONSUMER_KEY,
-      ovhDomain: config?.ovhDomain || process.env.OVH_EMAIL_DOMAIN || 'symphonia-controltower.com',
-      // Commun
-      fromEmail: config?.fromEmail || process.env.EMAIL_FROM || process.env.OVH_EMAIL_USER || 'noreply@symphonia-controltower.com',
-      fromName: config?.fromName || process.env.EMAIL_FROM_NAME || 'SYMPHONI.A',
+      provider: 'ses',
+      region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+      fromEmail: process.env.SES_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@symphonia-controltower.com',
+      fromName: process.env.SES_FROM_NAME || process.env.EMAIL_FROM_NAME || 'SYMPHONI.A',
+      replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com',
     };
 
-    // Initialiser SMTP automatiquement si les credentials sont présents
-    if (this.config.smtpUser && this.config.smtpPassword) {
-      this.smtpTransporter = nodemailer.createTransport({
-        host: this.config.smtpHost,
-        port: this.config.smtpPort,
-        secure: this.config.smtpSecure,
-        auth: {
-          user: this.config.smtpUser,
-          pass: this.config.smtpPassword,
-        },
-        tls: {
-          rejectUnauthorized: false, // Accepter les certificats OVH
+    this.initClient();
+  }
+
+  private initClient(): void {
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (accessKeyId && secretAccessKey) {
+      this.sesClient = new SESClient({
+        region: this.config.region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
         },
       });
-      console.log(`[EmailService] SMTP configuré avec ${this.config.smtpHost}:${this.config.smtpPort}`);
+      console.log(`[EmailService] AWS SES configured for region: ${this.config.region}`);
     } else {
-      console.log('[EmailService] Mode mock - pas de credentials SMTP');
+      console.log('[EmailService] AWS SES not configured - mock mode enabled');
       this.config.provider = 'mock';
-    }
-  }
-
-  // ========== ENVOI VIA OVH ==========
-
-  private async sendViaOvh(to: string, subject: string, html: string): Promise<boolean> {
-    const { ovhApplicationKey, ovhApplicationSecret, ovhConsumerKey, ovhDomain, fromEmail, fromName } = this.config;
-
-    if (!ovhApplicationKey || !ovhApplicationSecret || !ovhConsumerKey) {
-      console.error('OVH email configuration missing');
-      return false;
-    }
-
-    try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const method = 'POST';
-      const url = `https://eu.api.ovh.com/1.0/email/domain/${ovhDomain}/redirection`;
-
-      // Pour les emails transactionnels OVH, utiliser l'API email/exchange ou domain/email
-      // Alternative: utiliser l'API OVH Email Pro ou Exchange
-      const emailUrl = `https://eu.api.ovh.com/1.0/email/domain/${ovhDomain}/account`;
-
-      // Signature OVH
-      const body = JSON.stringify({
-        to,
-        from: `${fromName} <${fromEmail}>`,
-        subject,
-        body: html,
-        contentType: 'text/html',
-      });
-
-      const toSign = `${ovhApplicationSecret}+${ovhConsumerKey}+${method}+${emailUrl}+${body}+${timestamp}`;
-      const signature = '$1$' + crypto.createHash('sha1').update(toSign).digest('hex');
-
-      // Note: OVH n'a pas d'API email transactionnel direct comme pour SMS
-      // On utilise plutôt le SMTP OVH avec les credentials
-      // Fallback sur SMTP OVH
-      console.log(`[OVH Email] Would send to ${to}: ${subject}`);
-      console.log(`[OVH Email] Configure SMTP with OVH credentials for production`);
-
-      // Utiliser SMTP OVH
-      if (this.config.smtpHost?.includes('ovh') || this.config.smtpHost?.includes('ssl0')) {
-        return this.sendViaSmtp(to, subject, html);
-      }
-
-      // Log pour dev
-      this.logEmail(to, subject, html);
-      return true;
-    } catch (error) {
-      console.error('Error sending OVH email:', error);
-      return false;
-    }
-  }
-
-  // ========== ENVOI VIA SMTP ==========
-
-  private async sendViaSmtp(to: string, subject: string, html: string): Promise<boolean> {
-    if (!this.smtpTransporter) {
-      // Essayer de créer le transporteur
-      if (this.config.smtpHost) {
-        this.smtpTransporter = nodemailer.createTransport({
-          host: this.config.smtpHost,
-          port: this.config.smtpPort,
-          secure: this.config.smtpSecure,
-          auth: {
-            user: this.config.smtpUser || '',
-            pass: this.config.smtpPassword || '',
-          },
-        });
-      } else {
-        console.error('SMTP configuration missing');
-        return false;
-      }
-    }
-
-    try {
-      await this.smtpTransporter.sendMail({
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
-        to,
-        subject,
-        html,
-      });
-      console.log(`Email sent to ${to}`);
-      return true;
-    } catch (error) {
-      console.error('Error sending SMTP email:', error);
-      return false;
     }
   }
 
   // ========== MODE MOCK ==========
 
   private logEmail(to: string, subject: string, html: string): void {
-    // Extraire le texte du HTML pour le log
     const textContent = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200);
     console.log(`
 ========================================
-EMAIL (${this.config.provider.toUpperCase()})
+EMAIL (MOCK - AWS SES not configured)
 ========================================
 To: ${to}
 From: ${this.config.fromName} <${this.config.fromEmail}>
@@ -186,15 +72,41 @@ ${textContent}...
   // ========== METHODE PRINCIPALE ==========
 
   private async send(to: string, subject: string, html: string): Promise<boolean> {
-    switch (this.config.provider) {
-      case 'ovh':
-        return this.sendViaOvh(to, subject, html);
-      case 'smtp':
-        return this.sendViaSmtp(to, subject, html);
-      case 'mock':
-      default:
-        this.logEmail(to, subject, html);
-        return true;
+    if (!this.sesClient) {
+      this.logEmail(to, subject, html);
+      return true;
+    }
+
+    const fromAddress = `${this.config.fromName} <${this.config.fromEmail}>`;
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: {
+        ToAddresses: [to],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: 'UTF-8',
+          },
+        },
+      },
+      ReplyToAddresses: [this.config.replyTo],
+    };
+
+    try {
+      const command = new SendEmailCommand(params);
+      const response = await this.sesClient.send(command);
+      console.log(`[EmailService] Email sent to ${to}: ${response.MessageId}`);
+      return true;
+    } catch (error: any) {
+      console.error('[EmailService] AWS SES send failed:', error.message);
+      return false;
     }
   }
 
@@ -304,7 +216,7 @@ ${textContent}...
 
           <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 20px 0;">
             <p style="margin: 0; color: #92400e; font-size: 14px;">
-              ⏰ Ce lien est valable pendant <strong>7 jours</strong>. Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
+              Ce lien est valable pendant <strong>7 jours</strong>. Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
             </p>
           </div>
         </div>
@@ -328,7 +240,7 @@ ${textContent}...
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #059669; margin-bottom: 20px;">📦 Nouvelle commande partagée</h1>
+          <h1 style="color: #059669; margin-bottom: 20px;">Nouvelle commande partagée</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour ${data.logisticianName},</p>
 
@@ -363,7 +275,7 @@ ${textContent}...
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #dc2626; margin-bottom: 20px;">🔒 Accès révoqué</h1>
+          <h1 style="color: #dc2626; margin-bottom: 20px;">Accès révoqué</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour ${data.logisticianName},</p>
 
@@ -394,7 +306,7 @@ ${textContent}...
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px;">
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <h1 style="color: #2563eb; margin-bottom: 20px; text-align: center;">🎉 Bienvenue sur RT Technologie!</h1>
+          <h1 style="color: #2563eb; margin-bottom: 20px; text-align: center;">Bienvenue sur RT Technologie!</h1>
 
           <p style="font-size: 16px; color: #333;">Bonjour,</p>
 
@@ -428,22 +340,32 @@ ${textContent}...
 
   private getAccessLevelLabel(level: string): string {
     const labels: Record<string, string> = {
-      view: '👁️ Consultation',
-      edit: '✏️ Modification',
-      sign: '✍️ Signature',
-      full: '🔑 Accès complet',
+      view: 'Consultation',
+      edit: 'Modification',
+      sign: 'Signature',
+      full: 'Accès complet',
     };
     return labels[level] || level;
   }
 
   // ========== UTILITAIRES ==========
 
-  setProvider(provider: EmailProvider): void {
-    this.config.provider = provider;
-  }
-
   getProvider(): EmailProvider {
     return this.config.provider;
+  }
+
+  isConfigured(): boolean {
+    return this.sesClient !== null;
+  }
+
+  getConfig(): Record<string, unknown> {
+    return {
+      provider: 'AWS SES',
+      region: this.config.region,
+      fromEmail: this.config.fromEmail,
+      fromName: this.config.fromName,
+      configured: this.isConfigured(),
+    };
   }
 }
 

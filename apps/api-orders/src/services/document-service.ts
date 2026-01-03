@@ -3,21 +3,30 @@
  * Upload, validation, signature et archivage des CMR/BL/POD
  */
 import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import Document, { DocumentType, DocumentStatus, IDocument } from '../models/Document';
 import Order from '../models/Order';
 import EventService from './event-service';
 
-// Configuration email
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
+};
+
+let sesClient: SESClient | null = null;
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({ region: SES_CONFIG.region, credentials: { accessKeyId, secretAccessKey } });
+    return sesClient;
+  }
+  return null;
+}
 
 interface UploadDocumentParams {
   orderId: string;
@@ -378,15 +387,34 @@ class DocumentService {
         </html>
       `;
 
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'SYMPHONI.A <documents@symphonia-controltower.com>',
-          to: order.createdBy?.email || process.env.INDUSTRIAL_EMAIL,
-          subject: `[SYMPHONI.A] ${docLabel} déposé - ${order.reference}`,
-          html
-        });
-      } catch (error) {
-        console.error('[DocumentService] Error sending notification:', error);
+      const client = getSESClient();
+      const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+      const toEmail = order.createdBy?.email || process.env.INDUSTRIAL_EMAIL;
+      const subject = `[SYMPHONI.A] ${docLabel} déposé - ${order.reference}`;
+
+      if (!client) {
+        console.log(`[DocumentService] MOCK EMAIL - To: ${toEmail}, Subject: ${subject}`);
+        return;
+      }
+
+      if (toEmail) {
+        const params: SendEmailCommandInput = {
+          Source: fromAddress,
+          Destination: { ToAddresses: [toEmail] },
+          Message: {
+            Subject: { Data: subject, Charset: 'UTF-8' },
+            Body: { Html: { Data: html, Charset: 'UTF-8' } }
+          },
+          ReplyToAddresses: [SES_CONFIG.replyTo]
+        };
+
+        try {
+          const command = new SendEmailCommand(params);
+          const response = await client.send(command);
+          console.log(`[DocumentService] Email sent to ${toEmail}: ${response.MessageId}`);
+        } catch (error: any) {
+          console.error('[DocumentService] AWS SES error:', error.message);
+        }
       }
     }
   }
@@ -446,15 +474,31 @@ class DocumentService {
       </html>
     `;
 
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+    const subject = `[SYMPHONI.A] Document rejeté - ${order.reference}`;
+
+    if (!client) {
+      console.log(`[DocumentService] MOCK EMAIL - To: ${order.carrierEmail}, Subject: ${subject}`);
+      return;
+    }
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: { ToAddresses: [order.carrierEmail] },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: { Html: { Data: html, Charset: 'UTF-8' } }
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo]
+    };
+
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'SYMPHONI.A <documents@symphonia-controltower.com>',
-        to: order.carrierEmail,
-        subject: `[SYMPHONI.A] Document rejeté - ${order.reference}`,
-        html
-      });
-    } catch (error) {
-      console.error('[DocumentService] Error sending rejection notification:', error);
+      const command = new SendEmailCommand(params);
+      const response = await client.send(command);
+      console.log(`[DocumentService] Rejection email sent to ${order.carrierEmail}: ${response.MessageId}`);
+    } catch (error: any) {
+      console.error('[DocumentService] AWS SES error:', error.message);
     }
   }
 

@@ -1,45 +1,43 @@
 /**
- * NotificationService - Service d'envoi de notifications aux transporteurs
- * Gère l'envoi d'emails et SMS pour les invitations et rappels
+ * NotificationService - Service d'envoi de notifications aux transporteurs via AWS SES
+ * Gère l'envoi d'emails pour les invitations, rappels et notifications de facturation
  */
-import nodemailer from 'nodemailer';
+
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import { IDispatchAttempt } from '../models/DispatchChain';
 
-// Configuration email avec support multi-provider
-const smtpConfig = {
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE !== 'false', // Default true for OVH SSL
-  auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 1000,
-  rateLimit: 10, // 10 emails per second max
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com',
+  billingFromEmail: process.env.SES_BILLING_FROM_EMAIL || 'billing@symphonia-controltower.com'
 };
 
-// Vérifier si SMTP est configuré
-const isSmtpConfigured = Boolean(smtpConfig.auth.user && smtpConfig.auth.pass);
+// Client SES singleton
+let sesClient: SESClient | null = null;
 
-const transporter = isSmtpConfigured
-  ? nodemailer.createTransport(smtpConfig)
-  : null;
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
 
-// Vérifier la connexion SMTP au démarrage
-if (transporter) {
-  transporter.verify((error, success) => {
-    if (error) {
-      console.warn('[NotificationService] SMTP connection failed:', error.message);
-      console.warn('[NotificationService] Emails will be logged to console instead');
-    } else {
-      console.log('[NotificationService] SMTP connection verified - Ready to send emails');
-    }
-  });
-} else {
-  console.warn('[NotificationService] SMTP not configured - Emails will be logged to console');
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+    console.log(`[NotificationService] AWS SES configured for region: ${SES_CONFIG.region}`);
+    return sesClient;
+  }
+
+  console.warn('[NotificationService] AWS SES not configured - emails will be logged only');
+  return null;
 }
 
 interface CarrierNotificationParams {
@@ -70,6 +68,59 @@ interface ReminderParams {
 }
 
 class NotificationService {
+  /**
+   * Helper pour envoyer un email via AWS SES avec fallback console
+   */
+  private static async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    fromEmail?: string,
+    recipient?: string
+  ): Promise<boolean> {
+    const client = getSESClient();
+    const from = fromEmail || SES_CONFIG.fromEmail;
+    const fromAddress = `${SES_CONFIG.fromName} <${from}>`;
+
+    if (!client) {
+      console.log(`[NotificationService] [MOCK] Email to ${recipient || to}:`);
+      console.log(`  Subject: ${subject}`);
+      console.log(`  From: ${fromAddress}`);
+      console.log(`  To: ${to}`);
+      return true; // Return true in mock mode for testing
+    }
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: {
+        ToAddresses: [to],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: 'UTF-8',
+          },
+        },
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo],
+    };
+
+    try {
+      const command = new SendEmailCommand(params);
+      const response = await client.send(command);
+      console.log(`[NotificationService] Email sent to ${recipient || to}: ${response.MessageId}`);
+      return true;
+    } catch (error: any) {
+      console.error(`[NotificationService] Failed to send email to ${recipient || to}:`, error.message);
+      return false;
+    }
+  }
+
   /**
    * Envoie une invitation de transport à un transporteur
    */
@@ -179,36 +230,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] 🚚 Nouvelle demande - ${pickupCity} → ${deliveryCity} - Réf. ${orderReference}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `carrier ${carrierName} (${carrierEmail})`);
-  }
-
-  /**
-   * Helper pour envoyer un email avec fallback console
-   */
-  private static async sendEmail(mailOptions: any, recipient: string): Promise<boolean> {
-    if (!transporter) {
-      console.log(`[NotificationService] [MOCK] Email to ${recipient}:`);
-      console.log(`  Subject: ${mailOptions.subject}`);
-      console.log(`  From: ${mailOptions.from}`);
-      console.log(`  To: ${mailOptions.to}`);
-      return true; // Return true in mock mode for testing
-    }
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log(`[NotificationService] Email sent to ${recipient}`);
-      return true;
-    } catch (error: any) {
-      console.error(`[NotificationService] Failed to send email to ${recipient}:`, error.message);
-      return false;
-    }
+    const subject = `[SYMPHONI.A] 🚚 Nouvelle demande - ${pickupCity} → ${deliveryCity} - Réf. ${orderReference}`;
+    return this.sendEmail(carrierEmail, subject, html, undefined, `carrier ${carrierName} (${carrierEmail})`);
   }
 
   /**
@@ -257,14 +280,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[URGENT] ⚠️ ${minutesRemaining} min restantes - Réf. ${orderReference}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `reminder to ${carrierName} (${carrierEmail})`);
+    const subject = `[URGENT] ⚠️ ${minutesRemaining} min restantes - Réf. ${orderReference}`;
+    return this.sendEmail(carrierEmail, subject, html, undefined, `reminder to ${carrierName} (${carrierEmail})`);
   }
 
   /**
@@ -316,14 +333,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] ✓ Transport confirmé - Réf. ${orderReference}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `confirmation to ${carrierName} (${carrierEmail})`);
+    const subject = `[SYMPHONI.A] ✓ Transport confirmé - Réf. ${orderReference}`;
+    return this.sendEmail(carrierEmail, subject, html, undefined, `confirmation to ${carrierName} (${carrierEmail})`);
   }
 
   /**
@@ -386,14 +397,7 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
-      to: industrialEmail,
-      subject: `[SYMPHONI.A] ${subject}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `industrial ${industrialName} (${industrialEmail})`);
+    return this.sendEmail(industrialEmail, `[SYMPHONI.A] ${subject}`, html, undefined, `industrial ${industrialName} (${industrialEmail})`);
   }
 
   /**
@@ -455,14 +459,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: industrialEmail,
-      subject: `[SYMPHONI.A] Préfacture ${preInvoiceNumber} - ${carrierName} - ${totalAmount.toFixed(2)}€ à valider`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+    const subject = `[SYMPHONI.A] Préfacture ${preInvoiceNumber} - ${carrierName} - ${totalAmount.toFixed(2)}€ à valider`;
+    return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
   /**
@@ -502,14 +500,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] Préfacture ${preInvoiceNumber} validée - Déposez votre facture`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    const subject = `[SYMPHONI.A] Préfacture ${preInvoiceNumber} validée - Déposez votre facture`;
+    return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
@@ -544,14 +536,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] Facture acceptée - Paiement prévu le ${dueDate.toLocaleDateString('fr-FR')}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    const subject = `[SYMPHONI.A] Facture acceptée - Paiement prévu le ${dueDate.toLocaleDateString('fr-FR')}`;
+    return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
@@ -589,14 +575,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] Facture rejetée - Écart de ${Math.abs(difference).toFixed(2)}€`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    const subject = `[SYMPHONI.A] Facture rejetée - Écart de ${Math.abs(difference).toFixed(2)}€`;
+    return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
@@ -646,14 +626,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: industrialEmail,
-      subject: `[SYMPHONI.A] 📄 Facture ${carrierName} reçue - ${preInvoiceNumber}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+    const subject = `[SYMPHONI.A] 📄 Facture ${carrierName} reçue - ${preInvoiceNumber}`;
+    return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
   /**
@@ -688,14 +662,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: carrierEmail,
-      subject: `[SYMPHONI.A] Paiement ${amount.toFixed(2)}€ effectué - Réf: ${paymentReference}`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `carrier ${carrierName}`);
+    const subject = `[SYMPHONI.A] Paiement ${amount.toFixed(2)}€ effectué - Réf: ${paymentReference}`;
+    return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
@@ -741,14 +709,8 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: industrialEmail,
-      subject: `[${urgencyText}] Paiement ${preInvoiceNumber} - ${daysRemaining}j restants - ${amount.toFixed(2)}€`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `industrial ${industrialName}`);
+    const subject = `[${urgencyText}] Paiement ${preInvoiceNumber} - ${daysRemaining}j restants - ${amount.toFixed(2)}€`;
+    return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
   /**
@@ -789,30 +751,21 @@ class NotificationService {
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <billing@symphonia-controltower.com>',
-      to: industrialEmail,
-      subject: `[RETARD] Paiement ${preInvoiceNumber} - ${daysOverdue}j de retard - ${amount.toFixed(2)}€`,
-      html,
-    };
-
-    return this.sendEmail(mailOptions, `industrial ${industrialName} (overdue)`);
+    const subject = `[RETARD] Paiement ${preInvoiceNumber} - ${daysOverdue}j de retard - ${amount.toFixed(2)}€`;
+    return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName} (overdue)`);
   }
 
   /**
-   * Vérifie l'état de la connexion SMTP
+   * Vérifie l'état de la connexion AWS SES
    */
   static async checkSmtpConnection(): Promise<{ connected: boolean; message: string }> {
-    if (!transporter) {
-      return { connected: false, message: 'SMTP not configured - mock mode enabled' };
+    const client = getSESClient();
+
+    if (!client) {
+      return { connected: false, message: 'AWS SES not configured - mock mode enabled' };
     }
 
-    try {
-      await transporter.verify();
-      return { connected: true, message: 'SMTP connection verified' };
-    } catch (error: any) {
-      return { connected: false, message: `SMTP error: ${error.message}` };
-    }
+    return { connected: true, message: `AWS SES configured for region: ${SES_CONFIG.region}` };
   }
 }
 

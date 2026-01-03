@@ -1,0 +1,25 @@
+{
+    "Name": "process-inbound-emails",
+    "Enabled": true,
+    "TlsPolicy": "Optional",
+    "Recipients": [
+        "reply@symphonia-controltower.com",
+        "tracking@symphonia-controltower.com",
+        "support@symphonia-controltower.com"
+    ],
+    "Actions": [
+        {
+            "S3Action": {
+                "BucketName": "symphonia-inbound-emails",
+                "ObjectKeyPrefix": "emails/"
+            }
+        },
+        {
+            "SNSAction": {
+                "TopicArn": "arn:aws:sns:eu-central-1:004843574253:symphonia-inbound-emails",
+                "Encoding": "UTF-8"
+            }
+        }
+    ],
+    "ScanEnabled": true
+}

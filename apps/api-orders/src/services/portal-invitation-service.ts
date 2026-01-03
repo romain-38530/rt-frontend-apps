@@ -1,22 +1,45 @@
 /**
- * Service de gestion des invitations portail
+ * Service de gestion des invitations portail via AWS SES
  * Envoie des emails aux expéditeurs/destinataires pour leur donner accès au suivi
  */
+
 import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import PortalInvitation from '../models/PortalInvitation';
 import type { IAddress } from '../models/Order';
 
-// Configuration email
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
+};
+
+// Client SES singleton
+let sesClient: SESClient | null = null;
+
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+    console.log(`[PortalInvitationService] AWS SES configured for region: ${SES_CONFIG.region}`);
+    return sesClient;
+  }
+
+  console.warn('[PortalInvitationService] AWS SES not configured - emails will be logged only');
+  return null;
+}
 
 interface CreateInvitationParams {
   orderId: string;
@@ -166,7 +189,7 @@ export class PortalInvitationService {
   }
 
   /**
-   * Envoie l'email d'invitation
+   * Envoie l'email d'invitation via AWS SES
    */
   private static async sendInvitationEmail(params: {
     email: string;
@@ -270,12 +293,48 @@ export class PortalInvitationService {
       </html>
     `;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'SYMPHONI.A <noreply@symphonia-controltower.com>',
-      to: email,
-      subject: `[SYMPHONI.A] Accès ${portalLabel} - Commande ${orderReference}`,
-      html,
-    });
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+    const subject = `[SYMPHONI.A] Accès ${portalLabel} - Commande ${orderReference}`;
+
+    // Mode mock si pas de client SES
+    if (!client) {
+      console.log(`[PortalInvitationService] MOCK EMAIL:
+        To: ${email}
+        From: ${fromAddress}
+        Subject: ${subject}
+        Content: ${html.substring(0, 200)}...`);
+      return;
+    }
+
+    const sesParams: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: {
+        ToAddresses: [email],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: 'UTF-8',
+          },
+        },
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo],
+    };
+
+    try {
+      const command = new SendEmailCommand(sesParams);
+      const response = await client.send(command);
+      console.log(`[PortalInvitationService] Invitation email sent to ${email}: ${response.MessageId}`);
+    } catch (error: any) {
+      console.error('[PortalInvitationService] AWS SES send failed:', error.message);
+      throw error;
+    }
   }
 
   /**

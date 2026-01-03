@@ -17,6 +17,7 @@ import preinvoicesRoutes from './routes/preinvoices';
 import analyticsRoutes from './routes/analytics';
 import aiReportsRoutes from './routes/ai-reports';
 import palettesRoutes from './routes/palettes';
+import emailActionsRoutes from './routes/email-actions';
 import timeoutScheduler from './services/timeout-scheduler';
 import preinvoiceScheduler from './services/preinvoice-scheduler';
 import aiReportScheduler from './services/ai-report-scheduler';
@@ -85,8 +86,8 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.15.1',
-    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Palettes Europe',
+    version: '2.16.0',
+    description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Email Automation avec Claude',
     endpoints: {
       health: '/health',
       orders: {
@@ -221,6 +222,15 @@ app.get('/', (req, res) => {
         pickup: 'POST /api/v1/palettes/:orderId/pickup',
         delivery: 'POST /api/v1/palettes/:orderId/delivery',
         companyBalance: 'GET /api/v1/palettes/company/:companyId/balance'
+      },
+      emailActions: {
+        executeAction: 'GET /actions/:token',
+        submitAction: 'POST /actions/:token',
+        sesWebhook: 'POST /actions/webhooks/ses-inbound',
+        orderEmails: 'GET /api/v1/emails/order/:orderId',
+        emailStats: 'GET /api/v1/emails/stats',
+        pendingEmails: 'GET /api/v1/emails/pending',
+        actionStats: 'GET /api/v1/emails/stats/:orderId?'
       }
     }
   });
@@ -241,6 +251,10 @@ app.use('/api/v1/preinvoices', preinvoicesRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/ai-reports', aiReportsRoutes);
 app.use('/api/v1/palettes', palettesRoutes);
+
+// Email actions (boutons cliquables + webhooks entrants)
+app.use('/actions', emailActionsRoutes);
+app.use('/api/v1/emails', emailActionsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -281,7 +295,7 @@ mongoose.connect(MONGODB_URI)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.15.1 - Palettes Europe Integration');
+      console.log('SYMPHONI.A Orders API v2.16.0 - Email Automation avec Claude AI');
     });
   })
   .catch((error) => {

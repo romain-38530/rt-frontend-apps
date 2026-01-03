@@ -10,7 +10,7 @@ import { authenticateToken } from '../middleware/auth';
 const router = Router();
 
 // POST /diagnostics/run - Lancer un diagnostic
-router.post('/run', async (req: Request, res: Response) => {
+router.post('/run', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { type } = req.body;
 
@@ -53,7 +53,7 @@ router.post('/run', async (req: Request, res: Response) => {
 });
 
 // GET /diagnostics/status - Statut de tous les services
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', authenticateToken, async (req: Request, res: Response) => {
   try {
     const statuses = await getAllServicesStatus();
 
@@ -86,7 +86,7 @@ router.get('/status', async (req: Request, res: Response) => {
 });
 
 // GET /diagnostics/:service - Statut d'un service spécifique
-router.get('/:service', async (req: Request, res: Response) => {
+router.get('/:service', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { service } = req.params;
 
@@ -112,7 +112,7 @@ router.get('/:service', async (req: Request, res: Response) => {
 });
 
 // POST /diagnostics/check/:service - Vérifier un service maintenant
-router.post('/check/:service', async (req: Request, res: Response) => {
+router.post('/check/:service', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { service } = req.params;
 

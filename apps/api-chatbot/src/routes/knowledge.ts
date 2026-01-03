@@ -9,7 +9,7 @@ import { authenticateToken } from '../middleware/auth';
 const router = Router();
 
 // GET /knowledge - Rechercher des articles
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       query,
@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /knowledge/:id - Détail d'un article
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -78,7 +78,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /knowledge/:id/helpful - Marquer un article comme utile ou non
-router.post('/:id/helpful', async (req: Request, res: Response) => {
+router.post('/:id/helpful', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { helpful } = req.body;

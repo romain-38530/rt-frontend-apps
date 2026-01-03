@@ -1,6 +1,43 @@
-import nodemailer from 'nodemailer';
-// import axios from 'axios'; // TODO: Implement push notifications
+/**
+ * Notification Service - AWS SES
+ * Service de notifications multi-canal pour les fournisseurs via AWS SES
+ */
+
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import Supplier from '../models/Supplier';
+
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'notifications@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'RT Technologie',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
+};
+
+// Client SES singleton
+let sesClient: SESClient | null = null;
+
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+    console.log(`[NotificationService] AWS SES configured for region: ${SES_CONFIG.region}`);
+    return sesClient;
+  }
+
+  console.warn('[NotificationService] AWS SES not configured - emails will be logged only');
+  return null;
+}
 
 export interface INotification {
   supplierId: string;
@@ -13,20 +50,6 @@ export interface INotification {
 }
 
 export class NotificationService {
-  private transporter: nodemailer.Transporter;
-
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-      }
-    });
-  }
-
   /**
    * Envoie une notification multi-canal
    */
@@ -173,7 +196,7 @@ export class NotificationService {
   }
 
   /**
-   * Envoie un email de notification
+   * Envoie un email de notification via AWS SES
    */
   private async sendEmailNotification(supplier: any, notification: INotification) {
     const primaryContact = supplier.contacts.find((c: any) => c.isPrimary);
@@ -181,38 +204,73 @@ export class NotificationService {
       throw new Error('No primary contact found');
     }
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to: primaryContact.email,
-      subject: `[RT Technologie] ${notification.title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background-color: ${this.getPriorityColor(notification.priority)}; color: white; padding: 20px; border-radius: 4px 4px 0 0;">
-            <h2 style="margin: 0;">${notification.title}</h2>
-          </div>
-          <div style="padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px;">
-            <p style="font-size: 16px; line-height: 1.6;">${notification.message}</p>
-            ${notification.data ? `
-              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin-top: 20px;">
-                <strong>Détails:</strong>
-                <pre style="margin: 10px 0; overflow-x: auto;">${JSON.stringify(notification.data, null, 2)}</pre>
-              </div>
-            ` : ''}
-            <p style="margin-top: 30px;">
-              <a href="${process.env.SUPPLIER_PORTAL_URL}" style="background-color: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                Accéder au portail
-              </a>
-            </p>
-          </div>
-          <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-            RT Technologie - Portail Fournisseur<br>
-            ${supplier.companyName}
-          </div>
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: ${this.getPriorityColor(notification.priority)}; color: white; padding: 20px; border-radius: 4px 4px 0 0;">
+          <h2 style="margin: 0;">${notification.title}</h2>
         </div>
-      `
+        <div style="padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px;">
+          <p style="font-size: 16px; line-height: 1.6;">${notification.message}</p>
+          ${notification.data ? `
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin-top: 20px;">
+              <strong>Détails:</strong>
+              <pre style="margin: 10px 0; overflow-x: auto;">${JSON.stringify(notification.data, null, 2)}</pre>
+            </div>
+          ` : ''}
+          <p style="margin-top: 30px;">
+            <a href="${process.env.SUPPLIER_PORTAL_URL}" style="background-color: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Accéder au portail
+            </a>
+          </p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+          RT Technologie - Portail Fournisseur<br>
+          ${supplier.companyName}
+        </div>
+      </div>
+    `;
+
+    // Mode mock si pas de client SES
+    if (!client) {
+      console.log(`[NotificationService] MOCK EMAIL:
+        To: ${primaryContact.email}
+        From: ${fromAddress}
+        Subject: [RT Technologie] ${notification.title}
+        Content: ${html.substring(0, 200)}...`);
+      return;
+    }
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: {
+        ToAddresses: [primaryContact.email],
+      },
+      Message: {
+        Subject: {
+          Data: `[RT Technologie] ${notification.title}`,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: 'UTF-8',
+          },
+        },
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo],
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      const command = new SendEmailCommand(params);
+      const response = await client.send(command);
+      console.log(`[NotificationService] Email sent to ${primaryContact.email}: ${response.MessageId}`);
+    } catch (error: any) {
+      console.error('[NotificationService] AWS SES send failed:', error.message);
+      throw error;
+    }
   }
 
   /**

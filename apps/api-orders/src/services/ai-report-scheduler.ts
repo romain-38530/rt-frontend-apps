@@ -2,23 +2,39 @@
  * AI Report Scheduler - Planification des rapports IA mensuels
  * Génère automatiquement les rapports d'analyse le 1er de chaque mois
  */
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import AIAnalyticsService from './ai-analytics-service';
 import Order from '../models/Order';
 
-// Configuration email
-const smtpConfig = {
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE !== 'false',
-  auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  }
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'reports@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
 };
 
-const isSmtpConfigured = Boolean(smtpConfig.auth.user && smtpConfig.auth.pass);
-const transporter = isSmtpConfigured ? nodemailer.createTransport(smtpConfig) : null;
+// Client SES singleton
+let sesClient: SESClient | null = null;
+
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+      credentials: { accessKeyId, secretAccessKey },
+    });
+    console.log(`[AIReportScheduler] AWS SES configured for region: ${SES_CONFIG.region}`);
+    return sesClient;
+  }
+
+  console.warn('[AIReportScheduler] AWS SES not configured - emails will be logged only');
+  return null;
+}
 
 interface ScheduledEntity {
   type: 'industrial' | 'carrier' | 'logistician';
@@ -266,11 +282,13 @@ class AIReportScheduler {
   }
 
   /**
-   * Envoie une notification email pour un rapport
+   * Envoie une notification email pour un rapport via AWS SES
    */
   private async sendReportNotification(entity: ScheduledEntity, report: any): Promise<void> {
-    if (!entity.email || !transporter) {
-      console.log(`[AI Report Scheduler] Email not sent - ${!entity.email ? 'no email' : 'SMTP not configured'}`);
+    const client = getSESClient();
+
+    if (!entity.email) {
+      console.log(`[AI Report Scheduler] Email not sent - no email for entity`);
       return;
     }
 
@@ -281,36 +299,67 @@ class AIReportScheduler {
 
     const subject = `[SYMPHONI.A] Votre rapport d'analyse ${monthNames[report.period.month - 1]} ${report.period.year}`;
 
-    const text = `
-Bonjour ${entity.name},
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">Rapport d'Analyse Mensuel</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">${monthNames[report.period.month - 1]} ${report.period.year}</p>
+          </div>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p>Bonjour ${entity.name},</p>
+            <p>Votre rapport d'analyse mensuel est disponible sur SYMPHONI.A.</p>
 
-Votre rapport d'analyse mensuel est disponible sur SYMPHONI.A.
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3 style="margin-top: 0;">Résumé</h3>
+              <p>${report.executiveSummary.overview}</p>
+            </div>
 
-Résumé:
-${report.executiveSummary.overview}
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3 style="margin-top: 0;">Points clés</h3>
+              <ul>
+                ${report.executiveSummary.keyFindings.map((f: string) => `<li>${f}</li>`).join('')}
+              </ul>
+            </div>
 
-Points clés:
-${report.executiveSummary.keyFindings.map((f: string) => `- ${f}`).join('\n')}
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
+              <strong>Recommandation principale:</strong>
+              <p style="margin: 10px 0 0 0;">${report.executiveSummary.mainRecommendation}</p>
+            </div>
 
-Recommandation principale:
-${report.executiveSummary.mainRecommendation}
+            <p>Connectez-vous à votre espace pour consulter le rapport détaillé et le plan d'action.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-Connectez-vous à votre espace pour consulter le rapport détaillé et le plan d'action.
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
 
-Cordialement,
-L'équipe SYMPHONI.A
-    `.trim();
+    if (!client) {
+      console.log(`[AI Report Scheduler] MOCK EMAIL to ${entity.email}: ${subject}`);
+      return;
+    }
+
+    const params: SendEmailCommandInput = {
+      Source: fromAddress,
+      Destination: { ToAddresses: [entity.email] },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: { Html: { Data: html, Charset: 'UTF-8' } }
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo]
+    };
 
     try {
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || 'no-reply@symphonia-controltower.com',
-        to: entity.email,
-        subject,
-        text
-      });
-      console.log(`[AI Report Scheduler] Notification sent to ${entity.email}`);
-    } catch (error) {
-      console.error(`[AI Report Scheduler] Failed to send notification:`, error);
+      const command = new SendEmailCommand(params);
+      const response = await client.send(command);
+      console.log(`[AI Report Scheduler] Notification sent to ${entity.email}: ${response.MessageId}`);
+    } catch (error: any) {
+      console.error(`[AI Report Scheduler] Failed to send notification:`, error.message);
     }
   }
 

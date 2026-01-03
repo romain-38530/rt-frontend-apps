@@ -2,7 +2,7 @@
  * Service de confirmation de livraison - SYMPHONI.A
  * Gère la confirmation avec signature électronique du destinataire
  */
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import Order from '../models/Order';
 import DocumentService from './document-service';
 import EventService from './event-service';
@@ -10,16 +10,25 @@ import ScoringService from './scoring-service';
 import ArchiveService from './archive-service';
 import { v4 as uuidv4 } from 'uuid';
 
-// Configuration email
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
+};
+
+let sesClient: SESClient | null = null;
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({ region: SES_CONFIG.region, credentials: { accessKeyId, secretAccessKey } });
+    return sesClient;
+  }
+  return null;
+}
 
 interface DeliveryConfirmationParams {
   orderId: string;
@@ -326,16 +335,32 @@ class DeliveryService {
       recipients.push(order.pickupAddress.contactEmail);
     }
 
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+    const subject = `[SYMPHONI.A] ✅ Livraison confirmée - ${order.reference}`;
+
+    if (!client) {
+      console.log(`[DeliveryService] MOCK EMAIL - Subject: ${subject}, Recipients: ${recipients.join(', ')}`);
+      return;
+    }
+
     for (const email of recipients) {
+      const params: SendEmailCommandInput = {
+        Source: fromAddress,
+        Destination: { ToAddresses: [email] },
+        Message: {
+          Subject: { Data: subject, Charset: 'UTF-8' },
+          Body: { Html: { Data: html, Charset: 'UTF-8' } }
+        },
+        ReplyToAddresses: [SES_CONFIG.replyTo]
+      };
+
       try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'SYMPHONI.A <delivery@symphonia-controltower.com>',
-          to: email,
-          subject: `[SYMPHONI.A] ✅ Livraison confirmée - ${order.reference}`,
-          html
-        });
-      } catch (error) {
-        console.error(`[DeliveryService] Email error to ${email}:`, error);
+        const command = new SendEmailCommand(params);
+        const response = await client.send(command);
+        console.log(`[DeliveryService] Email sent to ${email}: ${response.MessageId}`);
+      } catch (error: any) {
+        console.error(`[DeliveryService] AWS SES error to ${email}:`, error.message);
       }
     }
   }
@@ -417,16 +442,32 @@ class DeliveryService {
     if (order.createdBy?.email) recipients.push(order.createdBy.email);
     if (order.carrierEmail) recipients.push(order.carrierEmail);
 
+    const client = getSESClient();
+    const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
+    const subject = `[SYMPHONI.A] ⚠️ Incident livraison - ${order.reference}`;
+
+    if (!client) {
+      console.log(`[DeliveryService] MOCK EMAIL - Subject: ${subject}, Recipients: ${recipients.join(', ')}`);
+      return;
+    }
+
     for (const email of recipients) {
+      const params: SendEmailCommandInput = {
+        Source: fromAddress,
+        Destination: { ToAddresses: [email] },
+        Message: {
+          Subject: { Data: subject, Charset: 'UTF-8' },
+          Body: { Html: { Data: html, Charset: 'UTF-8' } }
+        },
+        ReplyToAddresses: [SES_CONFIG.replyTo]
+      };
+
       try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'SYMPHONI.A <incidents@symphonia-controltower.com>',
-          to: email,
-          subject: `[SYMPHONI.A] ⚠️ Incident livraison - ${order.reference}`,
-          html
-        });
-      } catch (error) {
-        console.error(`[DeliveryService] Email error to ${email}:`, error);
+        const command = new SendEmailCommand(params);
+        const response = await client.send(command);
+        console.log(`[DeliveryService] Incident email sent to ${email}: ${response.MessageId}`);
+      } catch (error: any) {
+        console.error(`[DeliveryService] AWS SES error to ${email}:`, error.message);
       }
     }
   }

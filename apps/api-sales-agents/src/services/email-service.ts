@@ -1,40 +1,43 @@
-import nodemailer from 'nodemailer';
+/**
+ * Email Service - AWS SES
+ * Service d'envoi d'emails pour les agents commerciaux via AWS SES
+ */
+
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import Agent from '../models/Agent';
 import AgentContract from '../models/AgentContract';
 import Commission from '../models/Commission';
 
-// Configuration SMTP
-const SMTP_CONFIG = {
-  host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: process.env.SMTP_SECURE !== 'false',
-  user: process.env.SMTP_USER || '',
-  password: process.env.SMTP_PASSWORD || '',
-  fromEmail: process.env.SMTP_FROM_EMAIL || 'agents@symphonia-controltower.com',
-  fromName: process.env.SMTP_FROM_NAME || 'RT Transport Solutions'
+// Configuration AWS SES
+const SES_CONFIG = {
+  region: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-central-1',
+  fromEmail: process.env.SES_FROM_EMAIL || 'agents@symphonia-controltower.com',
+  fromName: process.env.SES_FROM_NAME || 'RT Transport Solutions',
+  replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com'
 };
 
-// Transporter Nodemailer
-let transporter: nodemailer.Transporter | null = null;
+// Client SES singleton
+let sesClient: SESClient | null = null;
 
-function getTransporter(): nodemailer.Transporter | null {
-  if (transporter) return transporter;
+function getSESClient(): SESClient | null {
+  if (sesClient) return sesClient;
 
-  if (SMTP_CONFIG.user && SMTP_CONFIG.password) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_CONFIG.host,
-      port: SMTP_CONFIG.port,
-      secure: SMTP_CONFIG.secure,
-      auth: {
-        user: SMTP_CONFIG.user,
-        pass: SMTP_CONFIG.password
-      }
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
     });
-    console.log(`[EmailService] SMTP configured: ${SMTP_CONFIG.host}:${SMTP_CONFIG.port}`);
-    return transporter;
+    console.log(`[EmailService] AWS SES configured for region: ${SES_CONFIG.region}`);
+    return sesClient;
   }
 
-  console.warn('[EmailService] SMTP not configured - emails will be logged only');
+  console.warn('[EmailService] AWS SES not configured - emails will be logged only');
   return null;
 }
 
@@ -46,9 +49,10 @@ interface EmailOptions {
 }
 
 async function sendEmail(options: EmailOptions): Promise<boolean> {
-  const transport = getTransporter();
+  const client = getSESClient();
+  const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
 
-  if (!transport) {
+  if (!client) {
     console.log(`[EmailService] MOCK EMAIL:
       To: ${options.to}
       Subject: ${options.subject}
@@ -56,19 +60,40 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
     return true;
   }
 
-  try {
-    const info = await transport.sendMail({
-      from: `${SMTP_CONFIG.fromName} <${SMTP_CONFIG.fromEmail}>`,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text
-    });
+  const params: SendEmailCommandInput = {
+    Source: fromAddress,
+    Destination: {
+      ToAddresses: [options.to],
+    },
+    Message: {
+      Subject: {
+        Data: options.subject,
+        Charset: 'UTF-8',
+      },
+      Body: {
+        Html: {
+          Data: options.html,
+          Charset: 'UTF-8',
+        },
+        ...(options.text && {
+          Text: {
+            Data: options.text,
+            Charset: 'UTF-8',
+          },
+        }),
+      },
+    },
+    ReplyToAddresses: [SES_CONFIG.replyTo],
+  };
 
-    console.log(`[EmailService] Email sent to ${options.to}: ${info.messageId}`);
+  try {
+    const command = new SendEmailCommand(params);
+    const response = await client.send(command);
+
+    console.log(`[EmailService] Email sent to ${options.to}: ${response.MessageId}`);
     return true;
   } catch (error: any) {
-    console.error('[EmailService] Send failed:', error.message);
+    console.error('[EmailService] AWS SES send failed:', error.message);
     return false;
   }
 }
