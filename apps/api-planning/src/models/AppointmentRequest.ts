@@ -5,6 +5,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type AppointmentRequestStatus = 'pending' | 'proposed' | 'accepted' | 'rejected' | 'cancelled';
 export type AppointmentType = 'loading' | 'unloading';
+export type RDVRecipientType = 'industrial' | 'logistician' | 'supplier';
 
 export interface IAppointmentRequest extends Document {
   requestId: string;
@@ -22,11 +23,25 @@ export interface IAppointmentRequest extends Document {
   driverPhone?: string;
   vehiclePlate?: string;
 
-  // Destinataire (industriel/logisticien)
+  // Destinataire (industriel/logisticien/fournisseur)
   targetSiteId?: string;
   targetSiteName?: string;
   targetOrganizationId: string;
   targetOrganizationName?: string;
+  targetOrganizationType: RDVRecipientType;
+
+  // Routage RDV - Determination automatique du destinataire
+  rdvRouting: {
+    determinedBy: 'auto' | 'manual';
+    determinedAt: Date;
+    routingReason: string;
+    originalIndustrialId?: string;
+    originalIndustrialName?: string;
+    delegatedLogisticsId?: string;
+    delegatedLogisticsName?: string;
+    supplierId?: string;
+    supplierName?: string;
+  };
 
   // Creneaux souhaites par le transporteur
   preferredDates: Array<{
@@ -102,6 +117,23 @@ const AppointmentRequestSchema = new Schema<IAppointmentRequest>({
   targetSiteName: { type: String },
   targetOrganizationId: { type: String, required: true, index: true },
   targetOrganizationName: { type: String },
+  targetOrganizationType: {
+    type: String,
+    enum: ['industrial', 'logistician', 'supplier'],
+    default: 'industrial'
+  },
+
+  rdvRouting: {
+    determinedBy: { type: String, enum: ['auto', 'manual'], default: 'manual' },
+    determinedAt: { type: Date, default: Date.now },
+    routingReason: { type: String },
+    originalIndustrialId: { type: String },
+    originalIndustrialName: { type: String },
+    delegatedLogisticsId: { type: String },
+    delegatedLogisticsName: { type: String },
+    supplierId: { type: String },
+    supplierName: { type: String }
+  },
 
   preferredDates: [{
     date: { type: Date, required: true },

@@ -1565,6 +1565,111 @@ export default function OrderDetailPage() {
                 {/* Tab RDV */}
                 {activeTab === 'rdv' && (
                   <div style={{ padding: '20px' }}>
+                    {/* Info Destinataire RDV */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '20px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>📍</span>
+                        <span style={{ fontWeight: '600', color: '#4338ca' }}>Destinataire des demandes de RDV</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{
+                          background: 'white',
+                          borderRadius: '8px',
+                          padding: '12px',
+                        }}>
+                          <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            🚚 Chargement
+                          </div>
+                          <div style={{ fontWeight: '600', color: '#1e1b4b' }}>
+                            {(orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
+                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? orderAny.delegatedLogistics?.partnerName || 'Logisticien délégué'
+                              : orderAny.supplier && !orderAny.supplier.managedByIndustrial
+                                ? orderAny.supplier.supplierName || 'Fournisseur'
+                                : orderAny.organizationName || 'Vous (Donneur d\'ordre)'
+                            }
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                            {orderAny.pickup?.site || orderAny.pickup?.address || 'Site de chargement'}
+                          </div>
+                          <div style={{
+                            display: 'inline-block',
+                            marginTop: '6px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '500',
+                            background: (orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
+                                        orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? '#fef3c7'
+                              : orderAny.supplier && !orderAny.supplier.managedByIndustrial
+                                ? '#dbeafe'
+                                : '#dcfce7',
+                            color: (orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
+                                   orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? '#92400e'
+                              : orderAny.supplier && !orderAny.supplier.managedByIndustrial
+                                ? '#1e40af'
+                                : '#166534',
+                          }}>
+                            {(orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
+                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? `Logistique ${orderAny.delegatedLogistics?.partnerType || '3PL'}`
+                              : orderAny.supplier && !orderAny.supplier.managedByIndustrial
+                                ? 'Fournisseur'
+                                : 'Industriel'
+                            }
+                          </div>
+                        </div>
+                        <div style={{
+                          background: 'white',
+                          borderRadius: '8px',
+                          padding: '12px',
+                        }}>
+                          <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            📦 Livraison
+                          </div>
+                          <div style={{ fontWeight: '600', color: '#1e1b4b' }}>
+                            {(orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
+                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? orderAny.delegatedLogistics?.partnerName || 'Logisticien délégué'
+                              : orderAny.organizationName || 'Vous (Donneur d\'ordre)'
+                            }
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                            {orderAny.delivery?.site || orderAny.delivery?.address || 'Site de livraison'}
+                          </div>
+                          <div style={{
+                            display: 'inline-block',
+                            marginTop: '6px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '500',
+                            background: (orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
+                                        orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? '#fef3c7'
+                              : '#dcfce7',
+                            color: (orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
+                                   orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? '#92400e'
+                              : '#166534',
+                          }}>
+                            {(orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
+                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                              ? `Logistique ${orderAny.delegatedLogistics?.partnerType || '3PL'}`
+                              : 'Industriel'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {loadingRdv ? (
                       <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
                         Chargement des demandes de RDV...

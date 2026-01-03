@@ -1,11 +1,17 @@
 /**
- * Routes pour les demandes de RDV transporteur <-> industriel
+ * Routes pour les demandes de RDV transporteur <-> industriel/logisticien/fournisseur
+ *
+ * Le routage des RDV est determine automatiquement selon:
+ * - Si chargement chez fournisseur -> fournisseur ou industriel selon config
+ * - Si logistique deleguee -> logisticien delegue
+ * - Sinon -> industriel (donneur d'ordre)
  */
 import { Router, Request, Response } from 'express';
 import AppointmentRequest from '../models/AppointmentRequest';
 import Booking from '../models/Booking';
 import Slot from '../models/Slot';
 import { v4 as uuidv4 } from 'uuid';
+import { rdvRoutingService, RDVRoutingService } from '../services/RDVRoutingService';
 
 const router = Router();
 
@@ -78,28 +84,95 @@ router.get('/order/:orderId', async (req: Request, res: Response) => {
 });
 
 // POST /appointments - Creer une demande de RDV (transporteur)
+// Le destinataire est determine automatiquement si orderData est fourni
 router.post('/', async (req: Request, res: Response) => {
   try {
     const requestId = "apt_" + uuidv4();
+    const { orderData, type, ...appointmentData } = req.body;
+
+    let targetInfo = {
+      targetOrganizationId: appointmentData.targetOrganizationId,
+      targetOrganizationName: appointmentData.targetOrganizationName,
+      targetOrganizationType: appointmentData.targetOrganizationType || 'industrial',
+      targetSiteId: appointmentData.targetSiteId,
+      targetSiteName: appointmentData.targetSiteName,
+      rdvRouting: appointmentData.rdvRouting || {
+        determinedBy: 'manual',
+        determinedAt: new Date(),
+        routingReason: 'Routage manuel - destinataire specifie par l\'appelant',
+      },
+    };
+
+    // Si orderData est fourni, determiner automatiquement le destinataire
+    if (orderData) {
+      try {
+        const orderInfo = RDVRoutingService.fromAPIOrder(orderData);
+        const routingResult = rdvRoutingService.determineRDVRecipient(orderInfo, type);
+
+        targetInfo = {
+          targetOrganizationId: routingResult.targetOrganizationId,
+          targetOrganizationName: routingResult.targetOrganizationName,
+          targetOrganizationType: routingResult.targetOrganizationType,
+          targetSiteId: routingResult.targetSiteId,
+          targetSiteName: routingResult.targetSiteName,
+          rdvRouting: routingResult.routing,
+        };
+      } catch (routingError) {
+        console.warn('RDV routing auto-detection failed, using manual values:', routingError);
+      }
+    }
+
+    const routingMessage = RDVRoutingService.generateRoutingMessage({
+      ...targetInfo,
+      routing: targetInfo.rdvRouting as any,
+    });
 
     const appointment = new AppointmentRequest({
       requestId,
-      ...req.body,
+      type,
+      ...appointmentData,
+      ...targetInfo,
       messages: [{
         id: uuidv4(),
         senderId: 'system',
         senderName: 'Systeme',
         senderType: 'system',
-        content: 'Demande de rendez-vous creee',
+        content: routingMessage,
         timestamp: new Date()
       }]
     });
 
     await appointment.save();
+
+    console.log(`[RDV] Created appointment ${requestId} -> ${targetInfo.targetOrganizationType}:${targetInfo.targetOrganizationName}`);
+
     res.status(201).json(appointment);
   } catch (error) {
     console.error('Error creating appointment request:', error);
     res.status(500).json({ error: 'Erreur lors de la creation de la demande' });
+  }
+});
+
+// POST /appointments/auto-route - Determiner le destinataire sans creer la demande
+router.post('/auto-route', async (req: Request, res: Response) => {
+  try {
+    const { orderData, type } = req.body;
+
+    if (!orderData) {
+      return res.status(400).json({ error: 'orderData est requis' });
+    }
+
+    const orderInfo = RDVRoutingService.fromAPIOrder(orderData);
+    const routingResult = rdvRoutingService.determineRDVRecipient(orderInfo, type || 'loading');
+    const message = RDVRoutingService.generateRoutingMessage(routingResult);
+
+    res.json({
+      ...routingResult,
+      message,
+    });
+  } catch (error) {
+    console.error('Error auto-routing appointment:', error);
+    res.status(500).json({ error: 'Erreur lors du routage automatique' });
   }
 });
 
