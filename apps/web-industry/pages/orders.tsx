@@ -141,12 +141,17 @@ export default function OrdersPage() {
     setSelectedOrders(newSelected);
   };
 
-  // Sélectionner/Désélectionner toutes les commandes visibles
+  // Sélectionner/Désélectionner toutes les commandes éligibles (sans transporteur)
+  const getEligibleOrders = () => {
+    return orders.filter(o => !o.carrierId && ['draft', 'created', 'pending'].includes(o.status));
+  };
+
   const handleSelectAll = () => {
-    if (selectedOrders.size === orders.length) {
+    const eligibleOrders = getEligibleOrders();
+    if (selectedOrders.size === eligibleOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(orders.map(o => o.id)));
+      setSelectedOrders(new Set(eligibleOrders.map(o => o.id)));
     }
   };
 
@@ -319,7 +324,7 @@ export default function OrdersPage() {
                       fontSize: '13px',
                       fontWeight: '600',
                     }}>
-                    {selectedOrders.size === orders.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    {selectedOrders.size === getEligibleOrders().length && selectedOrders.size > 0 ? 'Tout désélectionner' : 'Tout sélectionner'}
                   </button>
                   <button
                     onClick={handleLaunchAutoPlanning}
@@ -493,16 +498,26 @@ export default function OrdersPage() {
                       Mode Planification Automatique Affret.IA
                     </div>
                     <div style={{ fontSize: '13px', color: '#a16207' }}>
-                      Cliquez sur les commandes à planifier automatiquement, puis lancez Affret.IA
+                      {getEligibleOrders().length > 0
+                        ? `${getEligibleOrders().length} commande${getEligibleOrders().length > 1 ? 's' : ''} sans transporteur disponible${getEligibleOrders().length > 1 ? 's' : ''} - Cliquez pour sélectionner`
+                        : 'Aucune commande sans transporteur à planifier'}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Liste avec sélection */}
+              {/* Liste avec sélection - Filtrer uniquement les commandes sans transporteur */}
               {isAffretMode ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {orders.map((order) => {
+                  {orders
+                    .filter((order) => {
+                      // Ne montrer que les commandes sans transporteur assigné
+                      const hasNoCarrier = !order.carrierId;
+                      // Et qui sont dans un statut permettant la planification
+                      const eligibleStatus = ['draft', 'created', 'pending'].includes(order.status);
+                      return hasNoCarrier && eligibleStatus;
+                    })
+                    .map((order) => {
                     const isSelected = selectedOrders.has(order.id);
                     return (
                       <div
