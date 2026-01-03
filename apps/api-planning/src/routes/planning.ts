@@ -282,7 +282,7 @@ router.post('/slots/generate', async (req: Request, res: Response) => {
 
       // Vérifier si c'est un jour ouvré
       const operatingHour = site.operatingHours.find(oh => oh.dayOfWeek === dayOfWeek);
-      const isHoliday = site.holidays.includes(dateStr);
+      const isHoliday = site.holidays?.includes(dateStr) || false;
 
       if (operatingHour && !isHoliday) {
         // Générer les créneaux pour cette journée

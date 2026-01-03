@@ -13,6 +13,14 @@ export interface ISiteGeofence {
   coordinates?: { lat: number; lng: number }[];
 }
 
+export interface ISiteOperatingHour {
+  dayOfWeek: number; // 0-6, Sunday = 0
+  open?: string;     // "08:00"
+  close?: string;    // "18:00"
+  openTime?: string; // alias for open
+  closeTime?: string; // alias for close
+}
+
 export interface ISite extends Document {
   siteId: string;
   name: string;
@@ -24,11 +32,10 @@ export interface ISite extends Document {
   };
   industrialId: string;
   isActive: boolean;
-  openingHours: {
-    dayOfWeek: number; // 0-6, Sunday = 0
-    openTime: string;  // "08:00"
-    closeTime: string; // "18:00"
-  }[];
+  openingHours: ISiteOperatingHour[];
+  operatingHours: ISiteOperatingHour[]; // alias for openingHours
+  defaultSlotDuration?: number; // in minutes
+  holidays?: string[]; // Array of date strings "YYYY-MM-DD"
   // Extended properties for driver app
   geofence?: ISiteGeofence;
   accessInstructions?: string;
@@ -53,9 +60,20 @@ const SiteSchema = new Schema<ISite>({
   isActive: { type: Boolean, default: true },
   openingHours: [{
     dayOfWeek: { type: Number, min: 0, max: 6 },
+    open: { type: String },
+    close: { type: String },
     openTime: { type: String },
     closeTime: { type: String }
   }],
+  operatingHours: [{
+    dayOfWeek: { type: Number, min: 0, max: 6 },
+    open: { type: String },
+    close: { type: String },
+    openTime: { type: String },
+    closeTime: { type: String }
+  }],
+  defaultSlotDuration: { type: Number, default: 30 },
+  holidays: [{ type: String }],
   // Extended properties for driver app
   geofence: {
     type: { type: String, enum: ['circle', 'polygon'] },

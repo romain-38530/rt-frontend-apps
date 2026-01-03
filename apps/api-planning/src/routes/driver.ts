@@ -347,7 +347,9 @@ router.post('/end-loading/:checkinId', async (req: Request, res: Response) => {
     // Mettre à jour la réservation
     const booking = await Booking.findById(checkin.bookingId);
     if (booking) {
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.loadingEndedAt = new Date();
+      if (!booking.cargo) booking.cargo = {};
       if (palletCount) booking.cargo.palletCount = palletCount;
       if (weight) booking.cargo.weight = weight;
       await booking.save();
@@ -388,6 +390,7 @@ router.post('/checkout/:checkinId', async (req: Request, res: Response) => {
     const booking = await Booking.findById(checkin.bookingId);
     if (booking) {
       booking.status = 'completed';
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.departedAt = new Date();
       booking.timestamps.completedAt = new Date();
 
@@ -408,6 +411,7 @@ router.post('/checkout/:checkinId', async (req: Request, res: Response) => {
         totalTimeMinutes: totalTime
       };
 
+      if (!booking.statusHistory) booking.statusHistory = [];
       booking.statusHistory.push({
         status: 'completed',
         changedAt: new Date()
@@ -436,6 +440,7 @@ router.post('/geofence-event', async (req: Request, res: Response) => {
     }
 
     if (eventType === 'enter') {
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.arrivedAt = new Date();
       await booking.save();
 
@@ -453,8 +458,8 @@ router.post('/geofence-event', async (req: Request, res: Response) => {
           siteId: booking.siteId,
           driverName: booking.vehicle?.driverName || 'Chauffeur',
           driverPhone: booking.vehicle?.driverPhone,
-          transporterOrgId: booking.transporter.orgId,
-          transporterName: booking.transporter.orgName,
+          transporterOrgId: booking.transporter?.orgId,
+          transporterName: booking.transporter?.orgName,
           plateNumber: booking.vehicle?.plateNumber || 'N/A',
           trailerNumber: booking.vehicle?.trailerNumber,
           checkinMode: 'app',

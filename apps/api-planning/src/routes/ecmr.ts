@@ -76,36 +76,36 @@ router.post('/', async (req: Request, res: Response) => {
       orderReference: booking.orderReference,
 
       sender: req.body.sender || {
-        name: booking.siteOwner.orgName,
+        name: booking.siteOwner?.orgName || 'N/A',
         address: 'À compléter',
         city: 'À compléter',
         postalCode: '',
         country: 'France',
-        contactName: booking.siteOwner.contactName,
-        contactPhone: booking.siteOwner.contactPhone,
-        contactEmail: booking.siteOwner.contactEmail
+        contactName: booking.siteOwner?.contactName,
+        contactPhone: booking.siteOwner?.contactPhone,
+        contactEmail: booking.siteOwner?.contactEmail
       },
 
       carrier: req.body.carrier || {
-        name: booking.transporter.orgName,
+        name: booking.transporter?.orgName || 'N/A',
         address: 'À compléter',
         city: 'À compléter',
         postalCode: '',
         country: 'France',
-        contactName: booking.transporter.contactName,
-        contactPhone: booking.transporter.contactPhone,
-        contactEmail: booking.transporter.contactEmail
+        contactName: booking.transporter?.contactName,
+        contactPhone: booking.transporter?.contactPhone,
+        contactEmail: booking.transporter?.contactEmail
       },
 
       recipient: req.body.recipient || {
-        name: booking.requester.orgName,
+        name: booking.requester?.orgName || 'N/A',
         address: 'À compléter',
         city: 'À compléter',
         postalCode: '',
         country: 'France',
-        contactName: booking.requester.contactName,
-        contactPhone: booking.requester.contactPhone,
-        contactEmail: booking.requester.contactEmail
+        contactName: booking.requester?.contactName,
+        contactPhone: booking.requester?.contactPhone,
+        contactEmail: booking.requester?.contactEmail
       },
 
       loadingPlace: req.body.loadingPlace || {
@@ -122,16 +122,16 @@ router.post('/', async (req: Request, res: Response) => {
       },
 
       goods: req.body.goods || [{
-        description: booking.cargo.description,
+        description: booking.cargo?.description || 'Marchandises',
         packaging: 'Palettes',
-        quantity: booking.cargo.palletCount || 1,
-        weight: booking.cargo.weight || 0,
-        volume: booking.cargo.volume,
-        adrClass: booking.cargo.adrClass
+        quantity: booking.cargo?.palletCount || 1,
+        weight: booking.cargo?.weight || 0,
+        volume: booking.cargo?.volume,
+        adrClass: booking.cargo?.adrClass
       }],
 
-      totalWeight: booking.cargo.weight || 0,
-      totalPackages: booking.cargo.palletCount || 1,
+      totalWeight: booking.cargo?.weight || 0,
+      totalPackages: booking.cargo?.palletCount || 1,
 
       vehiclePlate: booking.vehicle?.plateNumber || 'À compléter',
       trailerPlate: booking.vehicle?.trailerNumber,
@@ -266,6 +266,7 @@ router.post('/:id/sign', async (req: Request, res: Response) => {
     // Mettre à jour le check-in et la réservation
     const booking = await Booking.findById(ecmr.bookingId);
     if (booking) {
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.signedAt = new Date();
       await booking.save();
 
