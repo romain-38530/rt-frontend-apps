@@ -131,3 +131,43 @@ export type { AppointmentRequestFormProps, AppointmentRequestData, AppointmentRe
 // Auto Planning Components - Planification automatique avec escalade Affret.IA
 export { AutoPlanningModal } from './components/AutoPlanning';
 export type { AutoPlanningModalProps, DispatchCarrier, DispatchEvent } from './components/AutoPlanning';
+
+// ============================================
+// CONFORMITÉ v4.0.0 - RGPD, EU 561/2006, L229-25
+// ============================================
+
+// GDPR Components - Conformité RGPD (Articles 7, 17, 20)
+export { CookieConsent, PrivacyCenter } from './components/GDPR';
+export type {
+  CookieConsentProps,
+  CookiePreferences,
+  PrivacyCenterProps,
+  ConsentSettings,
+  ExportStatus,
+  DeleteRequestStatus
+} from './components/GDPR';
+
+// Security Components - Authentification 2FA
+export { TwoFactorSetup, TwoFactorVerify } from './components/Security';
+export type { TwoFactorSetupProps, TwoFactorVerifyProps } from './components/Security';
+
+// Compliance Components - EU 561/2006 (Temps de conduite)
+export { DrivingTimeDisplay } from './components/Compliance';
+export type {
+  DrivingTimeDisplayProps,
+  DrivingSession,
+  DailyDrivingStats,
+  WeeklyDrivingStats,
+  BreakInfo,
+  ComplianceAlert
+} from './components/Compliance';
+
+// Carbon Footprint Components - Article L229-25 Code environnement
+export { EmissionsDisplay } from './components/Carbon';
+export type {
+  EmissionsDisplayProps,
+  RouteInfo,
+  VehicleType,
+  EmissionsData,
+  EmissionsComparison
+} from './components/Carbon';

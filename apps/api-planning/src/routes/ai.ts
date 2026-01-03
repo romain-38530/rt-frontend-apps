@@ -200,8 +200,8 @@ router.post('/optimize-planning', async (req: Request, res: Response) => {
 
     // Trier les réservations par heure
     bookings.sort((a, b) => {
-      const aTime = a.confirmedTimeSlot?.start || a.requestedTimeSlot.start;
-      const bTime = b.confirmedTimeSlot?.start || b.requestedTimeSlot.start;
+      const aTime = a.confirmedTimeSlot?.start || a.requestedTimeSlot?.start || '00:00';
+      const bTime = b.confirmedTimeSlot?.start || b.requestedTimeSlot?.start || '00:00';
       return aTime.localeCompare(bTime);
     });
 
@@ -212,8 +212,8 @@ router.post('/optimize-planning', async (req: Request, res: Response) => {
 
       for (const dock of docks) {
         // Vérifier la compatibilité
-        if (booking.cargo.isAdr && !dock.adrOnly && dock.type !== 'adr') continue;
-        if (booking.cargo.temperatureRequired && !dock.hasRefrigeration) continue;
+        if (booking.cargo?.isAdr && !dock.adrOnly && dock.type !== 'adr') continue;
+        if (booking.cargo?.temperatureRequired && !dock.hasRefrigeration) continue;
 
         const load = dockLoads[dock._id.toString()];
         if (load < minLoad) {
@@ -288,7 +288,7 @@ router.post('/resolve-conflict', async (req: Request, res: Response) => {
       // Option 1: Autre créneau même jour
       const sameDayAlt = alternatives.find(a =>
         a.availableCapacity > 0 &&
-        (!booking.cargo.isAdr || a.isAdr)
+        (!booking.cargo?.isAdr || a.isAdr)
       );
 
       if (sameDayAlt) {
@@ -350,7 +350,7 @@ router.post('/resolve-conflict', async (req: Request, res: Response) => {
         affectedBookings: bookings.map(b => ({
           id: b._id,
           reference: b.reference,
-          transporter: b.transporter.orgName
+          transporter: b.transporter?.orgName || 'N/A'
         })),
         proposedSolutions: solutions,
         autoResolved: solutions.every(s => s.type !== 'manual'),

@@ -57,13 +57,16 @@ router.post('/checkin', async (req: Request, res: Response) => {
     if (location) {
       const site = await Site.findById(booking.siteId);
       if (site && site.geofence) {
+        const geoLat = site.geofence.latitude || site.geofence.center?.lat || 0;
+        const geoLng = site.geofence.longitude || site.geofence.center?.lng || 0;
+        const geoRadius = site.geofence.radiusMeters || site.geofence.radius || 500;
         const distance = calculateDistance(
           location.latitude,
           location.longitude,
-          site.geofence.latitude,
-          site.geofence.longitude
+          geoLat,
+          geoLng
         );
-        isWithinGeofence = distance <= site.geofence.radiusMeters;
+        isWithinGeofence = distance <= geoRadius;
       }
     }
 
@@ -83,8 +86,8 @@ router.post('/checkin', async (req: Request, res: Response) => {
       siteId: booking.siteId,
       driverName,
       driverPhone,
-      transporterOrgId: booking.transporter.orgId,
-      transporterName: booking.transporter.orgName,
+      transporterOrgId: booking.transporter?.orgId,
+      transporterName: booking.transporter?.orgName,
       plateNumber,
       trailerNumber,
       checkinMode: checkinMode || 'manual',
@@ -109,7 +112,9 @@ router.post('/checkin', async (req: Request, res: Response) => {
       driverName,
       driverPhone
     };
+    if (!booking.timestamps) booking.timestamps = {};
     booking.timestamps.checkedInAt = new Date();
+    if (!booking.statusHistory) booking.statusHistory = [];
     booking.statusHistory.push({
       status: 'checked_in',
       changedAt: new Date(),
@@ -241,6 +246,7 @@ router.post('/call/:checkinId', async (req: Request, res: Response) => {
     if (booking) {
       booking.dockId = dockId;
       booking.dockName = dock.name;
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.calledAt = new Date();
       await booking.save();
     }
@@ -270,7 +276,9 @@ router.post('/arrive-dock/:checkinId', async (req: Request, res: Response) => {
     const booking = await Booking.findById(checkin.bookingId);
     if (booking) {
       booking.status = 'at_dock';
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.atDockAt = new Date();
+      if (!booking.statusHistory) booking.statusHistory = [];
       booking.statusHistory.push({
         status: 'at_dock',
         changedAt: new Date()
@@ -303,7 +311,9 @@ router.post('/start-loading/:checkinId', async (req: Request, res: Response) => 
     const booking = await Booking.findById(checkin.bookingId);
     if (booking) {
       booking.status = 'loading';
+      if (!booking.timestamps) booking.timestamps = {};
       booking.timestamps.loadingStartedAt = new Date();
+      if (!booking.statusHistory) booking.statusHistory = [];
       booking.statusHistory.push({
         status: 'loading',
         changedAt: new Date()
