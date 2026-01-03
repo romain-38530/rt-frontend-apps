@@ -35,9 +35,9 @@ frontend:
       NEXT_PUBLIC_SITE_URL: 'https://industry.symphonia-controltower.com'
       NEXT_PUBLIC_PORTAL_TYPE: 'industry'
 
-      # Core APIs (CloudFront HTTPS) - All URLs must include /api
+      # Core APIs (CloudFront HTTPS)
       NEXT_PUBLIC_API_URL: 'https://d2jgmccc3o2t9k.cloudfront.net/api'
-      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
+      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net'
       NEXT_PUBLIC_AUTHZ_URL: 'https://d2jgmccc3o2t9k.cloudfront.net/api'
       NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net/api'
       NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net/api'

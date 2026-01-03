@@ -44,7 +44,7 @@ frontend:
       # Core APIs (Deployed via CloudFront for HTTPS)
       NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
       NEXT_PUBLIC_AUTHZ_URL: 'https://ddaywxps9n701.cloudfront.net'
-      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net/api/v1'
+      NEXT_PUBLIC_ORDERS_API_URL: 'https://dh9acecfz0wg0.cloudfront.net'
       NEXT_PUBLIC_TRACKING_API_URL: 'https://d2mn43ccfvt3ub.cloudfront.net'
       NEXT_PUBLIC_APPOINTMENTS_API_URL: 'https://d28uezz0327lfm.cloudfront.net'
       NEXT_PUBLIC_DOCUMENTS_API_URL: 'https://d8987l284s9q4.cloudfront.net'
