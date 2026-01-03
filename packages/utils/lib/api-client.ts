@@ -196,12 +196,12 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
 }
 
 // Clients API par défaut pour chaque service
-// Note: Orders API requires /api/v1 prefix - ensure env var includes it or use default
-const ordersApiBaseUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
-// Fix: if env var doesn't include /v1, append it
-const ordersApiUrl = ordersApiBaseUrl.endsWith('/api')
-  ? `${ordersApiBaseUrl}/v1`
-  : ordersApiBaseUrl;
+// Orders API base URL - always append /api/v1 if not present
+const ordersApiBaseUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
+// Ensure URL ends with /api/v1
+const ordersApiUrl = ordersApiBaseUrl.includes('/api/v1')
+  ? ordersApiBaseUrl
+  : `${ordersApiBaseUrl.replace(/\/+$/, '')}/api/v1`;
 
 export const ordersApi = createApiClient({
   baseURL: ordersApiUrl,
