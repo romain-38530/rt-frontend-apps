@@ -154,6 +154,13 @@ export default function HomePage() {
       route: '/transporteurs'
     },
     {
+      icon: '🤝',
+      title: 'Délégation Logistique',
+      desc: 'Gérez vos partenaires 3PL/4PL et le routage des RDV',
+      locked: false,
+      route: '/delegation-logistique'
+    },
+    {
       icon: '📋',
       title: 'Grilles Tarifaires',
       desc: 'Configurez et gérez vos grilles tarifaires transport',

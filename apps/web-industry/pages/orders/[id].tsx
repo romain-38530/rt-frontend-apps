@@ -80,7 +80,28 @@ export default function OrderDetailPage() {
   const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [ecmrData, setEcmrData] = useState<any>(null);
   const [ecmrLoading, setEcmrLoading] = useState(false);
+  const [delegationConfig, setDelegationConfig] = useState<any>(null);
   const { toast } = useToast();
+
+  // API URLs
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr';
+
+  // Load delegation config (logistics partners)
+  const loadDelegationConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/logistics-delegation/routing-config`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDelegationConfig(data.routingConfig);
+      }
+    } catch (err) {
+      console.error('Error loading delegation config:', err);
+    }
+  };
 
   // eCMR functions
   const ORDERS_API_URL = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net/api/v1';
@@ -300,6 +321,7 @@ export default function OrderDetailPage() {
     loadOrder();
     loadAppointmentRequests();
     loadEcmrData();
+    loadDelegationConfig();
   }, [orderId]);
 
   const formatDate = (dateString: string) => {
@@ -1565,16 +1587,33 @@ export default function OrderDetailPage() {
                 {/* Tab RDV */}
                 {activeTab === 'rdv' && (
                   <div style={{ padding: '20px' }}>
-                    {/* Info Destinataire RDV */}
+                    {/* Info Destinataire RDV - basé sur la config de délégation */}
                     <div style={{
                       background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
                       borderRadius: '12px',
                       padding: '16px',
                       marginBottom: '20px',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '20px' }}>📍</span>
-                        <span style={{ fontWeight: '600', color: '#4338ca' }}>Destinataire des demandes de RDV</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '20px' }}>📍</span>
+                          <span style={{ fontWeight: '600', color: '#4338ca' }}>Destinataire des demandes de RDV</span>
+                        </div>
+                        {delegationConfig?.hasActiveDelegation && (
+                          <a
+                            href="/delegation-logistique"
+                            style={{
+                              fontSize: '12px',
+                              color: '#6366f1',
+                              textDecoration: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            ⚙️ Configurer la délégation
+                          </a>
+                        )}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div style={{
@@ -1586,9 +1625,8 @@ export default function OrderDetailPage() {
                             🚚 Chargement
                           </div>
                           <div style={{ fontWeight: '600', color: '#1e1b4b' }}>
-                            {(orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
-                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
-                              ? orderAny.delegatedLogistics?.partnerName || 'Logisticien délégué'
+                            {delegationConfig?.pickupDelegation
+                              ? delegationConfig.pickupDelegation.partnerName
                               : orderAny.supplier && !orderAny.supplier.managedByIndustrial
                                 ? orderAny.supplier.supplierName || 'Fournisseur'
                                 : orderAny.organizationName || 'Vous (Donneur d\'ordre)'
@@ -1604,22 +1642,19 @@ export default function OrderDetailPage() {
                             borderRadius: '4px',
                             fontSize: '10px',
                             fontWeight: '500',
-                            background: (orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
-                                        orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                            background: delegationConfig?.pickupDelegation
                               ? '#fef3c7'
                               : orderAny.supplier && !orderAny.supplier.managedByIndustrial
                                 ? '#dbeafe'
                                 : '#dcfce7',
-                            color: (orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
-                                   orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                            color: delegationConfig?.pickupDelegation
                               ? '#92400e'
                               : orderAny.supplier && !orderAny.supplier.managedByIndustrial
                                 ? '#1e40af'
                                 : '#166534',
                           }}>
-                            {(orderAny.delegatedLogistics?.managedOperations?.includes('pickup') ||
-                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
-                              ? `Logistique ${orderAny.delegatedLogistics?.partnerType || '3PL'}`
+                            {delegationConfig?.pickupDelegation
+                              ? `${delegationConfig.pickupDelegation.partnerType} Délégué`
                               : orderAny.supplier && !orderAny.supplier.managedByIndustrial
                                 ? 'Fournisseur'
                                 : 'Industriel'
@@ -1635,9 +1670,8 @@ export default function OrderDetailPage() {
                             📦 Livraison
                           </div>
                           <div style={{ fontWeight: '600', color: '#1e1b4b' }}>
-                            {(orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
-                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
-                              ? orderAny.delegatedLogistics?.partnerName || 'Logisticien délégué'
+                            {delegationConfig?.deliveryDelegation
+                              ? delegationConfig.deliveryDelegation.partnerName
                               : orderAny.organizationName || 'Vous (Donneur d\'ordre)'
                             }
                           </div>
@@ -1651,23 +1685,41 @@ export default function OrderDetailPage() {
                             borderRadius: '4px',
                             fontSize: '10px',
                             fontWeight: '500',
-                            background: (orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
-                                        orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                            background: delegationConfig?.deliveryDelegation
                               ? '#fef3c7'
                               : '#dcfce7',
-                            color: (orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
-                                   orderAny.delegatedLogistics?.managedOperations?.includes('both'))
+                            color: delegationConfig?.deliveryDelegation
                               ? '#92400e'
                               : '#166534',
                           }}>
-                            {(orderAny.delegatedLogistics?.managedOperations?.includes('delivery') ||
-                              orderAny.delegatedLogistics?.managedOperations?.includes('both'))
-                              ? `Logistique ${orderAny.delegatedLogistics?.partnerType || '3PL'}`
+                            {delegationConfig?.deliveryDelegation
+                              ? `${delegationConfig.deliveryDelegation.partnerType} Délégué`
                               : 'Industriel'
                             }
                           </div>
                         </div>
                       </div>
+                      {!delegationConfig?.hasActiveDelegation && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '10px 12px',
+                          background: 'rgba(255,255,255,0.7)',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          color: '#4338ca',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span>💡</span>
+                          <span>
+                            Vous gérez directement les RDV.{' '}
+                            <a href="/delegation-logistique" style={{ color: '#4338ca', fontWeight: '600' }}>
+                              Déléguer à un partenaire 3PL/4PL →
+                            </a>
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {loadingRdv ? (
