@@ -1098,92 +1098,6 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* Section Parties Prenantes */}
-              <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', backgroundColor: '#f5f3ff', borderBottom: '2px solid #8b5cf6' }}>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: '#6d28d9' }}>Parties prenantes</span>
-                </div>
-                <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                  {/* Expediteur */}
-                  <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e' }}>Expéditeur</div>
-                        <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px' }}>
-                          {orderAny.senderType === 'industriel' ? 'Industriel (interne)' :
-                           orderAny.senderType === 'logisticien' ? 'Logisticien de l\'industriel' :
-                           'Externe (Fournisseur/Transitaire)'}
-                        </div>
-                      </div>
-                      {/* Action button based on sender type */}
-                      {(orderAny.senderType === 'industriel' || orderAny.senderType === 'logisticien') ? (
-                        <a
-                          href="/planning"
-                          style={{ fontSize: '11px', color: '#92400e', textDecoration: 'none', fontWeight: '600', padding: '4px 8px', backgroundColor: '#fcd34d', borderRadius: '4px' }}
-                        >
-                          📅 Planning
-                        </a>
-                      ) : orderAny.senderType === 'externe' && orderAny.senderEmail ? (
-                        <button
-                          onClick={async () => {
-                            try {
-                              const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${order.id}/send-supplier-invitation`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: orderAny.senderEmail, name: orderAny.senderName }),
-                              });
-                              if (response.ok) {
-                                toast.success('Invitation envoyée au fournisseur');
-                              } else {
-                                throw new Error('Erreur lors de l\'envoi');
-                              }
-                            } catch (err) {
-                              toast.error('Erreur lors de l\'envoi de l\'invitation');
-                            }
-                          }}
-                          style={{ fontSize: '11px', color: 'white', fontWeight: '600', padding: '4px 8px', backgroundColor: '#f59e0b', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                        >
-                          ✉️ Envoyer invitation
-                        </button>
-                      ) : null}
-                    </div>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                      {orderAny.senderName || orderAny.forwarderName || 'Non défini'}
-                    </div>
-                    {orderAny.senderEmail && (
-                      <div style={{ fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        ✉️ {orderAny.senderEmail}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Destinataire */}
-                  <div style={{ padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #93c5fd' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af' }}>Destinataire</div>
-                      {orderAny.recipientEmail && (
-                        <a
-                          href={`https://d3b6p09ihn5w7r.amplifyapp.com/orders/?email=${encodeURIComponent(orderAny.recipientEmail)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}
-                        >
-                          Ouvrir portail →
-                        </a>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                      {orderAny.recipientName || 'Non défini'}
-                    </div>
-                    {orderAny.recipientEmail && (
-                      <div style={{ fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        ✉️ {orderAny.recipientEmail}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* Section Enlèvement */}
               <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', backgroundColor: '#f0fdf4', borderBottom: '2px solid #22c55e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1198,6 +1112,65 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
                 <div style={{ padding: '20px' }}>
+                  {/* Expéditeur intégré */}
+                  <div style={{ marginBottom: '20px', padding: '16px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '12px', border: '1px solid #fcd34d' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#f59e0b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                          🏭
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expéditeur</div>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#78350f' }}>
+                            {orderAny.senderName || orderAny.forwarderName || 'Non défini'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#b45309', marginTop: '2px' }}>
+                            {orderAny.senderType === 'industriel' ? 'Industriel (interne)' :
+                             orderAny.senderType === 'logisticien' ? 'Logisticien de l\'industriel' :
+                             'Externe (Fournisseur/Transitaire)'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                        {orderAny.senderEmail && (
+                          <div style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            ✉️ {orderAny.senderEmail}
+                          </div>
+                        )}
+                        {(orderAny.senderType === 'industriel' || orderAny.senderType === 'logisticien') ? (
+                          <a
+                            href="/planning"
+                            style={{ fontSize: '11px', color: 'white', textDecoration: 'none', fontWeight: '600', padding: '6px 12px', backgroundColor: '#f59e0b', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            📅 Planning
+                          </a>
+                        ) : orderAny.senderType === 'externe' && orderAny.senderEmail ? (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${order.id}/send-supplier-invitation`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email: orderAny.senderEmail, name: orderAny.senderName }),
+                                });
+                                if (response.ok) {
+                                  toast.success('Invitation envoyée au fournisseur');
+                                } else {
+                                  throw new Error('Erreur lors de l\'envoi');
+                                }
+                              } catch (err) {
+                                toast.error('Erreur lors de l\'envoi de l\'invitation');
+                              }
+                            }}
+                            style={{ fontSize: '11px', color: 'white', fontWeight: '600', padding: '6px 12px', backgroundColor: '#f59e0b', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
+                          >
+                            ✉️ Envoyer invitation
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                     {/* Adresse */}
                     <div>
@@ -1213,7 +1186,7 @@ export default function OrderDetailPage() {
                     </div>
                     {/* Contact */}
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Enlèvement chez :</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact sur site</div>
                       {order.pickupAddress.contactName && (
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.pickupAddress.contactName}</div>
                       )}
@@ -1286,6 +1259,45 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
                 <div style={{ padding: '20px' }}>
+                  {/* Destinataire intégré */}
+                  <div style={{ marginBottom: '20px', padding: '16px', background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', borderRadius: '12px', border: '1px solid #93c5fd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                          🏢
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Destinataire</div>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e3a8a' }}>
+                            {orderAny.recipientName || 'Non défini'}
+                          </div>
+                          {orderAny.recipientCompany && (
+                            <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+                              {orderAny.recipientCompany}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                        {orderAny.recipientEmail && (
+                          <div style={{ fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            ✉️ {orderAny.recipientEmail}
+                          </div>
+                        )}
+                        {orderAny.recipientEmail && (
+                          <a
+                            href={`https://d3b6p09ihn5w7r.amplifyapp.com/orders/?email=${encodeURIComponent(orderAny.recipientEmail)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '11px', color: 'white', textDecoration: 'none', fontWeight: '600', padding: '6px 12px', backgroundColor: '#3b82f6', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            🌐 Ouvrir portail →
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                     {/* Adresse */}
                     <div>
@@ -1301,7 +1313,7 @@ export default function OrderDetailPage() {
                     </div>
                     {/* Contact */}
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Livraison chez :</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Contact sur site</div>
                       {order.deliveryAddress.contactName && (
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{order.deliveryAddress.contactName}</div>
                       )}
