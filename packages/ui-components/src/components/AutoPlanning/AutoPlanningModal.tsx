@@ -46,11 +46,11 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
   onEscalateToAffretIA,
   ordersApiUrl,
 }) => {
-  // Normalize the API URL - remove trailing /api/v1 if present since we add /api/orders/...
+  // Get the base API URL for orders - ensures /api/v1 prefix is used
   const getBaseUrl = () => {
     const envUrl = ordersApiUrl || process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
-    // Remove /api/v1 or /api suffix if present
-    return envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/api\/?$/, '');
+    // Remove any trailing /api or /api/v1 suffix, we'll add /api/v1/orders/... ourselves
+    return envUrl.replace(/\/api(\/v1)?\/?$/, '');
   };
   const baseApiUrl = getBaseUrl();
   const [step, setStep] = useState<PlanningStep>('starting');
@@ -71,10 +71,16 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
       setStep('starting');
       setError(null);
 
-      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/auto-dispatch`, {
+      const response = await fetch(`${baseApiUrl}/api/v1/orders/${orderId}/auto-dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+
+      // Check if response is HTML (error page) instead of JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('API non disponible - veuillez réessayer plus tard');
+      }
 
       const data = await response.json();
 
@@ -97,7 +103,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
     if (!orderId) return;
 
     try {
-      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/dispatch-status`);
+      const response = await fetch(`${baseApiUrl}/api/v1/orders/${orderId}/dispatch-status`);
       const data = await response.json();
 
       if (response.ok && data.success) {
