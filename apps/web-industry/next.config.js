@@ -3,15 +3,15 @@ const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
 
   // Transpile workspace packages
   transpilePackages: ['@rt/ui-components', '@rt/contracts', '@rt/utils'],
 
-  // Webpack config for @shared alias
-  webpack: (config) => {
-    config.resolve.alias['@shared'] = path.resolve(__dirname, '../../packages/shared');
-    return config;
+  // Turbopack config for Next.js 16+ (replaces webpack config)
+  turbopack: {
+    resolveAlias: {
+      '@shared': path.resolve(__dirname, '../../packages/shared'),
+    },
   },
 
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
@@ -23,10 +23,6 @@ const nextConfig = {
   // Disable image optimization for static export
   images: {
     unoptimized: true,
-  },
-
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 
   typescript: {

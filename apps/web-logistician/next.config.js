@@ -6,12 +6,12 @@ const nextConfig = {
   transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
 
   reactStrictMode: true,
-  swcMinify: true,
 
-  // Webpack config for @shared alias
-  webpack: (config) => {
-    config.resolve.alias['@shared'] = path.resolve(__dirname, '../../packages/shared');
-    return config;
+  // Turbopack config for Next.js 16+ (replaces webpack config)
+  turbopack: {
+    resolveAlias: {
+      '@shared': path.resolve(__dirname, '../../packages/shared'),
+    },
   },
 
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
@@ -22,18 +22,10 @@ const nextConfig = {
     unoptimized: true,
   },
 
-  // Désactiver ESLint pendant le build pour déployer rapidement
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   // Désactiver TypeScript checking pendant le build
   typescript: {
     ignoreBuildErrors: false,
   },
-
-  // Désactiver optimisation des polices Google
-  optimizeFonts: false,
 };
 
 module.exports = nextConfig;

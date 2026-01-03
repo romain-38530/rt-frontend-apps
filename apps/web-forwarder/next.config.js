@@ -4,7 +4,9 @@ const nextConfig = {
   transpilePackages: ['@repo/ui-components', '@rt/contracts', '@rt/utils'],
 
   reactStrictMode: true,
-  swcMinify: true,
+
+  // Turbopack config for Next.js 16+
+  turbopack: {},
 
   // Export statique pour AWS Amplify Hosting (CDN uniquement)
   output: 'export',
@@ -14,18 +16,10 @@ const nextConfig = {
     unoptimized: true,
   },
 
-  // Désactiver ESLint pendant le build pour déployer rapidement
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   // Désactiver TypeScript checking pendant le build
   typescript: {
     ignoreBuildErrors: false,
   },
-
-  // Désactiver optimisation des polices Google
-  optimizeFonts: false,
 };
 
 module.exports = nextConfig;

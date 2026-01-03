@@ -1,18 +1,13 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   output: 'export', // Static export + Amplify rewrites pour API proxy
+
+  // Turbopack config for Next.js 16+
+  turbopack: {},
 
   images: {
     unoptimized: true,
-  },
-
-  // Désactiver ESLint pendant le build pour déployer rapidement
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 
   // Désactiver les erreurs TypeScript pendant le build
@@ -24,27 +19,6 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://ddaywxps9n701.cloudfront.net',
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://rttechnologie.com',
-  },
-
-  // Configuration webpack pour transpiler TypeScript externe
-  webpack: (config, { isServer }) => {
-    // Transpiler les fichiers TypeScript du dossier src/ root
-    config.module.rules.push({
-      test: /\.(ts|tsx)$/,
-      include: [path.resolve(__dirname, '../../src')],
-      use: {
-        loader: 'babel-loader',
-        options: {
-          presets: [
-            '@babel/preset-env',
-            '@babel/preset-typescript',
-            ['@babel/preset-react', { runtime: 'automatic' }],
-          ],
-        },
-      },
-    });
-
-    return config;
   },
 
   // Note: redirects() not supported with static export
