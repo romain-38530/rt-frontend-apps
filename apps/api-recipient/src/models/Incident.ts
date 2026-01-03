@@ -28,7 +28,7 @@ export interface IIncidentPhoto {
 
 export interface IIncidentAcknowledgement {
   acknowledgedBy: string;
-  acknowledgedByType: 'transporter' | 'industrial' | 'supplier' | 'admin';
+  acknowledgedByType: 'transporter' | 'industrial' | 'supplier' | 'admin' | 'recipient';
   acknowledgedAt: Date;
   comment?: string;
   actionPlan?: string;
@@ -38,7 +38,7 @@ export interface IIncidentResolution {
   action: 'replaced' | 'refunded' | 'credit_note' | 'discount' | 'no_action' | 'dispute';
   resolvedAt: Date;
   resolvedBy: string;
-  resolvedByType: 'transporter' | 'industrial' | 'supplier' | 'admin';
+  resolvedByType: 'transporter' | 'industrial' | 'supplier' | 'admin' | 'recipient';
   compensation?: {
     type: 'monetary' | 'product' | 'credit' | 'discount';
     amount?: number;
@@ -179,7 +179,7 @@ const AcknowledgementSchema = new Schema<IIncidentAcknowledgement>({
   acknowledgedBy: { type: String, required: true },
   acknowledgedByType: {
     type: String,
-    enum: ['transporter', 'industrial', 'supplier', 'admin'],
+    enum: ['transporter', 'industrial', 'supplier', 'admin', 'recipient'],
     required: true
   },
   acknowledgedAt: { type: Date, required: true },
@@ -197,7 +197,7 @@ const ResolutionSchema = new Schema<IIncidentResolution>({
   resolvedBy: { type: String, required: true },
   resolvedByType: {
     type: String,
-    enum: ['transporter', 'industrial', 'supplier', 'admin'],
+    enum: ['transporter', 'industrial', 'supplier', 'admin', 'recipient'],
     required: true
   },
   compensation: {

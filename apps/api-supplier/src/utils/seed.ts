@@ -244,7 +244,7 @@ async function seed() {
     // Créer des créneaux de chargement
     console.log('Creating test loading slots...');
 
-    const slot1 = await LoadingSlot.create({
+    await LoadingSlot.create({
       supplierId: supplier1.supplierId,
       orderId: order1.orderId,
       proposedBy: 'industrial',
@@ -255,7 +255,7 @@ async function seed() {
       status: 'proposed'
     });
 
-    const slot2 = await LoadingSlot.create({
+    await LoadingSlot.create({
       supplierId: supplier2.supplierId,
       orderId: order2.orderId,
       proposedBy: 'system',

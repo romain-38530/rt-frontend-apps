@@ -315,13 +315,19 @@ export class MatchingService {
       _id: { $ne: freightRequestId },
       'cargo.type': freightRequest.cargo.type,
       status: { $in: ['completed', 'awarded'] },
-      $or: [
-        { 'origin.port': freightRequest.origin.port },
-        { 'origin.country': freightRequest.origin.country }
-      ],
-      $or: [
-        { 'destination.port': freightRequest.destination.port },
-        { 'destination.country': freightRequest.destination.country }
+      $and: [
+        {
+          $or: [
+            { 'origin.port': freightRequest.origin.port },
+            { 'origin.country': freightRequest.origin.country }
+          ]
+        },
+        {
+          $or: [
+            { 'destination.port': freightRequest.destination.port },
+            { 'destination.country': freightRequest.destination.country }
+          ]
+        }
       ]
     })
     .sort({ createdAt: -1 })

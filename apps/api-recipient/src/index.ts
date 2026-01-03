@@ -29,14 +29,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Middleware de logging
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.path}`);
   next();
 });
 
 // Route de santé
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     service: 'api-recipient',
@@ -47,7 +47,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Route d'information de l'API
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'RT Technologie - Recipient API',
     version: '1.0.0',
@@ -86,7 +86,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Middleware de gestion des erreurs globales
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Global error handler:', err);
 
   res.status(500).json({

@@ -397,7 +397,7 @@ router.put('/:id/archive', async (req: Request, res: Response) => {
  * GET /chats/templates
  * Liste des templates de messages disponibles
  */
-router.get('/templates', async (req: Request, res: Response) => {
+router.get('/templates', async (_req: Request, res: Response) => {
   try {
     const templates = notificationService.getMessageTemplates();
     res.json({ templates });

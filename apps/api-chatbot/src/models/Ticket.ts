@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITicket extends Document {
-  conversationId: string;
+  conversationId: mongoose.Types.ObjectId | string;
   userId: string;
   subject: string;
   description: string;
@@ -128,16 +128,16 @@ const TicketSchema = new Schema<ITicket>({
   },
 });
 
-TicketSchema.pre('save', function(next) {
+TicketSchema.pre('save', function(this: ITicket, next) {
   this.updatedAt = new Date();
   next();
 });
 
 // Calculate SLA dates based on priority
-TicketSchema.pre('save', function(next) {
-  if (this.isNew && !this.sla.responseBy) {
+TicketSchema.pre('save', function(this: ITicket & { isNew: boolean }, next) {
+  if (this.isNew && !this.sla?.responseBy) {
     const now = new Date();
-    const slaHours = {
+    const slaHours: Record<string, { response: number; resolve: number }> = {
       urgent: { response: 1, resolve: 4 },
       high: { response: 4, resolve: 24 },
       medium: { response: 8, resolve: 72 },
@@ -145,8 +145,10 @@ TicketSchema.pre('save', function(next) {
     };
 
     const config = slaHours[this.priority];
-    this.sla.responseBy = new Date(now.getTime() + config.response * 60 * 60 * 1000);
-    this.sla.resolveBy = new Date(now.getTime() + config.resolve * 60 * 60 * 1000);
+    if (config && this.sla) {
+      this.sla.responseBy = new Date(now.getTime() + config.response * 60 * 60 * 1000);
+      this.sla.resolveBy = new Date(now.getTime() + config.resolve * 60 * 60 * 1000);
+    }
   }
   next();
 });

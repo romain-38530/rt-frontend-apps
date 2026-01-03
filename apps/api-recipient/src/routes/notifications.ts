@@ -48,7 +48,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     if (read !== undefined) {
-      const isRead = read === 'true' || read === true;
+      const isRead = read === 'true';
       notifications = notifications.filter(n => n.read === isRead);
     }
 

@@ -13,22 +13,24 @@ export const authenticateSupplier = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'No authorization token provided'
       });
+      return;
     }
 
     const token = authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Invalid authorization format. Use: Bearer TOKEN'
       });
+      return;
     }
 
     // Vérifier le token JWT
@@ -41,19 +43,21 @@ export const authenticateSupplier = (
     next();
   } catch (error: any) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Token has expired',
         expiredAt: error.expiredAt
       });
+      return;
     }
 
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Invalid token'
       });
+      return;
     }
 
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Authentication error',
       message: error.message
     });
@@ -64,21 +68,23 @@ export const authenticateSupplier = (
  * Middleware pour vérifier les rôles
  */
 export const checkRole = (allowedRoles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Not authenticated'
       });
+      return;
     }
 
     const userRole = req.user.role;
 
     if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'Insufficient permissions',
         requiredRoles: allowedRoles,
         yourRole: userRole
       });
+      return;
     }
 
     next();
@@ -88,20 +94,21 @@ export const checkRole = (allowedRoles: string[]) => {
 /**
  * Middleware pour vérifier le statut du fournisseur
  */
-export const checkSupplierStatus = (allowedStatuses: string[]) => {
-  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const checkSupplierStatus = (_allowedStatuses: string[]) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.supplierId) {
-        return res.status(401).json({
+        res.status(401).json({
           error: 'Supplier ID not found in token'
         });
+        return;
       }
 
       // Dans un cas réel, on ferait une requête à la DB
       // Pour cet exemple, on passe directement
       next();
     } catch (error: any) {
-      return res.status(500).json({
+      res.status(500).json({
         error: 'Error checking supplier status',
         message: error.message
       });
@@ -112,7 +119,7 @@ export const checkSupplierStatus = (allowedStatuses: string[]) => {
 /**
  * Génère un token JWT pour un fournisseur
  */
-export const generateSupplierToken = (supplierId: string, additionalData?: any) => {
+export const generateSupplierToken = (supplierId: string, additionalData?: any): string => {
   const payload = {
     supplierId,
     type: 'supplier',
@@ -123,7 +130,7 @@ export const generateSupplierToken = (supplierId: string, additionalData?: any) 
     payload,
     process.env.JWT_SECRET || 'default-secret',
     {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+      expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn']
     }
   );
 

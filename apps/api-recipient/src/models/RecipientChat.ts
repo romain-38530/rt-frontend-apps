@@ -90,6 +90,26 @@ export interface IRecipientChat extends Document {
   archivedBy?: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  addMessage(
+    senderId: string,
+    senderType: IChatMessage['senderType'],
+    senderName: string,
+    content: string,
+    attachments?: IChatAttachment[],
+    replyTo?: string
+  ): IChatMessage;
+  markAsRead(userId: string): void;
+  addParticipant(
+    participantId: string,
+    type: IChatParticipant['type'],
+    name: string,
+    email?: string
+  ): void;
+  removeParticipant(participantId: string): void;
+  archive(userId: string): void;
+  close(userId: string, reason?: string): void;
 }
 
 const ChatAttachmentSchema = new Schema<IChatAttachment>({

@@ -16,8 +16,15 @@ import type { Order, OrderEvent, OrderStatus } from '@rt/contracts';
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; icon: string }> = {
   draft: { label: 'Brouillon', color: '#9ca3af', icon: '📝' },
   created: { label: 'Créée', color: '#3b82f6', icon: '✅' },
+  pending: { label: 'En attente', color: '#fbbf24', icon: '⏳' },
+  // Auto-dispatch statuts
+  planification_auto: { label: 'Planification auto', color: '#6366f1', icon: '🤖' },
+  affret_ia: { label: 'Affrètement IA', color: '#a855f7', icon: '🧠' },
+  echec_planification: { label: 'Échec planification', color: '#ef4444', icon: '⚠️' },
+  accepted: { label: 'Acceptée', color: '#10b981', icon: '✓' },
+  // Legacy statuts
   sent_to_carrier: { label: 'Envoyée', color: '#8b5cf6', icon: '📨' },
-  carrier_accepted: { label: 'Acceptée', color: '#10b981', icon: '👍' },
+  carrier_accepted: { label: 'Acceptée transporteur', color: '#10b981', icon: '👍' },
   carrier_refused: { label: 'Refusée', color: '#ef4444', icon: '👎' },
   in_transit: { label: 'En transit', color: '#f59e0b', icon: '🚛' },
   arrived_pickup: { label: 'Arrivé collecte', color: '#14b8a6', icon: '📍' },

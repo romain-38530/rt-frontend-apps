@@ -14,8 +14,7 @@ router.post('/invite', async (req: Request, res: Response): Promise<void> => {
       companyName,
       siret,
       contactEmail,
-      contactName,
-      contactPhone
+      contactName
     } = req.body;
 
     // Validation

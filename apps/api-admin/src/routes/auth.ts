@@ -140,7 +140,7 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
 
         const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
         const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
-          expiresIn: JWT_CONFIG.accessToken.expiresIn
+          expiresIn: JWT_CONFIG.accessToken.expiresIn as jwt.SignOptions['expiresIn']
         });
 
         // Créer un refresh token

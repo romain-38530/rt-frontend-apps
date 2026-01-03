@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import axios from 'axios';
+// import axios from 'axios'; // TODO: Implement push notifications
 import Supplier from '../models/Supplier';
 
 export interface INotification {
@@ -16,7 +16,7 @@ export class NotificationService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: false,
@@ -100,7 +100,7 @@ export class NotificationService {
   /**
    * Notification pour créneau proposé
    */
-  async notifySlotProposed(supplierId: string, slotId: string, slotDetails: any) {
+  async notifySlotProposed(supplierId: string, _slotId: string, slotDetails: any) {
     await this.sendNotification({
       supplierId,
       type: 'slot',
@@ -115,7 +115,7 @@ export class NotificationService {
   /**
    * Notification pour créneau accepté
    */
-  async notifySlotAccepted(supplierId: string, slotId: string, slotDetails: any) {
+  async notifySlotAccepted(supplierId: string, _slotId: string, slotDetails: any) {
     await this.sendNotification({
       supplierId,
       type: 'slot',
@@ -130,7 +130,7 @@ export class NotificationService {
   /**
    * Notification pour rappel de chargement
    */
-  async notifyLoadingReminder(supplierId: string, orderId: string, slotDetails: any) {
+  async notifyLoadingReminder(supplierId: string, _orderId: string, slotDetails: any) {
     await this.sendNotification({
       supplierId,
       type: 'slot',

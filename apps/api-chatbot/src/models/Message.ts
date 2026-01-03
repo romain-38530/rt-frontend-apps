@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IMessage extends Document {
-  conversationId: string;
+  conversationId: mongoose.Types.ObjectId | string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   attachments: Array<{

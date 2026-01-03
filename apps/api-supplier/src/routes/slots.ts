@@ -330,7 +330,7 @@ router.post('/propose', async (req: Request, res: Response) => {
  * POST /slots/sync-eta
  * Synchroniser les ETA depuis l'API Tracking
  */
-router.post('/sync-eta', async (req: Request, res: Response) => {
+router.post('/sync-eta', async (_req: Request, res: Response) => {
   try {
     const result = await slotService.syncETAForActiveSlots();
 

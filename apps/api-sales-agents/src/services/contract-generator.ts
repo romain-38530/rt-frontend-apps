@@ -133,18 +133,19 @@ export async function generateContract(contractId: string): Promise<string> {
     doc.moveDown(3);
 
     // Footer
-    doc.fontSize(10);
+    doc.fontSize(10).fillColor('gray');
     doc.text(
       `Document généré le ${new Date().toLocaleDateString('fr-FR')} - Version ${contract.templateVersion}`,
-      { align: 'center', color: 'gray' }
+      { align: 'center' }
     );
+    doc.fillColor('black');
 
     // Finalize PDF
     doc.end();
 
     // Wait for stream to finish
-    await new Promise((resolve, reject) => {
-      stream.on('finish', resolve);
+    await new Promise<void>((resolve, reject) => {
+      stream.on('finish', () => resolve());
       stream.on('error', reject);
     });
 

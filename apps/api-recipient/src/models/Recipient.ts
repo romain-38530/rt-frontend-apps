@@ -102,6 +102,10 @@ export interface IRecipient extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  generateSiteId(): string;
+  generateContactId(): string;
 }
 
 const RecipientSiteSchema = new Schema<IRecipientSite>({

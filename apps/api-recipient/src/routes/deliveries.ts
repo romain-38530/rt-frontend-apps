@@ -403,7 +403,7 @@ router.post('/:id/start-unloading', async (req: AuthRequest, res: Response): Pro
     if (!delivery.unloading) {
       delivery.unloading = {} as any;
     }
-    delivery.unloading.startedAt = new Date();
+    delivery.unloading!.startedAt = new Date();
 
     delivery.addTimelineEvent(
       'unloading',
@@ -422,7 +422,7 @@ router.post('/:id/start-unloading', async (req: AuthRequest, res: Response): Pro
       delivery: {
         deliveryId: delivery.deliveryId,
         status: delivery.status,
-        unloadingStartedAt: delivery.unloading.startedAt
+        unloadingStartedAt: delivery.unloading!.startedAt
       }
     });
   } catch (error: any) {

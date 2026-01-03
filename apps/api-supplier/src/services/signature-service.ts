@@ -149,15 +149,14 @@ export class SignatureService {
     }
 
     // Vérifier l'intégrité de la signature
-    const hash = this.generateSignatureHash(
+    // Dans un cas réel, on comparerait ce hash avec celui stocké
+    // Pour cet exemple, on considère toutes les signatures comme valides
+    void this.generateSignatureHash(
       signature.orderId,
       signature.supplierId,
       signature.signatureData,
       signature.timestamp
     );
-
-    // Dans un cas réel, on comparerait ce hash avec celui stocké
-    // Pour cet exemple, on considère toutes les signatures comme valides
     signature.verified = true;
     await signature.save();
 
@@ -190,7 +189,7 @@ export class SignatureService {
   /**
    * Génère un PDF du bon de chargement signé
    */
-  async generateSignedLoadingNote(orderId: string, signatureId: string) {
+  async generateSignedLoadingNote(_orderId: string, signatureId: string) {
     const signature = await SupplierSignature.findOne({ signatureId });
 
     if (!signature) {
@@ -222,7 +221,7 @@ export class SignatureService {
 
     const requiredTypes = ['loading', 'delivery_note'];
     const existingTypes = signatures.map((sig) => sig.type);
-    const missing = requiredTypes.filter((type) => !existingTypes.includes(type));
+    const missing = requiredTypes.filter((type) => !existingTypes.includes(type as 'loading' | 'delivery_note'));
 
     return {
       complete: missing.length === 0,
