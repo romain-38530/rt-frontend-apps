@@ -5,9 +5,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import InboundEmail, { IInboundEmail, DetectedIntent } from '../models/InboundEmail';
 import Order from '../models/Order';
 import EmailAction from '../models/EmailAction';
+import IssueFollowUp from '../models/IssueFollowUp';
 import TrackingService from './tracking-service';
 import EventService from './event-service';
 
@@ -25,13 +27,38 @@ const SES_CONFIG = {
 let sesClient: SESClient | null = null;
 function getSESClient(): SESClient | null {
   if (sesClient) return sesClient;
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  if (accessKeyId && secretAccessKey) {
-    sesClient = new SESClient({ region: SES_CONFIG.region, credentials: { accessKeyId, secretAccessKey } });
-    return sesClient;
+  sesClient = new SESClient({ region: SES_CONFIG.region });
+  return sesClient;
+}
+
+// S3 Client pour recuperer le contenu des emails
+const S3_BUCKET = process.env.SES_S3_BUCKET || 'symphonia-inbound-emails';
+const S3_PREFIX = process.env.SES_S3_PREFIX || 'emails/';
+
+let s3Client: S3Client | null = null;
+function getS3Client(): S3Client {
+  if (s3Client) return s3Client;
+  s3Client = new S3Client({ region: SES_CONFIG.region });
+  return s3Client;
+}
+
+// Fonction pour recuperer le contenu de l'email depuis S3
+async function getEmailContentFromS3(messageId: string): Promise<string | null> {
+  try {
+    const client = getS3Client();
+    const command = new GetObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: `${S3_PREFIX}${messageId}`
+    });
+    const response = await client.send(command);
+    if (response.Body) {
+      return await response.Body.transformToString();
+    }
+    return null;
+  } catch (error: any) {
+    console.error(`[InboundEmailService] Error fetching email from S3: ${error.message}`);
+    return null;
   }
-  return null;
 }
 
 // Client Anthropic
@@ -83,10 +110,21 @@ class InboundEmailService {
     let bodyText = '';
     let bodyHtml = '';
 
-    if (rawContent) {
-      const parsed = this.parseEmailContent(rawContent);
+    // Si pas de contenu fourni, le recuperer depuis S3
+    let emailContent: string | undefined = rawContent;
+    if (!emailContent && sesMessage.mail.messageId) {
+      console.log(`[InboundEmailService] Fetching email content from S3: ${sesMessage.mail.messageId}`);
+      const s3Content = await getEmailContentFromS3(sesMessage.mail.messageId);
+      if (s3Content) emailContent = s3Content;
+    }
+
+    if (emailContent) {
+      const parsed = this.parseEmailContent(emailContent);
       bodyText = parsed.text;
       bodyHtml = parsed.html;
+      console.log(`[InboundEmailService] Parsed email body: ${bodyText.substring(0, 100)}...`);
+    } else {
+      console.log('[InboundEmailService] No email content available');
     }
 
     // Creer l'enregistrement
@@ -125,26 +163,50 @@ class InboundEmailService {
     let text = '';
     let html = '';
 
-    // Simplification: extraire text/plain et text/html
-    // En production, utiliser un parser MIME complet comme mailparser
-
-    const textMatch = raw.match(/Content-Type: text\/plain[^]*?\r?\n\r?\n([^]*?)(?=--|\r?\n\r?\n--)/i);
+    // Extraire text/plain
+    const textMatch = raw.match(/Content-Type:\s*text\/plain[^]*?charset[^]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--)/i);
     if (textMatch) {
-      text = textMatch[1].trim();
+      text = this.decodeQuotedPrintable(textMatch[1].trim());
     }
 
-    const htmlMatch = raw.match(/Content-Type: text\/html[^]*?\r?\n\r?\n([^]*?)(?=--|\r?\n\r?\n--)/i);
+    // Extraire text/html
+    const htmlMatch = raw.match(/Content-Type:\s*text\/html[^]*?charset[^]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--)/i);
     if (htmlMatch) {
-      html = htmlMatch[1].trim();
+      html = this.decodeQuotedPrintable(htmlMatch[1].trim());
     }
 
-    // Si pas de multipart, prendre tout comme texte
+    // Si pas de multipart, chercher apres les headers
     if (!text && !html) {
-      const bodyMatch = raw.match(/\r?\n\r?\n([^]*)/);
+      const bodyMatch = raw.match(/\r?\n\r?\n([\s\S]*)/);
       text = bodyMatch ? bodyMatch[1] : raw;
     }
 
+    // Nettoyer le texte (supprimer les citations d'email precedent)
+    if (text) {
+      // Supprimer tout apres "De :" ou "From:" ou "________________________________"
+      const replyMarkers = [
+        /\r?\n\s*De\s*:.*$/is,
+        /\r?\n\s*From\s*:.*$/is,
+        /\r?\n_{10,}.*$/is,
+        /\r?\nEnvoy[ée]\s*(à|a)\s*partir.*$/is,
+        /\r?\n>.*$/gm
+      ];
+      for (const marker of replyMarkers) {
+        text = text.replace(marker, '');
+      }
+      text = text.trim();
+    }
+
     return { text, html };
+  }
+
+  /**
+   * Decode quoted-printable encoding
+   */
+  private static decodeQuotedPrintable(str: string): string {
+    return str
+      .replace(/=\r?\n/g, '') // Soft line breaks
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   }
 
   /**
@@ -357,14 +419,20 @@ Analyse l'intention et extrait les informations pertinentes.`;
       switch (analysis.intent) {
         case 'status_update':
           await this.handleStatusUpdate(email, order, analysis);
+          // Verifier si cela resout un incident en cours
+          await this.checkAndResolveActiveFollowUp(email, order, analysis);
           break;
 
         case 'position_update':
           await this.handlePositionUpdate(email, order, analysis);
+          // Verifier si cela resout un incident en cours
+          await this.checkAndResolveActiveFollowUp(email, order, analysis);
           break;
 
         case 'eta_update':
           await this.handleETAUpdate(email, order, analysis);
+          // Verifier si cela resout un incident en cours
+          await this.checkAndResolveActiveFollowUp(email, order, analysis);
           break;
 
         case 'issue_report':
@@ -373,6 +441,8 @@ Analyse l'intention et extrait les informations pertinentes.`;
 
         case 'delivery_confirm':
           await this.handleDeliveryConfirm(email, order, analysis);
+          // Une livraison confirmee resout tout incident
+          await this.checkAndResolveActiveFollowUp(email, order, analysis);
           break;
 
         default:
@@ -508,6 +578,10 @@ Analyse l'intention et extrait les informations pertinentes.`;
 
   /**
    * Gere un signalement d'incident
+   * - Met a jour le statut de la commande en 'incident'
+   * - Notifie le destinataire du retard/probleme
+   * - Notifie l'expediteur
+   * - Cree un suivi de relances horaires
    */
   private static async handleIssueReport(
     email: IInboundEmail,
@@ -515,11 +589,13 @@ Analyse l'intention et extrait les informations pertinentes.`;
     analysis: NonNullable<IInboundEmail['claudeAnalysis']>
   ): Promise<void> {
     const issue = analysis.extractedData?.issue;
-    if (!issue) return;
+    const issueDescription = issue?.description || analysis.summary || email.bodyText?.substring(0, 500) || 'Incident signale';
+    const issueSeverity = (issue?.severity as 'low' | 'medium' | 'high' | 'critical') || 'medium';
+    const issueType = issue?.type || 'delay';
 
     const DeliveryService = (await import('./delivery-service')).default;
 
-    // Mapper les types d'incident
+    // 1. Mapper les types d'incident et reporter via DeliveryService
     const issueTypeMap: Record<string, 'damage' | 'shortage' | 'wrong_product' | 'delay' | 'other'> = {
       'damaged_goods': 'damage',
       'damage': 'damage',
@@ -528,6 +604,9 @@ Analyse l'intention et extrait les informations pertinentes.`;
       'wrong_delivery': 'wrong_product',
       'wrong_product': 'wrong_product',
       'delay': 'delay',
+      'breakdown': 'delay',
+      'panne': 'delay',
+      'accident': 'other',
       'other': 'other'
     };
 
@@ -539,17 +618,277 @@ Analyse l'intention et extrait les informations pertinentes.`;
         role: order.carrierEmail === email.fromEmail ? 'carrier' : 'recipient',
         email: email.fromEmail
       },
-      issueType: issueTypeMap[issue.type] || 'other',
-      severity: (issue.severity as 'minor' | 'major' | 'critical') || 'major',
-      description: issue.description || analysis.summary || email.bodyText?.substring(0, 500) || ''
+      issueType: issueTypeMap[issueType] || 'other',
+      severity: issueSeverity === 'critical' ? 'critical' : issueSeverity === 'high' ? 'major' : 'minor',
+      description: issueDescription
+    });
+
+    // 2. Mettre a jour le statut de la commande en 'incident'
+    order.status = 'incident';
+    await order.save();
+
+    console.log(`[InboundEmailService] Order ${order.reference} status updated to 'incident'`);
+
+    // 3. Notifier le destinataire
+    const recipientEmail = order.deliveryAddress?.contactEmail;
+    const recipientName = order.deliveryAddress?.contactName || 'Destinataire';
+    let recipientNotified = false;
+    let recipientMessageId: string | undefined;
+
+    if (recipientEmail) {
+      const recipientNotification = await this.sendIssueNotification({
+        to: recipientEmail,
+        toName: recipientName,
+        orderReference: order.reference,
+        issueDescription,
+        issueSeverity,
+        issueType,
+        carrierName: order.carrierName || 'Le transporteur',
+        role: 'recipient',
+        pickupCity: order.pickupAddress?.city,
+        deliveryCity: order.deliveryAddress?.city,
+        originalEta: order.eta
+      });
+      recipientNotified = recipientNotification.success;
+      recipientMessageId = recipientNotification.messageId;
+    }
+
+    // 4. Notifier l'expediteur (pickup contact)
+    const supplierEmail = order.pickupAddress?.contactEmail;
+    const supplierName = order.pickupAddress?.contactName || 'Expediteur';
+    let supplierNotified = false;
+    let supplierMessageId: string | undefined;
+
+    if (supplierEmail) {
+      const supplierNotification = await this.sendIssueNotification({
+        to: supplierEmail,
+        toName: supplierName,
+        orderReference: order.reference,
+        issueDescription,
+        issueSeverity,
+        issueType,
+        carrierName: order.carrierName || 'Le transporteur',
+        role: 'supplier',
+        pickupCity: order.pickupAddress?.city,
+        deliveryCity: order.deliveryAddress?.city,
+        originalEta: order.eta
+      });
+      supplierNotified = supplierNotification.success;
+      supplierMessageId = supplierNotification.messageId;
+    }
+
+    // 5. Creer le suivi de relances horaires
+    const followUpId = `followup_${uuidv4()}`;
+    const nextFollowUp = new Date();
+    nextFollowUp.setHours(nextFollowUp.getHours() + 1);
+
+    const messages: any[] = [];
+
+    if (recipientNotified && recipientEmail) {
+      messages.push({
+        type: 'recipient_notification',
+        sentAt: new Date(),
+        messageId: recipientMessageId,
+        recipient: recipientEmail,
+        content: `Notification d'incident envoyee au destinataire: ${issueDescription}`
+      });
+    }
+
+    if (supplierNotified && supplierEmail) {
+      messages.push({
+        type: 'recipient_notification',  // On reutilise le type pour les deux
+        sentAt: new Date(),
+        messageId: supplierMessageId,
+        recipient: supplierEmail,
+        content: `Notification d'incident envoyee a l'expediteur: ${issueDescription}`
+      });
+    }
+
+    const followUp = await IssueFollowUp.create({
+      followUpId,
+      orderId: order.orderId,
+      orderReference: order.reference,
+      sourceEmailId: email.emailId,
+      carrierEmail: order.carrierEmail || email.fromEmail,
+      carrierName: order.carrierName,
+      recipientEmail: recipientEmail || '',
+      recipientName,
+      industrialEmail: order.industrialId,  // Pour escalade si necessaire
+      issueType,
+      issueSeverity,
+      issueDescription,
+      status: 'active',
+      messages,
+      nextFollowUpAt: nextFollowUp,
+      followUpCount: 0,
+      maxFollowUps: 24,  // 24 relances = 24h
+      followUpIntervalMinutes: 60
+    });
+
+    console.log(`[InboundEmailService] IssueFollowUp ${followUpId} created, next followup at ${nextFollowUp}`);
+
+    // 6. Logger l'evenement
+    await EventService.createEvent({
+      orderId: order.orderId,
+      orderReference: order.reference,
+      eventType: 'incident_reported',
+      source: 'carrier',
+      actorId: email.fromEmail,
+      actorType: 'carrier',
+      actorName: email.fromName || order.carrierName || 'Transporteur',
+      description: `Incident signale: ${issueDescription}. Destinataire et expediteur notifies. Relances horaires programmees.`,
+      data: {
+        emailId: email.emailId,
+        followUpId,
+        issueType,
+        issueSeverity,
+        recipientNotified,
+        supplierNotified,
+        viaEmail: true
+      }
     });
 
     email.actionsExecuted?.push({
       action: 'issue_report',
       timestamp: new Date(),
       success: result.success,
-      result
+      result: {
+        ...result,
+        statusUpdated: 'incident',
+        recipientNotified,
+        supplierNotified,
+        followUpId,
+        nextFollowUpAt: nextFollowUp
+      }
     });
+  }
+
+  /**
+   * Envoie une notification d'incident au destinataire ou expediteur
+   */
+  private static async sendIssueNotification(params: {
+    to: string;
+    toName: string;
+    orderReference: string;
+    issueDescription: string;
+    issueSeverity: string;
+    issueType: string;
+    carrierName: string;
+    role: 'recipient' | 'supplier';
+    pickupCity?: string;
+    deliveryCity?: string;
+    originalEta?: Date;
+  }): Promise<{ success: boolean; messageId?: string }> {
+    const client = getSESClient();
+    if (!client) {
+      console.log('[InboundEmailService] SES not configured, skipping issue notification');
+      return { success: false };
+    }
+
+    const severityColors: Record<string, string> = {
+      low: '#f59e0b',
+      medium: '#f97316',
+      high: '#ef4444',
+      critical: '#dc2626'
+    };
+
+    const severityLabels: Record<string, string> = {
+      low: 'Mineur',
+      medium: 'Moyen',
+      high: 'Important',
+      critical: 'Critique'
+    };
+
+    const issueTypeLabels: Record<string, string> = {
+      delay: 'Retard',
+      breakdown: 'Panne',
+      panne: 'Panne',
+      damage: 'Marchandise endommagee',
+      shortage: 'Manquant',
+      accident: 'Accident',
+      other: 'Autre incident'
+    };
+
+    const roleMessage = params.role === 'recipient'
+      ? `Nous vous informons d'un incident concernant votre livraison.`
+      : `Nous vous informons d'un incident concernant l'expedition de votre marchandise.`;
+
+    const trajetInfo = params.pickupCity && params.deliveryCity
+      ? `<p><strong>Trajet:</strong> ${params.pickupCity} → ${params.deliveryCity}</p>`
+      : '';
+
+    const etaInfo = params.originalEta
+      ? `<p><strong>ETA initiale:</strong> ${new Date(params.originalEta).toLocaleString('fr-FR')}</p>`
+      : '';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0;">⚠️ SYMPHONI.A - Alerte Incident</h2>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Reference: ${params.orderReference}</p>
+          </div>
+
+          <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0;">
+            <p>Bonjour ${params.toName},</p>
+
+            <p>${roleMessage}</p>
+
+            <div style="background: ${severityColors[params.issueSeverity] || '#f97316'}; color: white; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold;">
+                🚨 ${issueTypeLabels[params.issueType] || 'Incident'} - Severite: ${severityLabels[params.issueSeverity] || 'Moyen'}
+              </p>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid ${severityColors[params.issueSeverity] || '#f97316'};">
+              <p><strong>Description:</strong></p>
+              <p style="font-style: italic;">"${params.issueDescription}"</p>
+              <p><strong>Transporteur:</strong> ${params.carrierName}</p>
+              ${trajetInfo}
+              ${etaInfo}
+            </div>
+
+            <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 20px;">
+              <p style="margin: 0;"><strong>📌 Suivi en cours</strong></p>
+              <p style="margin: 5px 0 0 0;">Notre equipe suit cet incident. Vous recevrez des mises a jour regulieres jusqu'a resolution.</p>
+            </div>
+          </div>
+
+          <div style="background: #f1f5f9; padding: 15px; border-radius: 0 0 8px 8px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #666;">
+              Message automatique SYMPHONI.A<br>
+              Pour toute question: support@symphonia-controltower.com
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const subject = `⚠️ Incident Transport - ${params.orderReference} - ${issueTypeLabels[params.issueType] || 'Alerte'}`;
+
+    const sesParams: SendEmailCommandInput = {
+      Source: `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`,
+      Destination: { ToAddresses: [params.to] },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: { Html: { Data: html, Charset: 'UTF-8' } }
+      },
+      ReplyToAddresses: [SES_CONFIG.replyTo]
+    };
+
+    try {
+      const command = new SendEmailCommand(sesParams);
+      const response = await client.send(command);
+      console.log(`[InboundEmailService] Issue notification sent to ${params.to}: ${response.MessageId}`);
+      return { success: true, messageId: response.MessageId };
+    } catch (error: any) {
+      console.error(`[InboundEmailService] Issue notification error to ${params.to}: ${error.message}`);
+      return { success: false };
+    }
   }
 
   /**
@@ -581,6 +920,94 @@ Analyse l'intention et extrait les informations pertinentes.`;
       success: true,
       result: { requiresManualValidation: true }
     });
+  }
+
+  /**
+   * Verifie et resout les suivis d'incident actifs quand le transporteur envoie une mise a jour
+   */
+  private static async checkAndResolveActiveFollowUp(
+    email: IInboundEmail,
+    order: any,
+    analysis: NonNullable<IInboundEmail['claudeAnalysis']>
+  ): Promise<void> {
+    // Chercher un suivi actif pour cette commande
+    const activeFollowUp = await IssueFollowUp.findOne({
+      orderId: order.orderId,
+      status: 'active'
+    });
+
+    if (!activeFollowUp) return;
+
+    // Verifier que l'email vient du transporteur
+    if (email.fromEmail !== activeFollowUp.carrierEmail && email.fromEmail !== order.carrierEmail) {
+      console.log('[InboundEmailService] Follow-up response not from carrier, ignoring');
+      return;
+    }
+
+    // Determiner si c'est une resolution ou juste une mise a jour
+    const isResolution = analysis.intent === 'delivery_confirm' ||
+      (analysis.sentiment === 'positive' && analysis.intent === 'status_update');
+
+    // Importer le scheduler
+    const issueFollowUpScheduler = (await import('./issue-followup-scheduler')).default;
+
+    if (isResolution) {
+      // Resolution complete
+      const resolution = analysis.summary || email.bodyText?.substring(0, 200) || 'Resolu par le transporteur';
+      await issueFollowUpScheduler.resolveFollowUp(
+        activeFollowUp.followUpId,
+        resolution,
+        email.fromEmail
+      );
+
+      email.actionsExecuted?.push({
+        action: 'followup_resolved',
+        timestamp: new Date(),
+        success: true,
+        result: { followUpId: activeFollowUp.followUpId, resolution }
+      });
+
+      console.log(`[InboundEmailService] Follow-up ${activeFollowUp.followUpId} resolved by carrier response`);
+    } else {
+      // C'est une mise a jour, on log et on continue le suivi
+      activeFollowUp.messages.push({
+        type: 'carrier_response',
+        sentAt: new Date(),
+        recipient: activeFollowUp.carrierEmail,
+        content: analysis.summary || email.bodyText?.substring(0, 300) || 'Mise a jour recue',
+        responseReceived: true,
+        responseAt: new Date(),
+        responseContent: email.bodyText?.substring(0, 500)
+      });
+      await activeFollowUp.save();
+
+      // Logger l'evenement
+      await EventService.createEvent({
+        orderId: order.orderId,
+        orderReference: order.reference,
+        eventType: 'order.updated',
+        source: 'carrier',
+        actorId: email.fromEmail,
+        actorType: 'carrier',
+        actorName: email.fromName || order.carrierName,
+        description: `Mise a jour incident: ${analysis.summary || 'Reponse recue'}`,
+        data: {
+          emailId: email.emailId,
+          followUpId: activeFollowUp.followUpId,
+          intent: analysis.intent,
+          viaEmail: true
+        }
+      });
+
+      email.actionsExecuted?.push({
+        action: 'followup_updated',
+        timestamp: new Date(),
+        success: true,
+        result: { followUpId: activeFollowUp.followUpId }
+      });
+
+      console.log(`[InboundEmailService] Follow-up ${activeFollowUp.followUpId} updated with carrier response`);
+    }
   }
 
   /**

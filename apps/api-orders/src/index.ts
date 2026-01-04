@@ -21,6 +21,7 @@ import emailActionsRoutes from './routes/email-actions';
 import timeoutScheduler from './services/timeout-scheduler';
 import preinvoiceScheduler from './services/preinvoice-scheduler';
 import aiReportScheduler from './services/ai-report-scheduler';
+import issueFollowUpScheduler from './services/issue-followup-scheduler';
 import NotificationService from './services/notification-service';
 
 dotenv.config();
@@ -82,11 +83,23 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Middleware special pour AWS SNS qui envoie en text/plain
+app.use('/actions/webhooks', express.text({ type: '*/*' }), (req, res, next) => {
+  if (typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      // Si ce n'est pas du JSON, laisser tel quel
+    }
+  }
+  next();
+});
+
 // Routes
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.16.0',
+    version: '2.17.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Email Automation avec Claude',
     endpoints: {
       health: '/health',
@@ -293,9 +306,12 @@ mongoose.connect(MONGODB_URI)
     // DÃ©marrer le scheduler de rapports IA mensuels
     aiReportScheduler.start();
 
+    // DÃ©marrer le scheduler de suivi d'incidents (relances horaires)
+    issueFollowUpScheduler.start();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('SYMPHONI.A Orders API v2.16.0 - Email Automation avec Claude AI');
+      console.log('SYMPHONI.A Orders API v2.17.0 - Email Automation avec Claude AI + Issue Follow-up');
     });
   })
   .catch((error) => {
@@ -309,6 +325,7 @@ process.on('SIGTERM', () => {
   timeoutScheduler.stop();
   preinvoiceScheduler.stop();
   aiReportScheduler.stop();
+  issueFollowUpScheduler.stop();
   mongoose.connection.close();
   process.exit(0);
 });

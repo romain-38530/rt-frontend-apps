@@ -132,7 +132,16 @@ router.post('/webhooks/ses-inbound', async (req: Request, res: Response) => {
     if (body.Type === 'SubscriptionConfirmation') {
       console.log('[EmailWebhook] SNS Subscription confirmation received');
       console.log('SubscribeURL:', body.SubscribeURL);
-      // En production: faire un GET sur SubscribeURL pour confirmer
+
+      // Confirmer automatiquement l'abonnement SNS
+      try {
+        const axios = require('axios');
+        await axios.get(body.SubscribeURL);
+        console.log('[EmailWebhook] SNS Subscription confirmed successfully');
+      } catch (confirmError: any) {
+        console.error('[EmailWebhook] Failed to confirm subscription:', confirmError.message);
+      }
+
       return res.status(200).send('OK');
     }
 
