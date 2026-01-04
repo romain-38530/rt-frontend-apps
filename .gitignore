@@ -60,4 +60,11 @@ public/workbox-*.js.map
 # Deployment scripts generated files
 .amplify-apps.txt
 .deployment-info.txt
+
+# Elastic Beanstalk deployment artifacts
+deploy-package*/
+deploy-temp/
+test-extract/
+*.tar.gz
+deploy-*.zip
 # Updated dim. 23 nov. 2025 17:05:17

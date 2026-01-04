@@ -125,8 +125,8 @@ export { OrderProgressStepper, CarrierInfoCard } from './components/Order';
 export type { OrderProgressStepperProps, CarrierInfoCardProps } from './components/Order';
 
 // Appointments Components - Gestion des RDV transporteur <-> industriel
-export { AppointmentRequestForm, AppointmentResponsePanel } from './components/Appointments';
-export type { AppointmentRequestFormProps, AppointmentRequestData, AppointmentResponsePanelProps, AppointmentRequest } from './components/Appointments';
+export { AppointmentRequestForm, AppointmentResponsePanel, SlotGridPicker } from './components/Appointments';
+export type { AppointmentRequestFormProps, AppointmentRequestData, AppointmentResponsePanelProps, AppointmentRequest, SlotGridPickerProps, TimeSlot } from './components/Appointments';
 
 // Auto Planning Components - Planification automatique avec escalade Affret.IA
 export { AutoPlanningModal } from './components/AutoPlanning';

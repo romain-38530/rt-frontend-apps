@@ -5,3 +5,6 @@ export type { AppointmentRequestFormProps, AppointmentRequestData } from "./Appo
 
 export { AppointmentResponsePanel } from "./AppointmentResponsePanel";
 export type { AppointmentResponsePanelProps, AppointmentRequest } from "./AppointmentResponsePanel";
+
+export { SlotGridPicker } from "./SlotGridPicker";
+export type { SlotGridPickerProps, TimeSlot } from "./SlotGridPicker";
