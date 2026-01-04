@@ -71,7 +71,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
       setStep('starting');
       setError(null);
 
-      const response = await fetch(`${baseApiUrl}/api/v1/orders/${orderId}/auto-dispatch`, {
+      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/auto-dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -103,7 +103,7 @@ export const AutoPlanningModal: React.FC<AutoPlanningModalProps> = ({
     if (!orderId) return;
 
     try {
-      const response = await fetch(`${baseApiUrl}/api/v1/orders/${orderId}/dispatch-status`);
+      const response = await fetch(`${baseApiUrl}/api/orders/${orderId}/dispatch-status`);
       const data = await response.json();
 
       if (response.ok && data.success) {
