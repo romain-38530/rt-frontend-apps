@@ -1850,7 +1850,7 @@ export default function OrderDetailPage() {
                     </div>
 
                     {/* Verifier si un transporteur est assigne */}
-                    {!order?.carrierId && !order?.carrier?.id ? (
+                    {!order?.carrierId && !(order as any)?.carrier?.id ? (
                       <div style={{
                         textAlign: 'center',
                         padding: '40px 20px',
