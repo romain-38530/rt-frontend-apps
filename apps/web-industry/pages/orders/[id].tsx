@@ -78,6 +78,16 @@ export default function OrderDetailPage() {
   const [appointmentRequests, setAppointmentRequests] = useState<AppointmentRequest[]>([]);
   const [loadingRdv, setLoadingRdv] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<Array<{
+    slotId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    dockId: string;
+    dockName: string;
+    status: 'available' | 'booked' | 'blocked';
+  }>>([]);
+  const [siteDocks, setSiteDocks] = useState<Array<{ dockId: string; dockName: string }>>([]);
   const [ecmrData, setEcmrData] = useState<any>(null);
   const [ecmrLoading, setEcmrLoading] = useState(false);
   const [delegationConfig, setDelegationConfig] = useState<any>(null);
@@ -228,6 +238,65 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Charger les creneaux disponibles pour une date donnee
+  const PLANNING_API_URL = process.env.NEXT_PUBLIC_PLANNING_API_URL || 'http://localhost:3002';
+
+  const loadSlotsForDate = async (date: string, siteId?: string) => {
+    try {
+      // Utiliser le siteId de la commande si pas specifie
+      const targetSiteId = siteId || (order as any)?.pickupAddress?.siteId || (order as any)?.deliveryAddress?.siteId;
+      if (!targetSiteId) {
+        console.log('No siteId available for loading slots');
+        return;
+      }
+
+      const response = await fetch(`${PLANNING_API_URL}/api/v1/slots?siteId=${targetSiteId}&date=${date}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const slots = (data.data || data || []).map((slot: any) => ({
+          slotId: slot.slotId,
+          date: slot.date?.split('T')[0] || slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          dockId: slot.dockId,
+          dockName: slot.dockName || `Quai ${slot.dockId?.slice(-4) || ''}`,
+          status: slot.status === 'available' ? 'available' : slot.status === 'blocked' ? 'blocked' : 'booked',
+        }));
+        setAvailableSlots(slots);
+      }
+    } catch (err) {
+      console.error('Error loading slots:', err);
+    }
+  };
+
+  // Charger les quais du site
+  const loadSiteDocks = async (siteId?: string) => {
+    try {
+      const targetSiteId = siteId || (order as any)?.pickupAddress?.siteId || (order as any)?.deliveryAddress?.siteId;
+      if (!targetSiteId) return;
+
+      const response = await fetch(`${PLANNING_API_URL}/api/v1/docks?siteId=${targetSiteId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const docks = (data.data || data || []).map((dock: any) => ({
+          dockId: dock.dockId,
+          dockName: dock.name || dock.dockName || `Quai ${dock.number || ''}`,
+        }));
+        setSiteDocks(docks);
+      }
+    } catch (err) {
+      console.error('Error loading docks:', err);
+    }
+  };
+
   // Proposer un créneau
   const handleProposeSlot = async (requestId: string, slotData: any) => {
     try {
@@ -347,7 +416,28 @@ export default function OrderDetailPage() {
     // Optional features - load silently
     loadEcmrData();
     loadDelegationConfig();
+    // Charger les quais du site
+    loadSiteDocks();
   }, [orderId]);
+
+  // Charger les creneaux quand on a des demandes de RDV
+  useEffect(() => {
+    if (appointmentRequests.length > 0 && order) {
+      // Charger les creneaux pour la premiere date preferee de la premiere demande
+      const firstRequest = appointmentRequests.find(r => r.status === 'pending');
+      if (firstRequest?.preferredDates?.length > 0) {
+        const firstDate = firstRequest.preferredDates[0].date.split('T')[0];
+        loadSlotsForDate(firstDate);
+      } else {
+        // Sinon charger pour la date de livraison prevue
+        const deliveryDate = (order as any)?.dates?.deliveryDate?.split('T')[0] ||
+                           (order as any)?.delivery?.date?.split('T')[0];
+        if (deliveryDate) {
+          loadSlotsForDate(deliveryDate);
+        }
+      }
+    }
+  }, [appointmentRequests, order]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
@@ -1759,14 +1849,35 @@ export default function OrderDetailPage() {
                       )}
                     </div>
 
-                    {loadingRdv ? (
+                    {/* Verifier si un transporteur est assigne */}
+                    {!order?.carrierId && !order?.carrier?.id ? (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '40px 20px',
+                        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                        borderRadius: '12px',
+                        margin: '16px',
+                      }}>
+                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚚</div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                          Transporteur non assigné
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#a16207' }}>
+                          La prise de RDV sera disponible une fois qu'un transporteur aura été assigné à cette commande.
+                        </div>
+                        <div style={{ marginTop: '16px', fontSize: '13px', color: '#78716c' }}>
+                          Le transporteur pourra alors demander ses créneaux de chargement et livraison.
+                        </div>
+                      </div>
+                    ) : loadingRdv ? (
                       <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
                         Chargement des demandes de RDV...
                       </div>
                     ) : appointmentRequests.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
                         <div style={{ fontSize: '32px', marginBottom: '8px' }}>📅</div>
-                        <div>Aucune demande de RDV pour cette commande</div>
+                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>Aucune demande de RDV</div>
+                        <div style={{ fontSize: '13px' }}>Le transporteur n'a pas encore demandé de créneau</div>
                         <div style={{ fontSize: '13px', marginTop: '8px', color: '#6b7280' }}>
                           Les transporteurs peuvent demander des créneaux de chargement/livraison
                         </div>
@@ -1779,6 +1890,10 @@ export default function OrderDetailPage() {
                             request={request}
                             responderId="industry-user"
                             responderName="Industriel"
+                            availableSlots={availableSlots}
+                            docks={siteDocks}
+                            showSlotGrid={availableSlots.length > 0}
+                            onLoadSlotsForDate={(date) => loadSlotsForDate(date)}
                             onAccept={(requestId, slotId) => handleAcceptPreferred(requestId, slotId ? parseInt(slotId) : 0)}
                             onPropose={(requestId, slotData, message) => handleProposeSlot(requestId, slotData)}
                             onReject={(requestId, reason) => handleReject(requestId, reason)}

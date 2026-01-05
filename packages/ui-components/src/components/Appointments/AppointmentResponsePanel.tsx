@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { SlotGridPicker, TimeSlot } from './SlotGridPicker';
 
 export interface AppointmentRequest {
   requestId: string;
@@ -49,9 +50,16 @@ export interface AppointmentResponsePanelProps {
     endTime: string;
     dockId: string;
     dockName: string;
+    status?: 'available' | 'booked' | 'blocked';
   }>;
+  /** Quais disponibles pour la grille */
+  docks?: Array<{ dockId: string; dockName: string }>;
   responderId: string;
   responderName: string;
+  /** Afficher la grille de creneaux au lieu du formulaire simple */
+  showSlotGrid?: boolean;
+  /** Callback pour charger les creneaux d'une date */
+  onLoadSlotsForDate?: (date: string) => Promise<void>;
   onPropose: (requestId: string, slot: { date: string; startTime: string; endTime: string; dockId?: string; dockName?: string }, message?: string) => Promise<void>;
   onAccept: (requestId: string, slotId?: string) => Promise<void>;
   onReject: (requestId: string, reason: string) => Promise<void>;
@@ -61,8 +69,11 @@ export interface AppointmentResponsePanelProps {
 export const AppointmentResponsePanel: React.FC<AppointmentResponsePanelProps> = ({
   request,
   availableSlots,
+  docks,
   responderId,
   responderName,
+  showSlotGrid = false,
+  onLoadSlotsForDate,
   onPropose,
   onAccept,
   onReject,
@@ -75,8 +86,52 @@ export const AppointmentResponsePanel: React.FC<AppointmentResponsePanelProps> =
   const [proposedStartTime, setProposedStartTime] = useState('08:00');
   const [proposedEndTime, setProposedEndTime] = useState('09:00');
   const [selectedSlotId, setSelectedSlotId] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [newMessage, setNewMessage] = useState('');
+  const [useGridMode, setUseGridMode] = useState(showSlotGrid);
+
+  // Convertir les slots disponibles en format TimeSlot pour la grille
+  const gridSlots: TimeSlot[] = useMemo(() => {
+    if (!availableSlots) return [];
+    return availableSlots.map(slot => ({
+      slotId: slot.slotId,
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      dockId: slot.dockId,
+      dockName: slot.dockName,
+      status: slot.status || 'available',
+    }));
+  }, [availableSlots]);
+
+  // Date par defaut: premiere date preferee du transporteur
+  const defaultDate = useMemo(() => {
+    if (request.preferredDates?.length > 0) {
+      const firstDate = request.preferredDates[0].date;
+      return firstDate.split('T')[0];
+    }
+    return new Date().toISOString().split('T')[0];
+  }, [request.preferredDates]);
+
+  // Handler pour selection d'un slot dans la grille
+  const handleSlotSelect = (slot: TimeSlot) => {
+    setSelectedSlot(slot);
+    setSelectedSlotId(slot.slotId);
+    setProposedDate(slot.date.split('T')[0]);
+    setProposedStartTime(slot.startTime);
+    setProposedEndTime(slot.endTime);
+  };
+
+  // Handler pour changement de date dans la grille
+  const handleGridDateChange = async (date: string) => {
+    setProposedDate(date);
+    setSelectedSlot(null);
+    setSelectedSlotId('');
+    if (onLoadSlotsForDate) {
+      await onLoadSlotsForDate(date);
+    }
+  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -323,71 +378,133 @@ export const AppointmentResponsePanel: React.FC<AppointmentResponsePanelProps> =
       {/* Formulaire proposition */}
       {showProposeForm && (
         <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Proposer un creneau</div>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <input
-              type="date"
-              value={proposedDate}
-              onChange={(e) => setProposedDate(e.target.value)}
-              style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
-            />
-            <input
-              type="time"
-              value={proposedStartTime}
-              onChange={(e) => setProposedStartTime(e.target.value)}
-              style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
-            />
-            <span style={{ alignSelf: 'center' }}>a</span>
-            <input
-              type="time"
-              value={proposedEndTime}
-              onChange={(e) => setProposedEndTime(e.target.value)}
-              style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
-            />
-          </div>
-          {availableSlots && availableSlots.length > 0 && (
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ou choisir un creneau disponible:</div>
-              <select
-                value={selectedSlotId}
-                onChange={(e) => {
-                  setSelectedSlotId(e.target.value);
-                  const slot = availableSlots.find(s => s.slotId === e.target.value);
-                  if (slot) {
-                    setProposedDate(slot.date);
-                    setProposedStartTime(slot.startTime);
-                    setProposedEndTime(slot.endTime);
-                  }
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600' }}>Proposer un creneau</div>
+            {(availableSlots && availableSlots.length > 0) && (
+              <button
+                onClick={() => setUseGridMode(!useGridMode)}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: useGridMode ? '#8b5cf6' : '#e5e7eb',
+                  color: useGridMode ? 'white' : '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500',
                 }}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
               >
-                <option value="">-- Selectionner --</option>
-                {availableSlots.map(slot => (
-                  <option key={slot.slotId} value={slot.slotId}>
-                    {formatDate(slot.date)} {slot.startTime}-{slot.endTime} ({slot.dockName})
-                  </option>
-                ))}
-              </select>
+                {useGridMode ? '📅 Grille' : '✏️ Manuel'}
+              </button>
+            )}
+          </div>
+
+          {/* Mode grille de creneaux */}
+          {useGridMode && gridSlots.length > 0 ? (
+            <div style={{ marginBottom: '16px' }}>
+              <SlotGridPicker
+                selectedDate={proposedDate || defaultDate}
+                slots={gridSlots.filter(s => s.date.split('T')[0] === (proposedDate || defaultDate))}
+                onSlotSelect={handleSlotSelect}
+                selectedSlotId={selectedSlotId}
+                showDocks={!!docks && docks.length > 0}
+                docks={docks}
+                allowDateNavigation={!!onLoadSlotsForDate}
+                onDateChange={handleGridDateChange}
+                minDate={defaultDate}
+              />
+              {selectedSlot && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#ede9fe',
+                  borderRadius: '8px',
+                  border: '1px solid #c4b5fd',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#5b21b6', marginBottom: '4px' }}>
+                    Creneau selectionne:
+                  </div>
+                  <div style={{ fontWeight: '700', color: '#111827' }}>
+                    {formatDate(selectedSlot.date)} de {selectedSlot.startTime} a {selectedSlot.endTime}
+                    {selectedSlot.dockName && <span style={{ color: '#6b7280' }}> - {selectedSlot.dockName}</span>}
+                  </div>
+                </div>
+              )}
             </div>
+          ) : (
+            <>
+              {/* Mode manuel - saisie date/heure */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <input
+                  type="date"
+                  value={proposedDate}
+                  onChange={(e) => setProposedDate(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                />
+                <input
+                  type="time"
+                  value={proposedStartTime}
+                  onChange={(e) => setProposedStartTime(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                />
+                <span style={{ alignSelf: 'center' }}>a</span>
+                <input
+                  type="time"
+                  value={proposedEndTime}
+                  onChange={(e) => setProposedEndTime(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                />
+              </div>
+              {availableSlots && availableSlots.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ou choisir un creneau disponible:</div>
+                  <select
+                    value={selectedSlotId}
+                    onChange={(e) => {
+                      setSelectedSlotId(e.target.value);
+                      const slot = availableSlots.find(s => s.slotId === e.target.value);
+                      if (slot) {
+                        setProposedDate(slot.date.split('T')[0]);
+                        setProposedStartTime(slot.startTime);
+                        setProposedEndTime(slot.endTime);
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                  >
+                    <option value="">-- Selectionner --</option>
+                    {availableSlots.map(slot => (
+                      <option key={slot.slotId} value={slot.slotId}>
+                        {formatDate(slot.date)} {slot.startTime}-{slot.endTime} ({slot.dockName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </>
           )}
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={handlePropose}
               disabled={isProcessing || !proposedDate}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#22c55e',
+                backgroundColor: isProcessing || !proposedDate ? '#9ca3af' : '#22c55e',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: 'pointer',
+                cursor: isProcessing || !proposedDate ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
               }}
             >
-              Envoyer proposition
+              {isProcessing ? 'Envoi...' : 'Envoyer proposition'}
             </button>
             <button
-              onClick={() => setShowProposeForm(false)}
+              onClick={() => {
+                setShowProposeForm(false);
+                setSelectedSlot(null);
+                setSelectedSlotId('');
+              }}
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#f3f4f6',
