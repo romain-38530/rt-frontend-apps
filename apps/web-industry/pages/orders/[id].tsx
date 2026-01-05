@@ -425,7 +425,7 @@ export default function OrderDetailPage() {
     if (appointmentRequests.length > 0 && order) {
       // Charger les creneaux pour la premiere date preferee de la premiere demande
       const firstRequest = appointmentRequests.find(r => r.status === 'pending');
-      if (firstRequest?.preferredDates?.length > 0) {
+      if (firstRequest && firstRequest.preferredDates && firstRequest.preferredDates.length > 0) {
         const firstDate = firstRequest.preferredDates[0].date.split('T')[0];
         loadSlotsForDate(firstDate);
       } else {
