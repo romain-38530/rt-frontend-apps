@@ -143,7 +143,7 @@ export default function OrdersPage() {
 
   // Sélectionner/Désélectionner toutes les commandes éligibles (sans transporteur)
   const getEligibleOrders = () => {
-    return orders.filter(o => !o.carrierId && ['draft', 'created', 'pending'].includes(o.status));
+    return orders.filter(o => !o.carrierId && ['draft', 'created', 'pending', 'planning_failed', 'echec_planification'].includes(o.status));
   };
 
   const handleSelectAll = () => {
@@ -518,8 +518,8 @@ export default function OrdersPage() {
                     .filter((order) => {
                       // Ne montrer que les commandes sans transporteur assigné
                       const hasNoCarrier = !order.carrierId;
-                      // Et qui sont dans un statut permettant la planification
-                      const eligibleStatus = ['draft', 'created', 'pending'].includes(order.status);
+                      // Et qui sont dans un statut permettant la planification (inclut echec planification)
+                      const eligibleStatus = ['draft', 'created', 'pending', 'planning_failed', 'echec_planification'].includes(order.status);
                       return hasNoCarrier && eligibleStatus;
                     })
                     .map((order) => {
