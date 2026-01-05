@@ -7,6 +7,7 @@ import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/cli
 import IssueFollowUp, { IIssueFollowUp } from '../models/IssueFollowUp';
 import Order from '../models/Order';
 import EventService from './event-service';
+import { EmailTemplates } from '../templates/email-design-system';
 
 // Configuration SES
 const SES_CONFIG = {
@@ -173,54 +174,17 @@ class IssueFollowUpScheduler {
 
     const hoursElapsed = Math.round((Date.now() - new Date(followUp.createdAt).getTime()) / (1000 * 60 * 60));
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">🔄 SYMPHONI.A - Demande de Point de Situation</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Relance #${followUp.followUpCount + 1} - ${followUp.orderReference}</p>
-          </div>
+    const html = EmailTemplates.followUpReminder({
+      carrierName: followUp.carrierName || 'Transporteur',
+      orderReference: followUp.orderReference,
+      issueDescription: followUp.issueDescription,
+      followUpCount: followUp.followUpCount + 1,
+      hoursElapsed,
+      pickupCity: order.pickupAddress?.city,
+      deliveryCity: order.deliveryAddress?.city
+    });
 
-          <div style="background: #fffbeb; padding: 20px; border: 1px solid #fbbf24;">
-            <p>Bonjour ${followUp.carrierName || 'Transporteur'},</p>
-
-            <p>Suite a l'incident signale il y a <strong>${hoursElapsed} heure(s)</strong>, nous sollicitons un point de situation concernant cette livraison.</p>
-
-            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
-              <p style="margin: 0;"><strong>Incident initial:</strong></p>
-              <p style="margin: 5px 0 0 0; font-style: italic;">"${followUp.issueDescription}"</p>
-            </div>
-
-            <div style="background: #fef3c7; padding: 15px; border-radius: 8px;">
-              <p style="margin: 0;"><strong>📋 Merci de nous informer:</strong></p>
-              <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                <li>Votre situation actuelle</li>
-                <li>Estimation de la reprise/resolution</li>
-                <li>Nouvelle ETA si applicable</li>
-              </ul>
-            </div>
-
-            <p style="margin-top: 20px;"><strong>Comment repondre:</strong></p>
-            <p>Repondez simplement a cet email avec votre mise a jour. Notre systeme IA analysera votre reponse et mettra a jour le suivi automatiquement.</p>
-          </div>
-
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 0 0 8px 8px; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #666;">
-              Reference: ${followUp.orderReference}<br>
-              Trajet: ${order.pickupAddress?.city || 'N/A'} → ${order.deliveryAddress?.city || 'N/A'}<br>
-              <br>
-              Message automatique SYMPHONI.A - Suivi Incident
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `🔄 Point de Situation Requis - ${followUp.orderReference} - Relance #${followUp.followUpCount + 1}`;
+    const subject = `Point de Situation Requis - ${followUp.orderReference} - Relance #${followUp.followUpCount + 1}`;
 
     const params: SendEmailCommandInput = {
       Source: `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`,
@@ -295,53 +259,24 @@ class IssueFollowUpScheduler {
       recipients.push(order.pickupAddress.contactEmail);
     }
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">🚨 SYMPHONI.A - Escalade Incident</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Reference: ${followUp.orderReference}</p>
-          </div>
-
-          <div style="background: #fef2f2; padding: 20px; border: 1px solid #fecaca;">
-            <p>Bonjour,</p>
-
-            <p>L'incident concernant votre ${order?.flowType === 'inbound' ? 'livraison' : 'expedition'} n'a pas pu etre resolu malgre nos relances repetees aupres du transporteur.</p>
-
-            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 20px 0;">
-              <p><strong>Incident:</strong> ${followUp.issueDescription}</p>
-              <p><strong>Transporteur:</strong> ${followUp.carrierName || 'N/A'}</p>
-              <p><strong>Relances envoyees:</strong> ${followUp.followUpCount}</p>
-              <p><strong>Duree:</strong> ${Math.round((Date.now() - new Date(followUp.createdAt).getTime()) / (1000 * 60 * 60))} heures</p>
-            </div>
-
-            <div style="background: #fee2e2; padding: 15px; border-radius: 8px;">
-              <p style="margin: 0;"><strong>⚠️ Action Requise</strong></p>
-              <p style="margin: 5px 0 0 0;">Notre equipe prend en charge cet incident. Vous serez contacte directement pour trouver une solution.</p>
-            </div>
-          </div>
-
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 0 0 8px 8px; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #666;">
-              Message automatique SYMPHONI.A<br>
-              Contact urgence: support@symphonia-controltower.com
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const hoursElapsed = Math.round((Date.now() - new Date(followUp.createdAt).getTime()) / (1000 * 60 * 60));
 
     for (const recipient of recipients.filter(r => r)) {
       try {
+        const html = EmailTemplates.escalationNotification({
+          recipientName: recipient === followUp.recipientEmail ? (followUp.recipientName || 'Client') : 'Expediteur',
+          orderReference: followUp.orderReference,
+          issueDescription: followUp.issueDescription,
+          carrierName: followUp.carrierName || 'N/A',
+          followUpCount: followUp.followUpCount,
+          hoursElapsed
+        });
+
         const params: SendEmailCommandInput = {
           Source: `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`,
           Destination: { ToAddresses: [recipient] },
           Message: {
-            Subject: { Data: `🚨 Escalade Incident - ${followUp.orderReference}`, Charset: 'UTF-8' },
+            Subject: { Data: `Escalade Incident - ${followUp.orderReference}`, Charset: 'UTF-8' },
             Body: { Html: { Data: html, Charset: 'UTF-8' } }
           },
           ReplyToAddresses: [SES_CONFIG.replyTo]
@@ -414,48 +349,19 @@ class IssueFollowUpScheduler {
       recipients.push(order.pickupAddress.contactEmail);
     }
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">✅ SYMPHONI.A - Incident Resolu</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Reference: ${followUp.orderReference}</p>
-          </div>
-
-          <div style="background: #ecfdf5; padding: 20px; border: 1px solid #a7f3d0;">
-            <p>Bonjour,</p>
-
-            <p>Bonne nouvelle ! L'incident concernant votre transport a ete resolu.</p>
-
-            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
-              <p><strong>Resolution:</strong></p>
-              <p style="font-style: italic;">"${followUp.resolution}"</p>
-            </div>
-
-            <p>La livraison reprend son cours normal. Vous recevrez une notification lors de la livraison.</p>
-          </div>
-
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 0 0 8px 8px; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #666;">
-              Message automatique SYMPHONI.A<br>
-              Merci de votre confiance
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
     for (const recipient of recipients.filter(r => r)) {
       try {
+        const html = EmailTemplates.resolutionNotification({
+          recipientName: recipient === followUp.recipientEmail ? (followUp.recipientName || 'Client') : 'Expediteur',
+          orderReference: followUp.orderReference,
+          resolution: followUp.resolution || 'Incident resolu'
+        });
+
         const params: SendEmailCommandInput = {
           Source: `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`,
           Destination: { ToAddresses: [recipient] },
           Message: {
-            Subject: { Data: `✅ Incident Resolu - ${followUp.orderReference}`, Charset: 'UTF-8' },
+            Subject: { Data: `Incident Resolu - ${followUp.orderReference}`, Charset: 'UTF-8' },
             Body: { Html: { Data: html, Charset: 'UTF-8' } }
           },
           ReplyToAddresses: [SES_CONFIG.replyTo]
@@ -463,6 +369,7 @@ class IssueFollowUpScheduler {
 
         const command = new SendEmailCommand(params);
         await client.send(command);
+        console.log(`[IssueFollowUpScheduler] Resolution notification sent to ${recipient}`);
       } catch (error: any) {
         console.error(`[IssueFollowUpScheduler] Error sending resolution to ${recipient}: ${error.message}`);
       }

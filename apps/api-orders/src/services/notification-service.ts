@@ -1,10 +1,11 @@
 /**
- * NotificationService - Service d'envoi de notifications aux transporteurs via AWS SES
- * Gère l'envoi d'emails pour les invitations, rappels et notifications de facturation
+ * NotificationService - Service d'envoi de notifications via AWS SES
+ * Utilise le design system SYMPHONI.A pour des emails professionnels
  */
 
 import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import { IDispatchAttempt } from '../models/DispatchChain';
+import { EmailTemplates, generateEmailTemplate, COLORS, LINKS } from '../templates/email-design-system';
 
 // Configuration AWS SES
 const SES_CONFIG = {
@@ -12,7 +13,7 @@ const SES_CONFIG = {
   fromEmail: process.env.SES_FROM_EMAIL || 'noreply@symphonia-controltower.com',
   fromName: process.env.SES_FROM_NAME || 'SYMPHONI.A',
   replyTo: process.env.SES_REPLY_TO || 'support@symphonia-controltower.com',
-  billingFromEmail: process.env.SES_BILLING_FROM_EMAIL || 'billing@symphonia-controltower.com'
+  billingFromEmail: process.env.SES_BILLING_FROM_EMAIL || 'facturation@symphonia-controltower.com'
 };
 
 // Client SES singleton
@@ -56,6 +57,7 @@ interface CarrierNotificationParams {
   weight: number;
   expiresAt: Date;
   responseUrl: string;
+  price?: number;
 }
 
 interface ReminderParams {
@@ -76,18 +78,18 @@ class NotificationService {
     subject: string,
     html: string,
     fromEmail?: string,
-    recipient?: string
+    logRecipient?: string
   ): Promise<boolean> {
     const client = getSESClient();
     const from = fromEmail || SES_CONFIG.fromEmail;
     const fromAddress = `${SES_CONFIG.fromName} <${from}>`;
 
     if (!client) {
-      console.log(`[NotificationService] [MOCK] Email to ${recipient || to}:`);
+      console.log(`[NotificationService] [MOCK] Email to ${logRecipient || to}:`);
       console.log(`  Subject: ${subject}`);
       console.log(`  From: ${fromAddress}`);
       console.log(`  To: ${to}`);
-      return true; // Return true in mock mode for testing
+      return true;
     }
 
     const params: SendEmailCommandInput = {
@@ -113,16 +115,16 @@ class NotificationService {
     try {
       const command = new SendEmailCommand(params);
       const response = await client.send(command);
-      console.log(`[NotificationService] Email sent to ${recipient || to}: ${response.MessageId}`);
+      console.log(`[NotificationService] Email sent to ${logRecipient || to}: ${response.MessageId}`);
       return true;
     } catch (error: any) {
-      console.error(`[NotificationService] Failed to send email to ${recipient || to}:`, error.message);
+      console.error(`[NotificationService] Failed to send email to ${logRecipient || to}:`, error.message);
       return false;
     }
   }
 
   /**
-   * Envoie une invitation de transport à un transporteur
+   * Envoie une invitation de transport a un transporteur
    */
   static async sendCarrierInvitation(params: CarrierNotificationParams): Promise<boolean> {
     const {
@@ -136,101 +138,29 @@ class NotificationService {
       goodsDescription,
       weight,
       expiresAt,
-      responseUrl
+      responseUrl,
+      price
     } = params;
 
     const expiresInMinutes = Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60));
+    const expiresInHours = Math.floor(expiresInMinutes / 60);
+    const remainingMinutes = expiresInMinutes % 60;
+    const expiresIn = expiresInHours > 0
+      ? `${expiresInHours}h${remainingMinutes > 0 ? remainingMinutes + 'min' : ''}`
+      : `${expiresInMinutes} minutes`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f7fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; background: #38a169; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; }
-          .button-refuse { background: #e53e3e; }
-          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
-          .route { background: #e2e8f0; padding: 15px; border-radius: 8px; margin: 15px 0; }
-          .route-arrow { text-align: center; font-size: 24px; color: #4a5568; }
-          .urgency { background: #fed7d7; color: #c53030; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: inline-block; margin: 10px 0; }
-          .details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0; }
-          .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-          .detail-label { color: #718096; }
-          .detail-value { font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>SYMPHONI.A</h1>
-            <p>Nouvelle demande de transport</p>
-          </div>
-          <div class="content">
-            <p>Bonjour ${carrierName},</p>
+    const html = EmailTemplates.carrierInvitation({
+      carrierName,
+      orderReference,
+      pickupCity,
+      deliveryCity,
+      pickupDate: pickupDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      price: price ? `${price.toFixed(2)} EUR HT` : undefined,
+      responseUrl,
+      expiresIn
+    });
 
-            <p>Vous avez reçu une nouvelle demande de transport en <strong>exclusivité</strong>.</p>
-
-            <div class="urgency">
-              ⏰ Réponse attendue dans ${expiresInMinutes} minutes
-            </div>
-
-            <div class="route">
-              <div style="font-size: 18px; font-weight: bold;">
-                📍 ${pickupCity}
-              </div>
-              <div class="route-arrow">↓</div>
-              <div style="font-size: 18px; font-weight: bold;">
-                📍 ${deliveryCity}
-              </div>
-            </div>
-
-            <div class="details">
-              <div class="detail-row">
-                <span class="detail-label">Référence</span>
-                <span class="detail-value">${orderReference}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Date enlèvement</span>
-                <span class="detail-value">${pickupDate.toLocaleDateString('fr-FR')}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Date livraison</span>
-                <span class="detail-value">${deliveryDate.toLocaleDateString('fr-FR')}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Marchandise</span>
-                <span class="detail-value">${goodsDescription}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Poids</span>
-                <span class="detail-value">${weight} kg</span>
-              </div>
-            </div>
-
-            <p style="text-align: center; margin-top: 25px;">
-              <a href="${responseUrl}?action=accept" class="button">✓ Accepter</a>
-              <a href="${responseUrl}?action=refuse" class="button button-refuse">✗ Refuser</a>
-            </p>
-
-            <p><small>
-              Si vous ne répondez pas dans le délai imparti, la demande sera automatiquement
-              transmise au transporteur suivant.
-            </small></p>
-          </div>
-          <div class="footer">
-            <p>SYMPHONI.A - Plateforme de gestion logistique<br>
-            RT Technologie - Tous droits réservés</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `[SYMPHONI.A] 🚚 Nouvelle demande - ${pickupCity} → ${deliveryCity} - Réf. ${orderReference}`;
+    const subject = `Nouvelle demande de transport - ${pickupCity} vers ${deliveryCity} - Ref. ${orderReference}`;
     return this.sendEmail(carrierEmail, subject, html, undefined, `carrier ${carrierName} (${carrierEmail})`);
   }
 
@@ -240,100 +170,40 @@ class NotificationService {
   static async sendTimeoutReminder(params: ReminderParams): Promise<boolean> {
     const { carrierName, carrierEmail, orderReference, minutesRemaining, responseUrl } = params;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #c53030; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #fff5f5; padding: 30px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; background: #38a169; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2>⚠️ RAPPEL - Réponse urgente requise</h2>
-          </div>
-          <div class="content">
-            <p>Bonjour ${carrierName},</p>
+    const html = EmailTemplates.timeoutReminder({
+      carrierName,
+      orderReference,
+      minutesRemaining,
+      responseUrl
+    });
 
-            <p>Vous avez une demande de transport en attente de réponse.</p>
-
-            <p style="font-size: 24px; text-align: center; color: #c53030; font-weight: bold;">
-              ${minutesRemaining} minutes restantes
-            </p>
-
-            <p>Référence: <strong>${orderReference}</strong></p>
-
-            <p style="text-align: center;">
-              <a href="${responseUrl}" class="button">Répondre maintenant</a>
-            </p>
-
-            <p><small>Sans réponse de votre part, cette demande sera transmise au transporteur suivant.</small></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `[URGENT] ⚠️ ${minutesRemaining} min restantes - Réf. ${orderReference}`;
+    const subject = `RAPPEL - ${minutesRemaining} min restantes pour repondre - Ref. ${orderReference}`;
     return this.sendEmail(carrierEmail, subject, html, undefined, `reminder to ${carrierName} (${carrierEmail})`);
   }
 
   /**
-   * Notifie un transporteur qu'il a été sélectionné
+   * Notifie un transporteur qu'il a ete selectionne
    */
   static async sendCarrierConfirmation(
     carrierEmail: string,
     carrierName: string,
     orderReference: string,
-    portalUrl: string
+    portalUrl: string,
+    pickupCity?: string,
+    deliveryCity?: string,
+    pickupDate?: Date,
+    clientName?: string
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #38a169 0%, #2f855a 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f0fff4; padding: 30px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; background: #2f855a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✓ Transport confirmé</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${carrierName},</p>
+    const html = EmailTemplates.carrierConfirmation({
+      carrierName,
+      orderReference,
+      pickupCity: pickupCity || 'N/A',
+      deliveryCity: deliveryCity || 'N/A',
+      pickupDate: pickupDate?.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) || 'A confirmer',
+      clientName: clientName || 'Client'
+    });
 
-            <p>Votre acceptation pour le transport <strong>${orderReference}</strong> a été confirmée.</p>
-
-            <p>Vous pouvez maintenant accéder au portail transporteur pour :</p>
-            <ul>
-              <li>Consulter les détails complets de la commande</li>
-              <li>Organiser le transport</li>
-              <li>Mettre à jour le tracking</li>
-              <li>Déposer les documents (BL, CMR, POD)</li>
-            </ul>
-
-            <p style="text-align: center;">
-              <a href="${portalUrl}" class="button">Accéder au portail</a>
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `[SYMPHONI.A] ✓ Transport confirmé - Réf. ${orderReference}`;
+    const subject = `Transport confirme - Ref. ${orderReference}`;
     return this.sendEmail(carrierEmail, subject, html, undefined, `confirmation to ${carrierName} (${carrierEmail})`);
   }
 
@@ -345,63 +215,98 @@ class NotificationService {
     industrialName: string,
     orderReference: string,
     status: 'carrier_found' | 'escalated' | 'timeout',
-    carrierName?: string
+    carrierName?: string,
+    pickupCity?: string,
+    deliveryCity?: string
   ): Promise<boolean> {
-    const statusMessages = {
+    const statusConfig = {
       carrier_found: {
-        subject: `✓ Transporteur trouvé - Réf. ${orderReference}`,
-        title: 'Transporteur assigné',
-        message: `Le transporteur <strong>${carrierName}</strong> a accepté votre demande de transport.`,
-        color: '#38a169'
+        type: 'success' as const,
+        title: 'Transporteur Assigne',
+        subtitle: `Reference: ${orderReference}`,
+        content: `
+          <p>Excellente nouvelle ! Un transporteur a accepte votre demande de transport.</p>
+          ${carrierName ? `
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.successLight}; border-radius: 12px; border: 1px solid ${COLORS.successBorder};">
+            <tr>
+              <td style="padding: 20px;">
+                <p style="margin: 0;"><span style="color: ${COLORS.gray500}; font-size: 13px;">Transporteur assigne</span><br>
+                <span style="font-weight: 600; font-size: 16px; color: ${COLORS.gray800};">🚛 ${carrierName}</span></p>
+              </td>
+            </tr>
+          </table>
+          ` : ''}
+          <p>Vous recevrez les mises a jour de tracking par email et sur le portail.</p>
+        `,
+        infoBox: {
+          icon: '✅',
+          title: 'Prochaines etapes',
+          content: 'Le transporteur va organiser l\'enlevement. Vous serez notifie a chaque etape cle du transport.',
+          color: 'success' as const
+        }
       },
       escalated: {
-        subject: `⚠️ Escalade Affret.IA - Réf. ${orderReference}`,
+        type: 'action_required' as const,
         title: 'Escalade vers Affret.IA',
-        message: 'Aucun transporteur disponible. Votre commande a été transmise à Affret.IA pour recherche élargie.',
-        color: '#dd6b20'
+        subtitle: `Reference: ${orderReference}`,
+        content: `
+          <p>Aucun transporteur de votre panel n'a pu prendre en charge cette demande dans les delais.</p>
+          <p>Votre commande a ete automatiquement transmise a notre service <strong>Affret.IA</strong> pour une recherche elargie de transporteurs.</p>
+        `,
+        infoBox: {
+          icon: '🔍',
+          title: 'Recherche en cours',
+          content: 'Notre equipe recherche activement un transporteur disponible. Vous serez notifie des que nous aurons trouve une solution.',
+          color: 'warning' as const
+        }
       },
       timeout: {
-        subject: `ℹ️ Changement transporteur - Réf. ${orderReference}`,
-        title: 'Passage au transporteur suivant',
-        message: 'Le transporteur précédent n\'a pas répondu dans le délai. Votre commande a été transmise au transporteur suivant.',
-        color: '#3182ce'
+        type: 'notification' as const,
+        title: 'Changement de Transporteur',
+        subtitle: `Reference: ${orderReference}`,
+        content: `
+          <p>Le transporteur precedemment contacte n'a pas repondu dans le delai imparti.</p>
+          <p>Votre demande a ete automatiquement transmise au transporteur suivant de votre panel.</p>
+        `,
+        infoBox: {
+          icon: '🔄',
+          title: 'Processus en cours',
+          content: 'Le systeme de cascade automatique continue de rechercher un transporteur disponible.',
+          color: 'info' as const
+        }
       }
     };
 
-    const { subject, title, message, color } = statusMessages[status];
+    const config = statusConfig[status];
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${color}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2>${title}</h2>
-          </div>
-          <div class="content">
-            <p>Bonjour ${industrialName},</p>
-            <p>Concernant votre commande <strong>${orderReference}</strong> :</p>
-            <p>${message}</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const html = generateEmailTemplate({
+      type: config.type,
+      title: config.title,
+      subtitle: config.subtitle,
+      recipientName: industrialName,
+      content: config.content,
+      infoBox: config.infoBox,
+      ctaButton: {
+        text: 'Voir sur le portail',
+        url: `${LINKS.portalUrl}/orders/${orderReference}`
+      },
+      footer: {
+        reference: orderReference,
+        additionalInfo: pickupCity && deliveryCity ? `Trajet: ${pickupCity} → ${deliveryCity}` : undefined
+      }
+    });
 
-    return this.sendEmail(industrialEmail, `[SYMPHONI.A] ${subject}`, html, undefined, `industrial ${industrialName} (${industrialEmail})`);
+    const subjects = {
+      carrier_found: `Transporteur assigne - Ref. ${orderReference}`,
+      escalated: `Escalade Affret.IA - Ref. ${orderReference}`,
+      timeout: `Changement transporteur - Ref. ${orderReference}`
+    };
+
+    return this.sendEmail(industrialEmail, subjects[status], html, undefined, `industrial ${industrialName} (${industrialEmail})`);
   }
 
   /**
-   * Envoie une demande de validation de préfacture à l'industriel
+   * Envoie une demande de validation de prefacture a l'industriel
    */
   static async sendPreInvoiceValidationRequest(
     industrialEmail: string,
@@ -412,59 +317,80 @@ class NotificationService {
     kpis: any,
     orderCount: number
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">Préfacture à valider</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Réf: ${preInvoiceNumber}</p>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${industrialName},</p>
-            <p>La préfacture du transporteur <strong>${carrierName}</strong> est prête pour validation.</p>
+    const html = generateEmailTemplate({
+      type: 'action_required',
+      title: 'Prefacture a Valider',
+      subtitle: `Ref: ${preInvoiceNumber}`,
+      preheader: `Prefacture ${preInvoiceNumber} de ${carrierName} - ${totalAmount.toFixed(2)} EUR`,
+      recipientName: industrialName,
+      content: `
+        <p>La prefacture du transporteur <strong>${carrierName}</strong> est prete pour validation.</p>
 
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <h3 style="margin-top: 0;">Résumé</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 8px 0;">Nombre de commandes:</td><td style="text-align: right;"><strong>${orderCount}</strong></td></tr>
-                <tr><td style="padding: 8px 0;">Montant total TTC:</td><td style="text-align: right;"><strong>${totalAmount.toFixed(2)} €</strong></td></tr>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.gray50}; border-radius: 12px;">
+          <tr>
+            <td style="padding: 20px;">
+              <p style="margin: 0 0 16px 0; font-weight: 700; font-size: 16px; color: ${COLORS.gray800};">Resume</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200};">
+                    <span style="color: ${COLORS.gray500};">Nombre de commandes</span>
+                  </td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200}; text-align: right; font-weight: 600;">${orderCount}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: ${COLORS.gray500};">Montant total TTC</span>
+                  </td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: 700; font-size: 18px; color: ${COLORS.primary};">${totalAmount.toFixed(2)} EUR</td>
+                </tr>
               </table>
-            </div>
+            </td>
+          </tr>
+        </table>
 
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <h3 style="margin-top: 0;">KPIs Transporteur</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 5px 0;">Ponctualité enlèvement:</td><td style="text-align: right;">${kpis.onTimePickupRate}%</td></tr>
-                <tr><td style="padding: 5px 0;">Ponctualité livraison:</td><td style="text-align: right;">${kpis.onTimeDeliveryRate}%</td></tr>
-                <tr><td style="padding: 5px 0;">Documents complets:</td><td style="text-align: right;">${kpis.documentsCompleteRate}%</td></tr>
-                <tr><td style="padding: 5px 0;">Sans incident:</td><td style="text-align: right;">${kpis.incidentFreeRate}%</td></tr>
-                <tr><td style="padding: 5px 0;">Heures d'attente totales:</td><td style="text-align: right;">${kpis.totalWaitingHours}h</td></tr>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.infoLight}; border-radius: 12px; border: 1px solid ${COLORS.infoBorder};">
+          <tr>
+            <td style="padding: 20px;">
+              <p style="margin: 0 0 16px 0; font-weight: 700; font-size: 16px; color: ${COLORS.gray800};">📊 KPIs Transporteur</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 4px 0;"><span style="color: ${COLORS.gray600};">Ponctualite enlevement</span></td>
+                  <td style="padding: 4px 0; text-align: right; font-weight: 600;">${kpis.onTimePickupRate || 0}%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0;"><span style="color: ${COLORS.gray600};">Ponctualite livraison</span></td>
+                  <td style="padding: 4px 0; text-align: right; font-weight: 600;">${kpis.onTimeDeliveryRate || 0}%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0;"><span style="color: ${COLORS.gray600};">Documents complets</span></td>
+                  <td style="padding: 4px 0; text-align: right; font-weight: 600;">${kpis.documentsCompleteRate || 0}%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0;"><span style="color: ${COLORS.gray600};">Sans incident</span></td>
+                  <td style="padding: 4px 0; text-align: right; font-weight: 600;">${kpis.incidentFreeRate || 0}%</td>
+                </tr>
               </table>
-            </div>
+            </td>
+          </tr>
+        </table>
+      `,
+      ctaButton: {
+        text: 'Valider la prefacture',
+        url: `${LINKS.portalUrl}/preinvoices/${preInvoiceNumber}`,
+        color: COLORS.primary
+      },
+      footer: {
+        reference: preInvoiceNumber,
+        additionalInfo: `Transporteur: ${carrierName}`
+      }
+    });
 
-            <p>Merci de valider cette préfacture dans les meilleurs délais.</p>
-
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.PORTAL_URL || 'https://portail.symphonia-controltower.com'}/preinvoices/${preInvoiceNumber}"
-                 style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Valider la préfacture
-              </a>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `[SYMPHONI.A] Préfacture ${preInvoiceNumber} - ${carrierName} - ${totalAmount.toFixed(2)}€ à valider`;
+    const subject = `Prefacture ${preInvoiceNumber} - ${carrierName} - ${totalAmount.toFixed(2)} EUR a valider`;
     return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
   /**
-   * Notifie le transporteur que sa préfacture est validée
+   * Notifie le transporteur que sa prefacture est validee
    */
   static async notifyCarrierPreInvoiceValidated(
     carrierEmail: string,
@@ -472,40 +398,42 @@ class NotificationService {
     preInvoiceNumber: string,
     totalAmount: number
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">Préfacture validée</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Réf: ${preInvoiceNumber}</p>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${carrierName},</p>
-            <p>Votre préfacture <strong>${preInvoiceNumber}</strong> a été validée par l'industriel.</p>
-            <p>Montant validé: <strong>${totalAmount.toFixed(2)} €</strong></p>
-            <p>Vous pouvez maintenant déposer votre facture sur le portail.</p>
+    const html = generateEmailTemplate({
+      type: 'success',
+      title: 'Prefacture Validee',
+      subtitle: `Ref: ${preInvoiceNumber}`,
+      preheader: `Votre prefacture ${preInvoiceNumber} a ete validee`,
+      recipientName: carrierName,
+      content: `
+        <p>Votre prefacture <strong>${preInvoiceNumber}</strong> a ete validee par l'industriel.</p>
 
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.CARRIER_PORTAL_URL || 'https://portail-transporteur.symphonia-controltower.com'}/preinvoices/${preInvoiceNumber}"
-                 style="background: #059669; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Déposer ma facture
-              </a>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.successLight}; border-radius: 12px; border: 1px solid ${COLORS.successBorder};">
+          <tr>
+            <td style="padding: 20px; text-align: center;">
+              <p style="margin: 0 0 8px 0; color: ${COLORS.gray500}; font-size: 13px;">Montant valide</p>
+              <p style="margin: 0; font-weight: 700; font-size: 28px; color: ${COLORS.success};">${totalAmount.toFixed(2)} EUR</p>
+            </td>
+          </tr>
+        </table>
 
-    const subject = `[SYMPHONI.A] Préfacture ${preInvoiceNumber} validée - Déposez votre facture`;
+        <p>Vous pouvez maintenant deposer votre facture sur le portail transporteur.</p>
+      `,
+      ctaButton: {
+        text: 'Deposer ma facture',
+        url: `${LINKS.portalUrl}/carrier/preinvoices/${preInvoiceNumber}`,
+        color: COLORS.success
+      },
+      footer: {
+        reference: preInvoiceNumber
+      }
+    });
+
+    const subject = `Prefacture ${preInvoiceNumber} validee - Deposez votre facture`;
     return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
-   * Notifie le transporteur que sa facture est acceptée
+   * Notifie le transporteur que sa facture est acceptee
    */
   static async notifyCarrierInvoiceAccepted(
     carrierEmail: string,
@@ -514,34 +442,22 @@ class NotificationService {
     amount: number,
     dueDate: Date
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">Facture acceptée</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${carrierName},</p>
-            <p>Votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> a été acceptée.</p>
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <p><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
-              <p><strong>Date de paiement prévue:</strong> ${dueDate.toLocaleDateString('fr-FR')}</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const html = EmailTemplates.invoiceNotification({
+      recipientName: carrierName,
+      orderReference: preInvoiceNumber,
+      invoiceNumber: preInvoiceNumber,
+      amount: `${amount.toFixed(2)} EUR`,
+      dueDate: dueDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+      status: 'accepted',
+      viewUrl: `${LINKS.portalUrl}/carrier/invoices`
+    });
 
-    const subject = `[SYMPHONI.A] Facture acceptée - Paiement prévu le ${dueDate.toLocaleDateString('fr-FR')}`;
+    const subject = `Facture acceptee - Paiement prevu le ${dueDate.toLocaleDateString('fr-FR')}`;
     return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
-   * Notifie le transporteur que sa facture est rejetée
+   * Notifie le transporteur que sa facture est rejetee
    */
   static async notifyCarrierInvoiceRejected(
     carrierEmail: string,
@@ -551,36 +467,23 @@ class NotificationService {
     invoiceAmount: number,
     difference: number
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">Facture rejetée - Écart de montant</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${carrierName},</p>
-            <p>Votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> présente un écart de montant.</p>
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <p><strong>Montant préfacture:</strong> ${expectedAmount.toFixed(2)} €</p>
-              <p><strong>Montant facture:</strong> ${invoiceAmount.toFixed(2)} €</p>
-              <p><strong>Écart:</strong> ${difference.toFixed(2)} €</p>
-            </div>
-            <p>Merci de corriger votre facture et de la redéposer.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const html = EmailTemplates.invoiceNotification({
+      recipientName: carrierName,
+      orderReference: preInvoiceNumber,
+      invoiceNumber: preInvoiceNumber,
+      amount: `${invoiceAmount.toFixed(2)} EUR`,
+      dueDate: '-',
+      status: 'rejected',
+      viewUrl: `${LINKS.portalUrl}/carrier/preinvoices/${preInvoiceNumber}`,
+      rejectionReason: `Ecart de montant detecte: Prefacture ${expectedAmount.toFixed(2)} EUR vs Facture ${invoiceAmount.toFixed(2)} EUR (difference: ${difference >= 0 ? '+' : ''}${difference.toFixed(2)} EUR)`
+    });
 
-    const subject = `[SYMPHONI.A] Facture rejetée - Écart de ${Math.abs(difference).toFixed(2)}€`;
+    const subject = `Facture rejetee - Ecart de ${Math.abs(difference).toFixed(2)} EUR`;
     return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
-   * Notifie l'industriel qu'une facture transporteur a été déposée
+   * Notifie l'industriel qu'une facture transporteur a ete deposee
    */
   static async notifyIndustrialInvoiceUploaded(
     industrialEmail: string,
@@ -593,45 +496,79 @@ class NotificationService {
   ): Promise<boolean> {
     const difference = invoiceAmount - preInvoiceAmount;
     const differencePercent = Math.abs(difference / preInvoiceAmount * 100).toFixed(1);
-    const statusColor = Math.abs(difference / preInvoiceAmount) <= 0.01 ? '#10b981' : '#f59e0b';
-    const statusText = Math.abs(difference / preInvoiceAmount) <= 0.01 ? 'Acceptation automatique' : 'Vérification requise';
+    const isAutoAccepted = Math.abs(difference / preInvoiceAmount) <= 0.01;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">📄 Facture transporteur reçue</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${industrialName},</p>
-            <p>Le transporteur <strong>${carrierName}</strong> a déposé sa facture pour la préfacture <strong>${preInvoiceNumber}</strong>.</p>
+    const html = generateEmailTemplate({
+      type: 'invoice',
+      title: 'Facture Transporteur Recue',
+      subtitle: `Prefacture: ${preInvoiceNumber}`,
+      preheader: `Facture ${invoiceNumber} de ${carrierName} - ${invoiceAmount.toFixed(2)} EUR`,
+      recipientName: industrialName,
+      content: `
+        <p>Le transporteur <strong>${carrierName}</strong> a depose sa facture pour la prefacture <strong>${preInvoiceNumber}</strong>.</p>
 
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${statusColor};">
-              <p style="margin: 0 0 10px 0;"><strong>N° Facture:</strong> ${invoiceNumber}</p>
-              <p style="margin: 0 0 10px 0;"><strong>Montant préfacture:</strong> ${preInvoiceAmount.toFixed(2)} €</p>
-              <p style="margin: 0 0 10px 0;"><strong>Montant facture:</strong> ${invoiceAmount.toFixed(2)} €</p>
-              <p style="margin: 0 0 10px 0;"><strong>Écart:</strong> ${difference >= 0 ? '+' : ''}${difference.toFixed(2)} € (${differencePercent}%)</p>
-              <p style="margin: 0; padding: 8px; background: ${statusColor}20; border-radius: 4px; color: ${statusColor}; font-weight: bold;">
-                ${statusText}
-              </p>
-            </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.gray50}; border-radius: 12px;">
+          <tr>
+            <td style="padding: 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200};">
+                    <span style="color: ${COLORS.gray500}; font-size: 13px;">Numero de facture</span><br>
+                    <span style="font-weight: 600; color: ${COLORS.gray800};">📄 ${invoiceNumber}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200};">
+                    <span style="color: ${COLORS.gray500}; font-size: 13px;">Montant prefacture</span><br>
+                    <span style="font-weight: 600; color: ${COLORS.gray800};">${preInvoiceAmount.toFixed(2)} EUR</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200};">
+                    <span style="color: ${COLORS.gray500}; font-size: 13px;">Montant facture</span><br>
+                    <span style="font-weight: 700; font-size: 18px; color: ${COLORS.primary};">${invoiceAmount.toFixed(2)} EUR</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: ${COLORS.gray500}; font-size: 13px;">Ecart</span><br>
+                    <span style="font-weight: 600; color: ${Math.abs(difference) < 0.01 ? COLORS.success : COLORS.warning};">
+                      ${difference >= 0 ? '+' : ''}${difference.toFixed(2)} EUR (${differencePercent}%)
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `,
+      infoBox: isAutoAccepted ? {
+        icon: '✅',
+        title: 'Acceptation automatique',
+        content: 'L\'ecart etant inferieur a 1%, la facture a ete automatiquement acceptee. Le delai de paiement (30 jours) demarre.',
+        color: 'success'
+      } : {
+        icon: '⚠️',
+        title: 'Verification requise',
+        content: 'L\'ecart de montant necessite votre verification. Veuillez valider ou rejeter la facture.',
+        color: 'warning'
+      },
+      ctaButton: {
+        text: 'Voir la facture',
+        url: `${LINKS.portalUrl}/invoices/${invoiceNumber}`
+      },
+      footer: {
+        reference: preInvoiceNumber,
+        additionalInfo: `Transporteur: ${carrierName}`
+      }
+    });
 
-            <p>Le contrôle automatique a été effectué. Si la facture est acceptée, le décompte de paiement (30 jours) démarre automatiquement.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `[SYMPHONI.A] 📄 Facture ${carrierName} reçue - ${preInvoiceNumber}`;
+    const subject = `Facture ${carrierName} recue - ${preInvoiceNumber} - ${invoiceAmount.toFixed(2)} EUR`;
     return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
   /**
-   * Notifie le transporteur du paiement envoyé
+   * Notifie le transporteur du paiement envoye
    */
   static async notifyCarrierPaymentSent(
     carrierEmail: string,
@@ -640,34 +577,22 @@ class NotificationService {
     amount: number,
     paymentReference: string
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">Paiement effectué</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${carrierName},</p>
-            <p>Le paiement de votre facture pour la préfacture <strong>${preInvoiceNumber}</strong> a été effectué.</p>
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <p><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
-              <p><strong>Référence paiement:</strong> ${paymentReference}</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const html = EmailTemplates.invoiceNotification({
+      recipientName: carrierName,
+      orderReference: preInvoiceNumber,
+      invoiceNumber: preInvoiceNumber,
+      amount: `${amount.toFixed(2)} EUR`,
+      dueDate: new Date().toLocaleDateString('fr-FR'),
+      status: 'payment_sent',
+      viewUrl: `${LINKS.portalUrl}/carrier/payments`
+    });
 
-    const subject = `[SYMPHONI.A] Paiement ${amount.toFixed(2)}€ effectué - Réf: ${paymentReference}`;
+    const subject = `Paiement effectue - ${amount.toFixed(2)} EUR - Ref: ${paymentReference}`;
     return this.sendEmail(carrierEmail, subject, html, SES_CONFIG.billingFromEmail, `carrier ${carrierName}`);
   }
 
   /**
-   * Rappel de paiement imminent à l'industriel
+   * Rappel de paiement imminent a l'industriel
    */
   static async sendPaymentReminderToIndustrial(
     industrialEmail: string,
@@ -678,38 +603,62 @@ class NotificationService {
     daysRemaining: number,
     dueDate: Date
   ): Promise<boolean> {
-    const urgencyColor = daysRemaining <= 2 ? '#dc2626' : '#f59e0b';
-    const urgencyText = daysRemaining <= 2 ? 'URGENT' : 'Rappel';
+    const isUrgent = daysRemaining <= 2;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: ${urgencyColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">⚠️ ${urgencyText} - Paiement à effectuer</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${industrialName},</p>
-            <p>Le paiement de la préfacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> arrive à échéance.</p>
+    const html = generateEmailTemplate({
+      type: 'reminder',
+      title: isUrgent ? 'URGENT - Paiement Imminent' : 'Rappel de Paiement',
+      subtitle: `Prefacture: ${preInvoiceNumber}`,
+      preheader: `${daysRemaining} jour(s) avant echeance - ${amount.toFixed(2)} EUR`,
+      recipientName: industrialName,
+      content: `
+        <p>Le paiement de la prefacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> arrive a echeance.</p>
 
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${urgencyColor};">
-              <p style="font-size: 24px; margin: 0; color: ${urgencyColor}; font-weight: bold;">
-                ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restant${daysRemaining > 1 ? 's' : ''}
-              </p>
-              <p style="margin: 10px 0 0 0;"><strong>Montant:</strong> ${amount.toFixed(2)} €</p>
-              <p style="margin: 5px 0 0 0;"><strong>Échéance:</strong> ${dueDate.toLocaleDateString('fr-FR')}</p>
-            </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${isUrgent ? COLORS.errorLight : COLORS.warningLight}; border-radius: 12px; border: 1px solid ${isUrgent ? COLORS.errorBorder : COLORS.warningBorder};">
+          <tr>
+            <td style="padding: 24px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 48px; font-weight: 700; color: ${isUrgent ? COLORS.error : COLORS.warning};">${daysRemaining}</p>
+              <p style="margin: 0; font-size: 14px; color: ${COLORS.gray600};">jour${daysRemaining > 1 ? 's' : ''} restant${daysRemaining > 1 ? 's' : ''}</p>
+            </td>
+          </tr>
+        </table>
 
-            <p>Merci de procéder au règlement dans les délais.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.gray50}; border-radius: 12px;">
+          <tr>
+            <td style="padding: 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200};">
+                    <span style="color: ${COLORS.gray500};">Montant</span>
+                  </td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid ${COLORS.gray200}; text-align: right; font-weight: 700; font-size: 18px; color: ${COLORS.primary};">${amount.toFixed(2)} EUR</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: ${COLORS.gray500};">Echeance</span>
+                  </td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: 600;">${dueDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `,
+      ctaButton: {
+        text: 'Proceder au paiement',
+        url: `${LINKS.portalUrl}/payments/pending`,
+        color: isUrgent ? COLORS.error : COLORS.warning
+      },
+      footer: {
+        reference: preInvoiceNumber,
+        additionalInfo: `Transporteur: ${carrierName}`
+      }
+    });
 
-    const subject = `[${urgencyText}] Paiement ${preInvoiceNumber} - ${daysRemaining}j restants - ${amount.toFixed(2)}€`;
+    const subject = isUrgent
+      ? `URGENT - Paiement ${preInvoiceNumber} - ${daysRemaining}j restant - ${amount.toFixed(2)} EUR`
+      : `Rappel - Paiement ${preInvoiceNumber} - ${daysRemaining}j restants - ${amount.toFixed(2)} EUR`;
+
     return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName}`);
   }
 
@@ -724,39 +673,62 @@ class NotificationService {
     amount: number,
     daysOverdue: number
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #991b1b; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0;">🚨 RETARD DE PAIEMENT</h1>
-          </div>
-          <div style="background: #fef2f2; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p>Bonjour ${industrialName},</p>
-            <p>Le paiement de la préfacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> est en retard.</p>
+    const html = generateEmailTemplate({
+      type: 'alert',
+      title: 'RETARD DE PAIEMENT',
+      subtitle: `Prefacture: ${preInvoiceNumber}`,
+      preheader: `Paiement en retard de ${daysOverdue} jours - ${amount.toFixed(2)} EUR`,
+      recipientName: industrialName,
+      content: `
+        <p>Le paiement de la prefacture <strong>${preInvoiceNumber}</strong> pour le transporteur <strong>${carrierName}</strong> est en retard.</p>
 
-            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #991b1b;">
-              <p style="font-size: 24px; margin: 0; color: #991b1b; font-weight: bold;">
-                Retard: ${daysOverdue} jour${daysOverdue > 1 ? 's' : ''}
-              </p>
-              <p style="margin: 10px 0 0 0;"><strong>Montant dû:</strong> ${amount.toFixed(2)} €</p>
-            </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.errorLight}; border-radius: 12px; border: 1px solid ${COLORS.errorBorder};">
+          <tr>
+            <td style="padding: 24px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 48px; font-weight: 700; color: ${COLORS.error};">${daysOverdue}</p>
+              <p style="margin: 0; font-size: 14px; color: ${COLORS.gray600};">jour${daysOverdue > 1 ? 's' : ''} de retard</p>
+            </td>
+          </tr>
+        </table>
 
-            <p style="color: #991b1b; font-weight: bold;">Merci de régulariser cette situation dans les plus brefs délais.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; background: ${COLORS.gray50}; border-radius: 12px;">
+          <tr>
+            <td style="padding: 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: ${COLORS.gray500};">Montant du</span>
+                  </td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: 700; font-size: 18px; color: ${COLORS.error};">${amount.toFixed(2)} EUR</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `,
+      infoBox: {
+        icon: '⚠️',
+        title: 'Action requise',
+        content: 'Merci de regulariser cette situation dans les plus brefs delais pour maintenir de bonnes relations avec vos transporteurs.',
+        color: 'error'
+      },
+      ctaButton: {
+        text: 'Regulariser maintenant',
+        url: `${LINKS.portalUrl}/payments/overdue`,
+        color: COLORS.error
+      },
+      footer: {
+        reference: preInvoiceNumber,
+        additionalInfo: `Transporteur: ${carrierName}`
+      }
+    });
 
-    const subject = `[RETARD] Paiement ${preInvoiceNumber} - ${daysOverdue}j de retard - ${amount.toFixed(2)}€`;
+    const subject = `RETARD - Paiement ${preInvoiceNumber} - ${daysOverdue}j de retard - ${amount.toFixed(2)} EUR`;
     return this.sendEmail(industrialEmail, subject, html, SES_CONFIG.billingFromEmail, `industrial ${industrialName} (overdue)`);
   }
 
   /**
-   * Vérifie l'état de la connexion AWS SES
+   * Verifie l'etat de la connexion AWS SES
    */
   static async checkSmtpConnection(): Promise<{ connected: boolean; message: string }> {
     const client = getSESClient();

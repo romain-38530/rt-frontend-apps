@@ -12,6 +12,7 @@ import EmailAction from '../models/EmailAction';
 import IssueFollowUp from '../models/IssueFollowUp';
 import TrackingService from './tracking-service';
 import EventService from './event-service';
+import { EmailTemplates, generateEmailTemplate, COLORS, LINKS } from '../templates/email-design-system';
 
 // Configuration Claude API
 const CLAUDE_API_KEY = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
@@ -785,90 +786,29 @@ Analyse l'intention et extrait les informations pertinentes.`;
       return { success: false };
     }
 
-    const severityColors: Record<string, string> = {
-      low: '#f59e0b',
-      medium: '#f97316',
-      high: '#ef4444',
-      critical: '#dc2626'
-    };
-
-    const severityLabels: Record<string, string> = {
-      low: 'Mineur',
-      medium: 'Moyen',
-      high: 'Important',
-      critical: 'Critique'
-    };
+    const html = EmailTemplates.issueNotification({
+      recipientName: params.toName,
+      orderReference: params.orderReference,
+      issueType: params.issueType,
+      issueSeverity: params.issueSeverity,
+      issueDescription: params.issueDescription,
+      carrierName: params.carrierName,
+      pickupCity: params.pickupCity,
+      deliveryCity: params.deliveryCity,
+      originalEta: params.originalEta?.toLocaleString('fr-FR'),
+      role: params.role
+    });
 
     const issueTypeLabels: Record<string, string> = {
       delay: 'Retard',
       breakdown: 'Panne',
-      panne: 'Panne',
       damage: 'Marchandise endommagee',
       shortage: 'Manquant',
       accident: 'Accident',
-      other: 'Autre incident'
+      other: 'Incident'
     };
 
-    const roleMessage = params.role === 'recipient'
-      ? `Nous vous informons d'un incident concernant votre livraison.`
-      : `Nous vous informons d'un incident concernant l'expedition de votre marchandise.`;
-
-    const trajetInfo = params.pickupCity && params.deliveryCity
-      ? `<p><strong>Trajet:</strong> ${params.pickupCity} → ${params.deliveryCity}</p>`
-      : '';
-
-    const etaInfo = params.originalEta
-      ? `<p><strong>ETA initiale:</strong> ${new Date(params.originalEta).toLocaleString('fr-FR')}</p>`
-      : '';
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">⚠️ SYMPHONI.A - Alerte Incident</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Reference: ${params.orderReference}</p>
-          </div>
-
-          <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0;">
-            <p>Bonjour ${params.toName},</p>
-
-            <p>${roleMessage}</p>
-
-            <div style="background: ${severityColors[params.issueSeverity] || '#f97316'}; color: white; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; font-weight: bold;">
-                🚨 ${issueTypeLabels[params.issueType] || 'Incident'} - Severite: ${severityLabels[params.issueSeverity] || 'Moyen'}
-              </p>
-            </div>
-
-            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid ${severityColors[params.issueSeverity] || '#f97316'};">
-              <p><strong>Description:</strong></p>
-              <p style="font-style: italic;">"${params.issueDescription}"</p>
-              <p><strong>Transporteur:</strong> ${params.carrierName}</p>
-              ${trajetInfo}
-              ${etaInfo}
-            </div>
-
-            <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 20px;">
-              <p style="margin: 0;"><strong>📌 Suivi en cours</strong></p>
-              <p style="margin: 5px 0 0 0;">Notre equipe suit cet incident. Vous recevrez des mises a jour regulieres jusqu'a resolution.</p>
-            </div>
-          </div>
-
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 0 0 8px 8px; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #666;">
-              Message automatique SYMPHONI.A<br>
-              Pour toute question: support@symphonia-controltower.com
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const subject = `⚠️ Incident Transport - ${params.orderReference} - ${issueTypeLabels[params.issueType] || 'Alerte'}`;
+    const subject = `Alerte Incident Transport - ${params.orderReference} - ${issueTypeLabels[params.issueType] || 'Alerte'}`;
 
     const sesParams: SendEmailCommandInput = {
       Source: `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`,
@@ -1035,35 +975,24 @@ Analyse l'intention et extrait les informations pertinentes.`;
       return;
     }
 
-    // Construire le HTML de la reponse
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">SYMPHONI.A</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Reponse automatique</p>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px;">
-            ${suggestedResponse.replace(/\n/g, '<br>')}
-
-            ${email.relatedOrderReference ? `
-            <div style="background: #e2e8f0; padding: 15px; border-radius: 8px; margin-top: 20px;">
-              <p style="margin: 0;"><strong>Reference:</strong> ${email.relatedOrderReference}</p>
-            </div>
-            ` : ''}
-
-            <p style="margin-top: 20px; font-size: 12px; color: #666;">
-              Ce message a ete genere automatiquement par SYMPHONI.A.<br>
-              Pour toute question, contactez notre equipe support.
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    // Construire le HTML de la reponse avec le design system
+    const html = generateEmailTemplate({
+      type: 'notification',
+      title: 'SYMPHONI.A',
+      subtitle: 'Reponse automatique',
+      content: `
+        <div style="white-space: pre-wrap;">${suggestedResponse}</div>
+      `,
+      infoBox: email.relatedOrderReference ? {
+        icon: '📋',
+        title: 'Reference commande',
+        content: email.relatedOrderReference,
+        color: 'info'
+      } : undefined,
+      footer: {
+        additionalInfo: 'Ce message a ete genere automatiquement par notre systeme IA.'
+      }
+    });
 
     const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
     const subject = `Re: ${email.subject}`;

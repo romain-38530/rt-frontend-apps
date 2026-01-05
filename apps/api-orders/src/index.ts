@@ -99,7 +99,7 @@ app.use('/actions/webhooks', express.text({ type: '*/*' }), (req, res, next) => 
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.17.0',
+    version: '2.18.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Email Automation avec Claude',
     endpoints: {
       health: '/health',

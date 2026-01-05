@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import PortalInvitation from '../models/PortalInvitation';
 import type { IAddress } from '../models/Order';
+import { EmailTemplates } from '../templates/email-design-system';
 
 // Configuration AWS SES
 const SES_CONFIG = {
@@ -197,113 +198,40 @@ export class PortalInvitationService {
     orderReference: string;
     role: 'supplier' | 'recipient' | 'logistician' | 'carrier';
     portalUrl: string;
+    inviterName?: string;
+    companyName?: string;
   }): Promise<void> {
-    const { email, contactName, orderReference, role, portalUrl } = params;
+    const { email, contactName, orderReference, role, portalUrl, inviterName, companyName } = params;
 
-    const roleLabels: Record<string, { label: string; portal: string; features: string[] }> = {
-      supplier: {
-        label: 'expéditeur',
-        portal: 'Portail Expéditeur',
-        features: [
-          'Suivre l\'organisation du chargement',
-          'Confirmer les dates de rendez-vous transporteur',
-          'Consulter les documents de transport',
-          'Communiquer avec le transporteur'
-        ]
-      },
-      recipient: {
-        label: 'destinataire',
-        portal: 'Portail Destinataire',
-        features: [
-          'Suivre la livraison en temps réel',
-          'Confirmer la réception',
-          'Consulter les documents de transport',
-          'Signer le bon de livraison'
-        ]
-      },
-      logistician: {
-        label: 'logisticien',
-        portal: 'Portail Logisticien',
-        features: [
-          'Gérer l\'organisation des transports',
-          'Planifier les rendez-vous',
-          'Suivre toutes les commandes',
-          'Coordonner avec les transporteurs'
-        ]
-      },
-      carrier: {
-        label: 'transporteur',
-        portal: 'Portail Transporteur',
-        features: [
-          'Consulter les détails de la commande',
-          'Organiser le transport',
-          'Mettre à jour le tracking',
-          'Déposer les documents (BL, CMR, POD)'
-        ]
-      }
+    const rolePortalLabels: Record<string, string> = {
+      supplier: 'Portail Expediteur',
+      recipient: 'Portail Destinataire',
+      logistician: 'Portail Logisticien',
+      carrier: 'Portail Transporteur'
     };
 
-    const { label: roleLabel, portal: portalLabel, features } = roleLabels[role] || roleLabels.recipient;
+    const portalLabel = rolePortalLabels[role] || 'Portail';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
-          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
-          .order-ref { background: #e0e7ff; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: inline-block; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>SYMPHONI.A</h1>
-            <p>${portalLabel}</p>
-          </div>
-          <div class="content">
-            <p>Bonjour ${contactName},</p>
-
-            <p>Vous avez été désigné comme <strong>${roleLabel}</strong> pour une commande de transport.</p>
-
-            <p>Référence de commande : <span class="order-ref">${orderReference}</span></p>
-
-            <p>En tant que ${roleLabel}, vous pouvez accéder au ${portalLabel} SYMPHONI.A pour :</p>
-            <ul>
-              ${features.map(f => `<li>${f}</li>`).join('\n              ')}
-            </ul>
-
-            <p style="text-align: center;">
-              <a href="${portalUrl}" class="button">Accéder au portail</a>
-            </p>
-
-            <p><small>Ce lien est valable 7 jours. Si vous n'avez pas demandé cet accès, vous pouvez ignorer cet email.</small></p>
-          </div>
-          <div class="footer">
-            <p>SYMPHONI.A - Plateforme de gestion logistique<br>
-            RT Technologie - Tous droits réservés</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const html = EmailTemplates.portalInvitation({
+      recipientName: contactName,
+      recipientEmail: email,
+      role,
+      inviterName: inviterName || 'SYMPHONI.A',
+      companyName: companyName || 'SYMPHONI.A',
+      activationUrl: portalUrl,
+      expiresIn: '7 jours'
+    });
 
     const client = getSESClient();
     const fromAddress = `${SES_CONFIG.fromName} <${SES_CONFIG.fromEmail}>`;
-    const subject = `[SYMPHONI.A] Accès ${portalLabel} - Commande ${orderReference}`;
+    const subject = `Invitation ${portalLabel} - Commande ${orderReference}`;
 
     // Mode mock si pas de client SES
     if (!client) {
       console.log(`[PortalInvitationService] MOCK EMAIL:
         To: ${email}
         From: ${fromAddress}
-        Subject: ${subject}
-        Content: ${html.substring(0, 200)}...`);
+        Subject: ${subject}`);
       return;
     }
 
