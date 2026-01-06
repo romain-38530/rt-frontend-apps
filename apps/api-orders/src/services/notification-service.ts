@@ -19,12 +19,13 @@ const SES_CONFIG = {
 // Client SES singleton
 let sesClient: SESClient | null = null;
 
-function getSESClient(): SESClient | null {
+function getSESClient(): SESClient {
   if (sesClient) return sesClient;
 
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 
+  // Si credentials explicites, les utiliser. Sinon, utiliser le role IAM (Elastic Beanstalk)
   if (accessKeyId && secretAccessKey) {
     sesClient = new SESClient({
       region: SES_CONFIG.region,
@@ -33,12 +34,16 @@ function getSESClient(): SESClient | null {
         secretAccessKey,
       },
     });
-    console.log(`[NotificationService] AWS SES configured for region: ${SES_CONFIG.region}`);
-    return sesClient;
+    console.log(`[NotificationService] AWS SES configured with explicit credentials for region: ${SES_CONFIG.region}`);
+  } else {
+    // Utilise automatiquement le role IAM attache a l'instance EC2
+    sesClient = new SESClient({
+      region: SES_CONFIG.region,
+    });
+    console.log(`[NotificationService] AWS SES configured with IAM role for region: ${SES_CONFIG.region}`);
   }
 
-  console.warn('[NotificationService] AWS SES not configured - emails will be logged only');
-  return null;
+  return sesClient;
 }
 
 interface CarrierNotificationParams {

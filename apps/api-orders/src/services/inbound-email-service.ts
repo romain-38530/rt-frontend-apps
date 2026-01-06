@@ -26,9 +26,10 @@ const SES_CONFIG = {
 };
 
 let sesClient: SESClient | null = null;
-function getSESClient(): SESClient | null {
+function getSESClient(): SESClient {
   if (sesClient) return sesClient;
   sesClient = new SESClient({ region: SES_CONFIG.region });
+  console.log(`[InboundEmailService] AWS SES configured with IAM role for region: ${SES_CONFIG.region}`);
   return sesClient;
 }
 

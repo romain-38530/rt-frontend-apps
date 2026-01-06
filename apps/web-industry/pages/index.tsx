@@ -161,6 +161,13 @@ export default function HomePage() {
       route: '/delegation-logistique'
     },
     {
+      icon: '🏭',
+      title: 'ICPE Partenaires',
+      desc: 'Suivi conformité ICPE de vos partenaires logistiques',
+      locked: false,
+      route: '/icpe-partenaires'
+    },
+    {
       icon: '📋',
       title: 'Grilles Tarifaires',
       desc: 'Configurez et gérez vos grilles tarifaires transport',

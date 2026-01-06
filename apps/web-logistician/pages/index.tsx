@@ -64,6 +64,13 @@ export default function HomePage() {
     },
     {
       icon: '📅',
+      title: 'RDV Transporteurs',
+      desc: 'Gerez les demandes de RDV delegues par vos industriels',
+      locked: false,
+      route: '/rdv-transporteurs'
+    },
+    {
+      icon: '🗓️',
       title: 'Planning & Itinéraires',
       desc: 'Planifiez vos opérations et optimisez vos itinéraires',
       locked: subscription?.tier === 'free',
@@ -138,6 +145,13 @@ export default function HomePage() {
       desc: 'Gérez les membres de votre équipe et leurs accès',
       locked: false,
       route: '/team'
+    },
+    {
+      icon: '🏭',
+      title: 'Gestion ICPE',
+      desc: 'Déclarations et suivi des installations classées',
+      locked: false,
+      route: '/icpe'
     }
   ];
 
