@@ -18,6 +18,7 @@ import analyticsRoutes from './routes/analytics';
 import aiReportsRoutes from './routes/ai-reports';
 import palettesRoutes from './routes/palettes';
 import emailActionsRoutes from './routes/email-actions';
+import trainingRoutes from './routes/training';
 import timeoutScheduler from './services/timeout-scheduler';
 import preinvoiceScheduler from './services/preinvoice-scheduler';
 import aiReportScheduler from './services/ai-report-scheduler';
@@ -99,7 +100,7 @@ app.use('/actions/webhooks', express.text({ type: '*/*' }), (req, res, next) => 
 app.get('/', (req, res) => {
   res.json({
     name: 'RT Technologie Orders API',
-    version: '2.19.0',
+    version: '2.20.0',
     description: 'API de gestion des commandes SYMPHONI.A - Cycle de vie complet + AI Analytics + Email Automation avec Claude',
     endpoints: {
       health: '/health',
@@ -264,6 +265,7 @@ app.use('/api/v1/preinvoices', preinvoicesRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/ai-reports', aiReportsRoutes);
 app.use('/api/v1/palettes', palettesRoutes);
+app.use('/api/v1/training', trainingRoutes);
 
 // Email actions (boutons cliquables + webhooks entrants)
 app.use('/actions', emailActionsRoutes);
