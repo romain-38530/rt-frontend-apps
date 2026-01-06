@@ -37,7 +37,7 @@ interface ApiResponse {
 }
 
 const PORTAL = 'forwarder';
-const API_BASE = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://rt-orders-api-prod-v2.eu-central-1.elasticbeanstalk.com';
+const API_BASE = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://rt-orders-api-prod-v2.eba-4tprbbqu.eu-central-1.elasticbeanstalk.com';
 
 export default function TrainingPage() {
   const router = useSafeRouter();
