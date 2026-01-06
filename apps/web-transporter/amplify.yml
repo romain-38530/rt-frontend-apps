@@ -54,6 +54,9 @@ frontend:
       NEXT_PUBLIC_CARRIERS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
       NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
 
+      # Pricing Grids API (Grilles tarifaires inter-univers)
+      NEXT_PUBLIC_PRICING_GRIDS_API_URL: 'https://dxakwgzrkhboh.cloudfront.net'
+
       # Build
       NODE_VERSION: '20'
       PNPM_VERSION: '8.15.4'

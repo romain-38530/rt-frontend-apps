@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated } from '../lib/auth';
-import { carriersApi } from '../lib/api';
+import { carriersApi, pricingGridsApi, PricingGrid } from '../lib/api';
 import { useToast } from '@rt/ui-components';
 
 interface PricingZone {
@@ -85,64 +85,88 @@ export default function GrilleTarifairePage() {
         return;
       }
 
-      // Charger les données tarifaires (mock pour l'instant)
-      const mockData: PricingData = {
-        carrierId: 'carrier-123',
+      // Charger les grilles tarifaires depuis l'API (créées par les industriels)
+      const gridsResponse = await pricingGridsApi.getMyGrids({ status: 'active' });
+
+      // Charger les propositions en cours
+      let pendingProposals: any[] = [];
+      try {
+        const proposalsResponse = await pricingGridsApi.getSentProposals({ status: 'pending' });
+        pendingProposals = proposalsResponse?.data || [];
+      } catch (e) {
+        console.warn('Could not load proposals:', e);
+      }
+
+      // Transformer les données API en format attendu par le composant
+      const grids: PricingGrid[] = gridsResponse?.data || [];
+
+      // Grouper les grilles par industriel
+      const industrialMap = new Map<string, IndustrialPricing>();
+
+      grids.forEach((grid: PricingGrid) => {
+        if (!industrialMap.has(grid.industrialId)) {
+          industrialMap.set(grid.industrialId, {
+            industrialId: grid.industrialId,
+            industrialName: grid.industrialName,
+            contractType: grid.gridType === 'FTL' ? 'contract' : grid.gridType === 'LTL' ? 'framework' : 'spot',
+            validFrom: grid.validFrom,
+            validUntil: grid.validUntil,
+            zones: [],
+            fuelSurcharge: grid.fuelIndexation?.enabled
+              ? {
+                  type: 'indexed',
+                  value: grid.fuelIndexation.currentIndex || grid.fuelIndexation.referenceIndex || 0,
+                  reference: grid.fuelIndexation.indexType || 'CNR'
+                }
+              : { type: 'fixed', value: 0 },
+            paymentTerms: grid.paymentTerms || 30,
+            volumeDiscounts: grid.volumeDiscounts
+          });
+        }
+
+        // Ajouter les zones de cette grille
+        const industrial = industrialMap.get(grid.industrialId)!;
+        if (grid.zones) {
+          grid.zones.forEach(zone => {
+            industrial.zones.push({
+              origin: zone.origin,
+              destination: zone.destination,
+              distance: zone.distance || 0,
+              basePrice: zone.basePrice,
+              negotiatedPrice: zone.negotiatedPrice,
+              status: zone.status,
+              lastUpdated: zone.lastUpdated
+            });
+          });
+        }
+      });
+
+      const industrials = Array.from(industrialMap.values());
+
+      // Transformer les propositions en négociations en cours
+      const negotiations = pendingProposals.map((p: any) => ({
+        id: p.id || p._id,
+        industrialId: p.industrialId,
+        industrialName: p.industrialCompanyName || 'Industriel',
+        zoneId: p.proposedPrices?.[0]?.zoneId || '',
+        proposedPrice: p.proposedPrices?.[0]?.basePrice || 0,
+        currentPrice: p.originalPrices?.[0]?.basePrice || 0,
+        status: p.status,
+        submittedAt: p.submittedAt || p.createdAt,
+        counterOffer: p.counterOffer
+      }));
+
+      const pricingData: PricingData = {
+        carrierId: grids[0]?.carrierId || '',
         isCompliant: true,
         complianceScore: score,
-        industrials: [
-          {
-            industrialId: 'ind-1',
-            industrialName: 'Carrefour Supply Chain',
-            contractType: 'contract',
-            validFrom: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
-            validUntil: new Date(Date.now() + 185 * 24 * 60 * 60 * 1000).toISOString(),
-            zones: [
-              { origin: 'Paris (75)', destination: 'Lyon (69)', distance: 465, basePrice: 850, negotiatedPrice: 820, status: 'active', lastUpdated: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
-              { origin: 'Paris (75)', destination: 'Marseille (13)', distance: 775, basePrice: 1150, negotiatedPrice: 1100, status: 'active', lastUpdated: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
-              { origin: 'Lyon (69)', destination: 'Bordeaux (33)', distance: 550, basePrice: 950, status: 'active' },
-              { origin: 'Lille (59)', destination: 'Paris (75)', distance: 225, basePrice: 450, negotiatedPrice: 430, status: 'active', lastUpdated: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString() },
-            ],
-            fuelSurcharge: { type: 'indexed', value: 15.2, reference: 'CNR Gazole' },
-            paymentTerms: 30,
-            volumeDiscounts: [
-              { threshold: 50, discount: 3 },
-              { threshold: 100, discount: 5 },
-              { threshold: 200, discount: 8 },
-            ]
-          },
-          {
-            industrialId: 'ind-2',
-            industrialName: 'Auchan Logistique',
-            contractType: 'framework',
-            validFrom: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-            validUntil: new Date(Date.now() + 275 * 24 * 60 * 60 * 1000).toISOString(),
-            zones: [
-              { origin: 'Roubaix (59)', destination: 'Paris (75)', distance: 230, basePrice: 480, status: 'active' },
-              { origin: 'Roubaix (59)', destination: 'Lyon (69)', distance: 680, basePrice: 1050, negotiatedPrice: 980, status: 'active', lastUpdated: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
-              { origin: 'Toulouse (31)', destination: 'Marseille (13)', distance: 405, basePrice: 720, status: 'pending' },
-            ],
-            fuelSurcharge: { type: 'fixed', value: 12 },
-            paymentTerms: 45,
-          },
-        ],
-        pendingNegotiations: [
-          {
-            id: 'neg-1',
-            industrialId: 'ind-2',
-            industrialName: 'Auchan Logistique',
-            zoneId: 'zone-3',
-            proposedPrice: 680,
-            currentPrice: 720,
-            status: 'pending',
-            submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ]
+        industrials,
+        pendingNegotiations: negotiations
       };
 
-      setData(mockData);
-      if (mockData.industrials.length > 0) {
-        setSelectedIndustrial(mockData.industrials[0]);
+      setData(pricingData);
+      if (industrials.length > 0) {
+        setSelectedIndustrial(industrials[0]);
       }
     } catch (err) {
       console.error('Error loading pricing data:', err);
@@ -167,10 +191,26 @@ export default function GrilleTarifairePage() {
   };
 
   const submitNegotiation = async () => {
-    if (!negotiationZone || !proposedPrice) return;
+    if (!negotiationZone || !proposedPrice || !selectedIndustrial) return;
 
     try {
-      // API call to submit negotiation
+      // Trouver la grille correspondante pour cet industriel
+      const gridsResponse = await pricingGridsApi.getMyGrids({ status: 'active' });
+      const grids = gridsResponse?.data || [];
+      const matchingGrid = grids.find((g: PricingGrid) => g.industrialId === selectedIndustrial.industrialId);
+
+      if (matchingGrid) {
+        // Proposer une mise à jour via l'API
+        await pricingGridsApi.proposeUpdate(matchingGrid.id, {
+          proposedZones: [{
+            zoneId: `${negotiationZone.origin}-${negotiationZone.destination}`,
+            proposedPrice: parseFloat(proposedPrice),
+            justification: `Proposition de tarif: ${formatPrice(parseFloat(proposedPrice))} pour ${negotiationZone.origin} → ${negotiationZone.destination}`
+          }],
+          message: `Nouvelle proposition tarifaire pour la zone ${negotiationZone.origin} → ${negotiationZone.destination}`
+        });
+      }
+
       toast.success('Proposition tarifaire envoyée !');
       setShowNegotiationModal(false);
       setNegotiationZone(null);
@@ -178,6 +218,7 @@ export default function GrilleTarifairePage() {
       // Reload data
       checkComplianceAndLoadData();
     } catch (err) {
+      console.error('Error submitting negotiation:', err);
       toast.error('Erreur lors de l\'envoi de la proposition');
     }
   };

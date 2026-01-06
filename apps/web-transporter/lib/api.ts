@@ -62,6 +62,9 @@ export const API_CONFIG = {
 
   // Carriers API (Référencement Transporteurs - subscriptions-contracts-eb)
   CARRIERS_API: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
+
+  // Pricing Grids API (Grilles tarifaires LTL/FTL/Messagerie)
+  PRICING_GRIDS_API: process.env.NEXT_PUBLIC_PRICING_GRIDS_API_URL || 'https://dxakwgzrkhboh.cloudfront.net',
 };
 
 // Helper to get auth headers
@@ -1722,6 +1725,300 @@ export const carriersApi = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ step })
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// PRICING GRIDS API - Grilles Tarifaires (Inter-univers)
+// ============================================
+
+export interface PricingGridZone {
+  zoneId: string;
+  zoneName: string;
+  origin: string;
+  destination: string;
+  distance?: number;
+  basePrice: number;
+  negotiatedPrice?: number;
+  lastUpdated?: string;
+  status: 'active' | 'pending' | 'expired';
+}
+
+export interface FuelIndexation {
+  enabled: boolean;
+  referenceIndex: number;
+  referenceDate: string;
+  indexType: 'CNR' | 'TICPE' | 'CUSTOM';
+  adjustmentFormula: 'LINEAR' | 'STEPPED' | 'PERCENTAGE';
+  adjustmentThreshold: number;
+  maxAdjustment: number;
+  currentIndex?: number;
+  currentIndexDate?: string;
+}
+
+export interface AnnexFees {
+  handling: {
+    enabled: boolean;
+    loadingFee?: number;
+    unloadingFee?: number;
+    palletHandling?: number;
+    waitingHourlyRate?: number;
+  };
+  delivery: {
+    enabled: boolean;
+    tailgateFee?: number;
+    appointmentFee?: number;
+    expressDeliveryFee?: number;
+    weekendFee?: number;
+    nightDeliveryFee?: number;
+    multiDropFee?: number;
+  };
+  administrative: {
+    enabled: boolean;
+    documentFee?: number;
+    customsFee?: number;
+    insuranceFeePercent?: number;
+    adValorem?: number;
+  };
+  special: {
+    enabled: boolean;
+    adrFee?: number;
+    temperatureControlFee?: number;
+    fragileHandlingFee?: number;
+    oversizeFee?: number;
+    heavyLoadFee?: number;
+  };
+  custom?: Array<{
+    name: string;
+    code: string;
+    type: 'fixed' | 'percentage' | 'per_unit';
+    value: number;
+    unit?: string;
+    mandatory: boolean;
+    conditions?: string;
+  }>;
+}
+
+export interface PricingGrid {
+  id: string;
+  gridId: string;
+  industrialId: string;
+  industrialName: string;
+  carrierId: string;
+  carrierName: string;
+  gridType: 'FTL' | 'LTL' | 'MESSAGERIE' | 'EXPRESS' | 'COMBINED';
+  name: string;
+  description?: string;
+  zones: PricingGridZone[];
+  fuelIndexation?: FuelIndexation;
+  annexFees?: AnnexFees;
+  validFrom: string;
+  validUntil: string;
+  status: 'draft' | 'active' | 'suspended' | 'expired';
+  volumeDiscounts?: Array<{
+    threshold: number;
+    discount: number;
+  }>;
+  paymentTerms?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PricingGridStats {
+  totalGrids: number;
+  activeGrids: number;
+  byIndustrial: Array<{
+    _id: string;
+    industrialName: string;
+    totalGrids: number;
+    activeGrids: number;
+  }>;
+}
+
+export const pricingGridsApi = {
+  /**
+   * Liste des grilles tarifaires assignées au transporteur
+   * (Créées par les industriels)
+   */
+  getMyGrids: async (params?: { status?: string; page?: number; limit?: number }) => {
+    const carrierId = getCarrierId();
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/api/pricing-grids/carrier/${carrierId}${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Détail d'une grille tarifaire
+   */
+  getGrid: async (gridId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/api/pricing-grids/${gridId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Proposer une mise à jour de tarifs à l'industriel
+   * (Le transporteur remplit les prix dans le squelette créé par l'industriel)
+   */
+  proposeUpdate: async (gridId: string, data: {
+    proposedZones: Array<{
+      zoneId: string;
+      proposedPrice: number;
+      justification?: string;
+    }>;
+    message?: string;
+    validUntil?: string;
+  }) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/api/pricing-grids/${gridId}/propose-update`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Liste des demandes de tarifs reçues (envoyées par les industriels)
+   */
+  getReceivedRequests: async (params?: { status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests/received${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Détail d'une demande de tarif
+   */
+  getRequest: async (requestId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/requests/${requestId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Soumettre une proposition tarifaire en réponse à une demande
+   */
+  submitProposal: async (data: {
+    requestId: string;
+    configId?: string;
+    proposedPrices: Array<{
+      zoneId: string;
+      zoneName?: string;
+      basePrice: number;
+      discountPercent?: number;
+    }>;
+    notes?: string;
+    validUntil?: string;
+    globalDiscount?: number;
+  }) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Liste des propositions envoyées par le transporteur
+   */
+  getSentProposals: async (params?: { status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/sent${query}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Détail d'une proposition
+   */
+  getProposal: async (proposalId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${proposalId}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Répondre à une contre-proposition (négociation)
+   */
+  negotiate: async (proposalId: string, data: {
+    newPrices?: Array<{ zoneId: string; price: number }>;
+    message?: string;
+    accept?: boolean;
+  }) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/proposals/${proposalId}/negotiate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Calculer le prix total avec frais annexes et indexation gasoil
+   */
+  calculateTotal: async (gridId: string, data: {
+    zoneId: string;
+    basePrice: number;
+    options?: {
+      tailgate?: boolean;
+      appointment?: boolean;
+      weekend?: boolean;
+      night?: boolean;
+      adr?: boolean;
+      temperatureControl?: boolean;
+      express?: boolean;
+    };
+    weight?: number;
+    palletCount?: number;
+    additionalDrops?: number;
+    currentFuelIndex?: number;
+  }) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/api/pricing-grids/${gridId}/calculate-total`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  /**
+   * Télécharger un fichier joint à une demande
+   */
+  downloadFile: async (fileId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/files/${fileId}/download`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /**
+   * Historique d'indexation gasoil d'une grille
+   */
+  getFuelIndexationHistory: async (gridId: string) => {
+    const res = await fetch(`${API_CONFIG.PRICING_GRIDS_API}/api/pricing-grids/${gridId}/fuel-indexation/history`, {
+      headers: getAuthHeaders()
     });
     return res.json();
   }

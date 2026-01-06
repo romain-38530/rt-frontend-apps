@@ -108,6 +108,47 @@ interface TransportPlan {
   carriersCount: number;
 }
 
+interface OptimizationWeights {
+  price: number;
+  transit: number;
+  score: number;
+}
+
+interface RouteComparison {
+  routeKey: string;
+  origin: string;
+  destination: string;
+  transportType: string;
+  offers: RouteOffer[];
+  bestPrice: RouteOffer | null;
+  bestTransit: RouteOffer | null;
+  bestScore: RouteOffer | null;
+  bestBalanced: RouteOffer | null;
+  priceDiffPercent: number;
+  transitDiffDays: number;
+}
+
+interface CostSimulation {
+  monthlyVolume: number;
+  routeDistribution: Map<string, number>;
+  currentCost: number;
+  optimizedCost: number;
+  savings: number;
+  savingsPercent: number;
+}
+
+interface TransportPlanSummary {
+  id: string;
+  name: string;
+  createdAt: string;
+  totalRoutes: number;
+  totalCost: number;
+  avgTransit: number;
+  carriersUsed: number;
+  optimizationStrategy: string;
+  selectedOffers: RouteOffer[];
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -393,13 +434,170 @@ function buildConsolidatedPlan(grids: PricingGrid[], carrierScores: CarrierScore
   return allOffers;
 }
 
+/**
+ * Build route comparisons for analysis
+ */
+function buildRouteComparisons(offers: RouteOffer[]): RouteComparison[] {
+  const routeMap = new Map<string, RouteOffer[]>();
+  offers.forEach(offer => {
+    const existing = routeMap.get(offer.routeKey) || [];
+    existing.push(offer);
+    routeMap.set(offer.routeKey, existing);
+  });
+
+  const comparisons: RouteComparison[] = [];
+  routeMap.forEach((routeOffers, routeKey) => {
+    if (routeOffers.length === 0) return;
+
+    const bestPrice = routeOffers.reduce((a, b) => a.price < b.price ? a : b);
+    const bestTransit = routeOffers.reduce((a, b) => a.transitDays < b.transitDays ? a : b);
+    const bestScore = routeOffers.reduce((a, b) => a.carrierScore > b.carrierScore ? a : b);
+
+    // Best balanced: normalize and weight (40% price, 30% transit, 30% score)
+    const maxPrice = Math.max(...routeOffers.map(o => o.price));
+    const minPrice = Math.min(...routeOffers.map(o => o.price));
+    const maxTransit = Math.max(...routeOffers.map(o => o.transitDays));
+    const minTransit = Math.min(...routeOffers.map(o => o.transitDays));
+    const maxScore = Math.max(...routeOffers.map(o => o.carrierScore));
+    const minScore = Math.min(...routeOffers.map(o => o.carrierScore));
+
+    const bestBalanced = routeOffers.reduce((best, offer) => {
+      const priceNorm = maxPrice > minPrice ? (maxPrice - offer.price) / (maxPrice - minPrice) : 0.5;
+      const transitNorm = maxTransit > minTransit ? (maxTransit - offer.transitDays) / (maxTransit - minTransit) : 0.5;
+      const scoreNorm = maxScore > minScore ? (offer.carrierScore - minScore) / (maxScore - minScore) : 0.5;
+      const balanced = priceNorm * 0.4 + transitNorm * 0.3 + scoreNorm * 0.3;
+
+      const bestPriceNorm = maxPrice > minPrice ? (maxPrice - best.price) / (maxPrice - minPrice) : 0.5;
+      const bestTransitNorm = maxTransit > minTransit ? (maxTransit - best.transitDays) / (maxTransit - minTransit) : 0.5;
+      const bestScoreNorm = maxScore > minScore ? (best.carrierScore - minScore) / (maxScore - minScore) : 0.5;
+      const bestBalanced = bestPriceNorm * 0.4 + bestTransitNorm * 0.3 + bestScoreNorm * 0.3;
+
+      return balanced > bestBalanced ? offer : best;
+    });
+
+    const priceDiffPercent = minPrice > 0 ? Math.round(((maxPrice - minPrice) / minPrice) * 100) : 0;
+    const transitDiffDays = maxTransit - minTransit;
+
+    comparisons.push({
+      routeKey,
+      origin: routeOffers[0].origin,
+      destination: routeOffers[0].destination,
+      transportType: routeOffers[0].transportType,
+      offers: routeOffers.sort((a, b) => a.price - b.price),
+      bestPrice,
+      bestTransit,
+      bestScore,
+      bestBalanced,
+      priceDiffPercent,
+      transitDiffDays
+    });
+  });
+
+  return comparisons.sort((a, b) => b.offers.length - a.offers.length);
+}
+
+/**
+ * Apply weighted optimization to select best offers
+ */
+function applyWeightedOptimization(offers: RouteOffer[], weights: OptimizationWeights): Map<string, RouteOffer> {
+  const routeMap = new Map<string, RouteOffer[]>();
+  offers.forEach(offer => {
+    const existing = routeMap.get(offer.routeKey) || [];
+    existing.push(offer);
+    routeMap.set(offer.routeKey, existing);
+  });
+
+  const selected = new Map<string, RouteOffer>();
+  routeMap.forEach((routeOffers, routeKey) => {
+    if (routeOffers.length === 0) return;
+
+    const maxPrice = Math.max(...routeOffers.map(o => o.price));
+    const minPrice = Math.min(...routeOffers.map(o => o.price));
+    const maxTransit = Math.max(...routeOffers.map(o => o.transitDays));
+    const minTransit = Math.min(...routeOffers.map(o => o.transitDays));
+    const maxScore = Math.max(...routeOffers.map(o => o.carrierScore));
+    const minScore = Math.min(...routeOffers.map(o => o.carrierScore));
+
+    let best = routeOffers[0];
+    let bestWeightedScore = -Infinity;
+
+    routeOffers.forEach(offer => {
+      const priceNorm = maxPrice > minPrice ? (maxPrice - offer.price) / (maxPrice - minPrice) : 0.5;
+      const transitNorm = maxTransit > minTransit ? (maxTransit - offer.transitDays) / (maxTransit - minTransit) : 0.5;
+      const scoreNorm = maxScore > minScore ? (offer.carrierScore - minScore) / (maxScore - minScore) : 0.5;
+
+      const weightedScore = priceNorm * weights.price + transitNorm * weights.transit + scoreNorm * weights.score;
+
+      if (weightedScore > bestWeightedScore) {
+        bestWeightedScore = weightedScore;
+        best = offer;
+      }
+    });
+
+    selected.set(routeKey, best);
+  });
+
+  return selected;
+}
+
+/**
+ * Calculate cost simulation
+ */
+function calculateCostSimulation(
+  offers: RouteOffer[],
+  selectedOffers: Map<string, RouteOffer>,
+  monthlyVolume: number
+): CostSimulation {
+  const uniqueRoutes = new Set(offers.map(o => o.routeKey)).size;
+  const volumePerRoute = monthlyVolume / uniqueRoutes;
+
+  let currentCost = 0;
+  let optimizedCost = 0;
+
+  const routeDistribution = new Map<string, number>();
+
+  const routeMap = new Map<string, RouteOffer[]>();
+  offers.forEach(offer => {
+    const existing = routeMap.get(offer.routeKey) || [];
+    existing.push(offer);
+    routeMap.set(offer.routeKey, existing);
+  });
+
+  routeMap.forEach((routeOffers, routeKey) => {
+    routeDistribution.set(routeKey, volumePerRoute);
+    // Current cost = average of all offers
+    const avgPrice = routeOffers.reduce((sum, o) => sum + o.price, 0) / routeOffers.length;
+    currentCost += avgPrice * volumePerRoute;
+
+    // Optimized cost = selected offer
+    const selected = selectedOffers.get(routeKey);
+    if (selected) {
+      optimizedCost += selected.price * volumePerRoute;
+    } else {
+      optimizedCost += avgPrice * volumePerRoute;
+    }
+  });
+
+  const savings = currentCost - optimizedCost;
+  const savingsPercent = currentCost > 0 ? (savings / currentCost) * 100 : 0;
+
+  return {
+    monthlyVolume,
+    routeDistribution,
+    currentCost: Math.round(currentCost),
+    optimizedCost: Math.round(optimizedCost),
+    savings: Math.round(savings),
+    savingsPercent: Math.round(savingsPercent * 10) / 10
+  };
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 export default function PricingGridsPage() {
   const router = useSafeRouter();
-  const apiUrl = API_CONFIG.SUBSCRIPTIONS_PRICING_API;
+  const apiUrl = API_CONFIG.PRICING_GRIDS_API;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State
@@ -414,6 +612,15 @@ export default function PricingGridsPage() {
   const [filterType, setFilterType] = useState<string>('');
   const [planFilter, setPlanFilter] = useState({ origin: '', destination: '', type: '' });
   const [selectedOffers, setSelectedOffers] = useState<Map<string, RouteOffer>>(new Map());
+
+  // Advanced analysis state
+  const [optimizationWeights, setOptimizationWeights] = useState<OptimizationWeights>({ price: 40, transit: 30, score: 30 });
+  const [monthlyVolume, setMonthlyVolume] = useState<number>(100);
+  const [showRouteDetail, setShowRouteDetail] = useState<string | null>(null);
+  const [savedPlans, setSavedPlans] = useState<TransportPlanSummary[]>([]);
+  const [planName, setPlanName] = useState<string>('');
+  const [showSavePlanModal, setShowSavePlanModal] = useState(false);
+  const [analysisView, setAnalysisView] = useState<'scoring' | 'routes' | 'simulation'>('scoring');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -433,6 +640,8 @@ export default function PricingGridsPage() {
   // Computed values
   const carrierScores = useMemo(() => calculateCarrierScores(grids), [grids]);
   const consolidatedOffers = useMemo(() => buildConsolidatedPlan(grids, carrierScores), [grids, carrierScores]);
+  const routeComparisons = useMemo(() => buildRouteComparisons(consolidatedOffers), [consolidatedOffers]);
+  const costSimulation = useMemo(() => calculateCostSimulation(consolidatedOffers, selectedOffers, monthlyVolume), [consolidatedOffers, selectedOffers, monthlyVolume]);
 
   const filteredOffers = useMemo(() => {
     return consolidatedOffers.filter(offer => {
@@ -449,9 +658,14 @@ export default function PricingGridsPage() {
       totalRoutes: selected.length,
       totalCost: selected.reduce((sum, o) => sum + o.price, 0),
       avgTransit: selected.length ? selected.reduce((sum, o) => sum + o.transitDays, 0) / selected.length : 0,
-      carriersUsed: new Set(selected.map(o => o.carrierId)).size
+      carriersUsed: new Set(selected.map(o => o.carrierId)).size,
+      avgScore: selected.length ? Math.round(selected.reduce((sum, o) => sum + o.carrierScore, 0) / selected.length) : 0
     };
   }, [selectedOffers]);
+
+  // Routes with competition (more than 1 offer)
+  const routesWithCompetition = useMemo(() => routeComparisons.filter(r => r.offers.length > 1), [routeComparisons]);
+  const routesWithoutCompetition = useMemo(() => routeComparisons.filter(r => r.offers.length === 1), [routeComparisons]);
 
   // API helpers
   const apiCall = useCallback(async (endpoint: string, method = 'GET', body?: any) => {
@@ -615,6 +829,143 @@ export default function PricingGridsPage() {
       newSelected.set(offer.routeKey, offer);
     }
     setSelectedOffers(newSelected);
+  };
+
+  // Apply weighted optimization
+  const applyOptimization = () => {
+    const normalized = {
+      price: optimizationWeights.price / 100,
+      transit: optimizationWeights.transit / 100,
+      score: optimizationWeights.score / 100
+    };
+    const newSelected = applyWeightedOptimization(consolidatedOffers, normalized);
+    setSelectedOffers(newSelected);
+    setSuccessMsg(`Optimisation appliquee (Prix: ${optimizationWeights.price}%, Delai: ${optimizationWeights.transit}%, Score: ${optimizationWeights.score}%)`);
+  };
+
+  // Save transport plan for auto-dispatch
+  const saveTransportPlan = async () => {
+    if (!planName.trim()) {
+      setError('Veuillez saisir un nom pour le plan');
+      return;
+    }
+
+    const selected = Array.from(selectedOffers.values());
+    if (selected.length === 0) {
+      setError('Aucune offre selectionnee');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Create plan summary
+      const planSummary: TransportPlanSummary = {
+        id: `PLAN-${Date.now()}`,
+        name: planName,
+        createdAt: new Date().toISOString(),
+        totalRoutes: selected.length,
+        totalCost: planStats.totalCost,
+        avgTransit: planStats.avgTransit,
+        carriersUsed: planStats.carriersUsed,
+        optimizationStrategy: `Prix: ${optimizationWeights.price}%, Delai: ${optimizationWeights.transit}%, Score: ${optimizationWeights.score}%`,
+        selectedOffers: selected
+      };
+
+      // Save to backend for use in auto-dispatch
+      const payload = {
+        planId: planSummary.id,
+        name: planSummary.name,
+        industrialId: 'demo-industrie-org',
+        routes: selected.map(offer => ({
+          routeKey: offer.routeKey,
+          origin: offer.origin,
+          destination: offer.destination,
+          carrierId: offer.carrierId,
+          carrierName: offer.carrierName,
+          gridId: offer.gridId,
+          transportType: offer.transportType,
+          price: offer.price,
+          priceUnit: offer.priceUnit,
+          transitDays: offer.transitDays,
+          carrierScore: offer.carrierScore,
+          priority: offer.isLowestPrice ? 1 : offer.isBestScore ? 2 : 3
+        })),
+        optimization: {
+          priceWeight: optimizationWeights.price,
+          transitWeight: optimizationWeights.transit,
+          scoreWeight: optimizationWeights.score
+        },
+        stats: {
+          totalRoutes: planStats.totalRoutes,
+          totalCost: planStats.totalCost,
+          avgTransit: planStats.avgTransit,
+          avgScore: planStats.avgScore,
+          carriersUsed: planStats.carriersUsed
+        },
+        status: 'active',
+        createdBy: 'demo-industrie'
+      };
+
+      // Save to pricing-grids API for consolidated plan
+      await apiCall('/api/pricing-grids/consolidated-plan', 'POST', payload);
+
+      // Also notify orders API for auto-dispatch integration
+      try {
+        const ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
+        await fetch(`${ordersApiUrl}/api/v1/dispatch/transport-plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAuthToken()}`
+          },
+          body: JSON.stringify({
+            planId: planSummary.id,
+            industrialId: 'demo-industrie-org',
+            routes: payload.routes,
+            activatedAt: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        console.warn('Could not sync with orders API:', e);
+      }
+
+      // Save locally
+      setSavedPlans(prev => [planSummary, ...prev]);
+      setSuccessMsg(`Plan "${planName}" sauvegarde et active pour l'auto-dispatch`);
+      setShowSavePlanModal(false);
+      setPlanName('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Activate a saved plan for auto-dispatch
+  const activatePlanForDispatch = async (plan: TransportPlanSummary) => {
+    try {
+      setLoading(true);
+
+      const ordersApiUrl = process.env.NEXT_PUBLIC_ORDERS_API_URL || 'https://dh9acecfz0wg0.cloudfront.net';
+      await fetch(`${ordersApiUrl}/api/v1/dispatch/transport-plan/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({
+          planId: plan.id,
+          industrialId: 'demo-industrie-org'
+        })
+      });
+
+      setSuccessMsg(`Plan "${plan.name}" active pour l'auto-dispatch`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const autoSelectBestOffers = (criterion: 'price' | 'score' | 'transit') => {
@@ -897,8 +1248,30 @@ export default function PricingGridsPage() {
           {/* ============================================================ */}
           {activeTab === 'analysis' && (
             <>
+              {/* Sub-tabs for analysis */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '20px', marginBottom: '20px' }}>
+                <button
+                  style={{ ...buttonStyle, background: analysisView === 'scoring' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.1)' }}
+                  onClick={() => setAnalysisView('scoring')}
+                >
+                  ⭐ Scoring Transporteurs
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: analysisView === 'routes' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.1)' }}
+                  onClick={() => setAnalysisView('routes')}
+                >
+                  🗺️ Comparaison Routes ({routesWithCompetition.length} avec concurrence)
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: analysisView === 'simulation' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255,255,255,0.1)' }}
+                  onClick={() => setAnalysisView('simulation')}
+                >
+                  📈 Simulation Couts
+                </button>
+              </div>
+
               {/* Stats globales */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚛</div>
                   <div style={{ fontSize: '28px', fontWeight: '700' }}>{carrierScores.length}</div>
@@ -911,8 +1284,13 @@ export default function PricingGridsPage() {
                 </div>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗺️</div>
-                  <div style={{ fontSize: '28px', fontWeight: '700' }}>{new Set(consolidatedOffers.map(o => o.routeKey)).size}</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700' }}>{routeComparisons.length}</div>
                   <div style={{ fontSize: '14px', opacity: 0.7 }}>Routes couvertes</div>
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔄</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#00D084' }}>{routesWithCompetition.length}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.7 }}>Avec concurrence</div>
                 </div>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '32px', marginBottom: '8px' }}>⭐</div>
@@ -921,91 +1299,343 @@ export default function PricingGridsPage() {
                 </div>
               </div>
 
-              {/* Classement transporteurs */}
-              <div style={cardStyle}>
-                <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Classement des Transporteurs par Score Global</h3>
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  {carrierScores.map((carrier, index) => (
-                    <div key={carrier.carrierId} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', border: index === 0 ? '2px solid #00D084' : '1px solid rgba(255,255,255,0.1)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                            <div style={{
-                              width: '40px', height: '40px', borderRadius: '50%',
-                              background: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : 'rgba(255,255,255,0.2)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '18px', fontWeight: '700', color: index < 3 ? '#000' : '#fff'
-                            }}>
-                              {index + 1}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '18px', fontWeight: '700' }}>{carrier.carrierName}</div>
-                              <div style={{ fontSize: '13px', opacity: 0.7 }}>{carrier.carrierId}</div>
-                            </div>
-                            <div style={{
-                              marginLeft: 'auto',
-                              padding: '8px 20px',
-                              borderRadius: '20px',
-                              background: `${getScoreColor(carrier.globalScore)}30`,
-                              color: getScoreColor(carrier.globalScore),
-                              fontSize: '24px',
-                              fontWeight: '700'
-                            }}>
-                              {carrier.globalScore}
-                            </div>
-                          </div>
+              {/* ============== VIEW: SCORING ============== */}
+              {analysisView === 'scoring' && (
+                <>
+                  {/* Classement transporteurs */}
+                  <div style={cardStyle}>
+                    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Classement des Transporteurs par Score Global</h3>
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      {carrierScores.map((carrier, index) => (
+                        <div key={carrier.carrierId} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', border: index === 0 ? '2px solid #00D084' : '1px solid rgba(255,255,255,0.1)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                                <div style={{
+                                  width: '40px', height: '40px', borderRadius: '50%',
+                                  background: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : 'rgba(255,255,255,0.2)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: '18px', fontWeight: '700', color: index < 3 ? '#000' : '#fff'
+                                }}>
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '18px', fontWeight: '700' }}>{carrier.carrierName}</div>
+                                  <div style={{ fontSize: '13px', opacity: 0.7 }}>{carrier.carrierId}</div>
+                                </div>
+                                <div style={{
+                                  marginLeft: 'auto',
+                                  padding: '8px 20px',
+                                  borderRadius: '20px',
+                                  background: `${getScoreColor(carrier.globalScore)}30`,
+                                  color: getScoreColor(carrier.globalScore),
+                                  fontSize: '24px',
+                                  fontWeight: '700'
+                                }}>
+                                  {carrier.globalScore}
+                                </div>
+                              </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                            <div>{renderScoreBar(carrier.priceScore, 'Prix', '#3b82f6')}</div>
-                            <div>{renderScoreBar(carrier.coverageScore, 'Couverture', '#8b5cf6')}</div>
-                            <div>{renderScoreBar(carrier.transitScore, 'Delai', '#f59e0b')}</div>
-                            <div>{renderScoreBar(carrier.reliabilityScore, 'Fiabilite', '#10b981')}</div>
-                          </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                                <div>{renderScoreBar(carrier.priceScore, 'Prix', '#3b82f6')}</div>
+                                <div>{renderScoreBar(carrier.coverageScore, 'Couverture', '#8b5cf6')}</div>
+                                <div>{renderScoreBar(carrier.transitScore, 'Delai', '#f59e0b')}</div>
+                                <div>{renderScoreBar(carrier.reliabilityScore, 'Fiabilite', '#10b981')}</div>
+                              </div>
 
-                          <div style={{ display: 'flex', gap: '24px', marginTop: '16px', fontSize: '13px' }}>
-                            <div><span style={{ opacity: 0.6 }}>Routes:</span> <strong>{carrier.totalRoutes}</strong></div>
-                            <div><span style={{ opacity: 0.6 }}>Prix moyen:</span> <strong>{carrier.avgPrice} EUR</strong></div>
-                            <div><span style={{ opacity: 0.6 }}>Delai moyen:</span> <strong>{carrier.avgTransitDays}j</strong></div>
-                            <div><span style={{ opacity: 0.6 }}>Ponctualite:</span> <strong>{carrier.onTimeRate}%</strong></div>
-                            <div><span style={{ opacity: 0.6 }}>Grilles:</span> <strong>{carrier.gridsCount}</strong></div>
+                              <div style={{ display: 'flex', gap: '24px', marginTop: '16px', fontSize: '13px' }}>
+                                <div><span style={{ opacity: 0.6 }}>Routes:</span> <strong>{carrier.totalRoutes}</strong></div>
+                                <div><span style={{ opacity: 0.6 }}>Prix moyen:</span> <strong>{carrier.avgPrice} EUR</strong></div>
+                                <div><span style={{ opacity: 0.6 }}>Delai moyen:</span> <strong>{carrier.avgTransitDays}j</strong></div>
+                                <div><span style={{ opacity: 0.6 }}>Ponctualite:</span> <strong>{carrier.onTimeRate}%</strong></div>
+                                <div><span style={{ opacity: 0.6 }}>Grilles:</span> <strong>{carrier.gridsCount}</strong></div>
+                              </div>
+                            </div>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {carrierScores.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '60px', opacity: 0.7 }}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
+                        <div>Aucun transporteur avec grille active</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Activez des grilles tarifaires pour voir le scoring</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Legende scoring */}
+                  <div style={cardStyle}>
+                    <h4 style={{ marginTop: 0 }}>Comment fonctionne le scoring ?</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', fontSize: '13px' }}>
+                      <div>
+                        <div style={{ color: '#3b82f6', fontWeight: '600', marginBottom: '4px' }}>Prix (35%)</div>
+                        <div style={{ opacity: 0.7 }}>Plus les prix sont competitifs, plus le score est eleve</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#8b5cf6', fontWeight: '600', marginBottom: '4px' }}>Couverture (20%)</div>
+                        <div style={{ opacity: 0.7 }}>Plus le nombre de routes couvertes est eleve, meilleur est le score</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#f59e0b', fontWeight: '600', marginBottom: '4px' }}>Delai (25%)</div>
+                        <div style={{ opacity: 0.7 }}>Plus les delais de transit sont courts, plus le score est eleve</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#10b981', fontWeight: '600', marginBottom: '4px' }}>Fiabilite (20%)</div>
+                        <div style={{ opacity: 0.7 }}>Base sur le taux de ponctualite historique du transporteur</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ============== VIEW: ROUTE COMPARISONS ============== */}
+              {analysisView === 'routes' && (
+                <>
+                  <div style={cardStyle}>
+                    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Comparaison des Offres par Route</h3>
+                    <p style={{ opacity: 0.7, marginBottom: '20px' }}>
+                      {routesWithCompetition.length} routes avec plusieurs offres concurrentes - identifiez les opportunites d'optimisation
+                    </p>
+
+                    {routesWithCompetition.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '60px', opacity: 0.7 }}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
+                        <div>Aucune route avec concurrence</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Ajoutez des grilles de plusieurs transporteurs pour comparer</div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: '16px' }}>
+                        {routesWithCompetition.slice(0, 20).map((route) => (
+                          <div key={route.routeKey} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                              <div>
+                                <div style={{ fontSize: '16px', fontWeight: '700' }}>{route.origin} → {route.destination}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.7 }}>
+                                  {getTypeIcon(route.transportType)} {route.transportType} | {route.offers.length} offres
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '12px', opacity: 0.7 }}>Ecart prix</div>
+                                  <div style={{ fontSize: '18px', fontWeight: '700', color: route.priceDiffPercent > 20 ? '#00D084' : '#f59e0b' }}>
+                                    {route.priceDiffPercent}%
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '12px', opacity: 0.7 }}>Ecart delai</div>
+                                  <div style={{ fontSize: '18px', fontWeight: '700' }}>
+                                    {route.transitDiffDays}j
+                                  </div>
+                                </div>
+                                <button
+                                  style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px' }}
+                                  onClick={() => setShowRouteDetail(showRouteDetail === route.routeKey ? null : route.routeKey)}
+                                >
+                                  {showRouteDetail === route.routeKey ? 'Masquer' : 'Details'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Meilleurs choix */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: showRouteDetail === route.routeKey ? '16px' : 0 }}>
+                              <div style={{ background: 'rgba(0,208,132,0.2)', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>💰 Meilleur prix</div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{route.bestPrice?.carrierName}</div>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#00D084' }}>{route.bestPrice?.price} EUR</div>
+                              </div>
+                              <div style={{ background: 'rgba(245,158,11,0.2)', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>⚡ Plus rapide</div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{route.bestTransit?.carrierName}</div>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#f59e0b' }}>{route.bestTransit?.transitDays}j</div>
+                              </div>
+                              <div style={{ background: 'rgba(139,92,246,0.2)', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>⭐ Meilleur score</div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{route.bestScore?.carrierName}</div>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#8b5cf6' }}>{route.bestScore?.carrierScore}/100</div>
+                              </div>
+                              <div style={{ background: 'rgba(102,126,234,0.2)', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', opacity: 0.7, marginBottom: '4px' }}>⚖️ Meilleur equilibre</div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{route.bestBalanced?.carrierName}</div>
+                                <div style={{ fontSize: '13px', color: '#667eea' }}>{route.bestBalanced?.price} EUR | {route.bestBalanced?.transitDays}j | {route.bestBalanced?.carrierScore}</div>
+                              </div>
+                            </div>
+
+                            {/* Details expanded */}
+                            {showRouteDetail === route.routeKey && (
+                              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                                  <thead>
+                                    <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                      <th style={{ padding: '8px' }}>Transporteur</th>
+                                      <th style={{ padding: '8px', textAlign: 'right' }}>Prix</th>
+                                      <th style={{ padding: '8px', textAlign: 'center' }}>Delai</th>
+                                      <th style={{ padding: '8px', textAlign: 'center' }}>Score</th>
+                                      <th style={{ padding: '8px' }}>Tags</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {route.offers.map((offer, idx) => (
+                                      <tr key={`${offer.carrierId}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '8px' }}>
+                                          <div style={{ fontWeight: '600' }}>{offer.carrierName}</div>
+                                          <div style={{ fontSize: '11px', opacity: 0.6 }}>{offer.gridName}</div>
+                                        </td>
+                                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600', color: offer.isLowestPrice ? '#00D084' : 'inherit' }}>
+                                          {offer.price} EUR
+                                        </td>
+                                        <td style={{ padding: '8px', textAlign: 'center', color: offer.isFastestTransit ? '#f59e0b' : 'inherit' }}>
+                                          {offer.transitDays}j
+                                        </td>
+                                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                                          <span style={{ padding: '2px 8px', borderRadius: '10px', background: `${getScoreColor(offer.carrierScore)}30`, color: getScoreColor(offer.carrierScore) }}>
+                                            {offer.carrierScore}
+                                          </span>
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                          {offer.isLowestPrice && <span style={{ marginRight: '4px', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(0,208,132,0.3)', color: '#00D084' }}>💰 Moins cher</span>}
+                                          {offer.isFastestTransit && <span style={{ marginRight: '4px', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(245,158,11,0.3)', color: '#f59e0b' }}>⚡ Rapide</span>}
+                                          {offer.isBestScore && <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(139,92,246,0.3)', color: '#8b5cf6' }}>⭐ Score</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Routes sans concurrence */}
+                  {routesWithoutCompetition.length > 0 && (
+                    <div style={cardStyle}>
+                      <h4 style={{ marginTop: 0, marginBottom: '16px' }}>Routes sans concurrence ({routesWithoutCompetition.length})</h4>
+                      <p style={{ opacity: 0.7, marginBottom: '16px', fontSize: '13px' }}>
+                        Ces routes n'ont qu'un seul transporteur - considerez d'ajouter des offres alternatives
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {routesWithoutCompetition.slice(0, 30).map(route => (
+                          <span key={route.routeKey} style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', fontSize: '12px' }}>
+                            {route.origin} → {route.destination}
+                          </span>
+                        ))}
+                        {routesWithoutCompetition.length > 30 && (
+                          <span style={{ padding: '6px 12px', fontSize: '12px', opacity: 0.7 }}>
+                            +{routesWithoutCompetition.length - 30} autres
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ============== VIEW: SIMULATION ============== */}
+              {analysisView === 'simulation' && (
+                <>
+                  {/* Parametres simulation */}
+                  <div style={cardStyle}>
+                    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Simulation de Couts</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '8px' }}>Volume mensuel (transports)</label>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={monthlyVolume}
+                          onChange={e => setMonthlyVolume(parseInt(e.target.value) || 0)}
+                          min="1"
+                        />
+                        <p style={{ fontSize: '12px', opacity: 0.7, marginTop: '8px' }}>
+                          Reparti equitablement sur {routeComparisons.length} routes
+                        </p>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Cout actuel (moyenne)</div>
+                          <div style={{ fontSize: '28px', fontWeight: '700' }}>{costSimulation.currentCost.toLocaleString()} EUR</div>
+                        </div>
+                        <div style={{ background: 'rgba(0,208,132,0.2)', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Cout optimise</div>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: '#00D084' }}>{costSimulation.optimizedCost.toLocaleString()} EUR</div>
+                        </div>
+                        <div style={{ background: 'rgba(102,126,234,0.2)', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '14px', opacity: 0.7, marginBottom: '8px' }}>Economies</div>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: '#667eea' }}>{costSimulation.savings.toLocaleString()} EUR</div>
+                          <div style={{ fontSize: '16px', color: '#00D084' }}>({costSimulation.savingsPercent}%)</div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
 
-                {carrierScores.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', opacity: 0.7 }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-                    <div>Aucun transporteur avec grille active</div>
-                    <div style={{ fontSize: '13px', marginTop: '8px' }}>Activez des grilles tarifaires pour voir le scoring</div>
+                  {/* Optimisation pondérée */}
+                  <div style={cardStyle}>
+                    <h4 style={{ marginTop: 0, marginBottom: '20px' }}>Optimisation Ponderee</h4>
+                    <p style={{ opacity: 0.7, marginBottom: '20px', fontSize: '13px' }}>
+                      Ajustez les poids pour trouver le meilleur equilibre entre prix, delai et fiabilite
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '20px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ color: '#3b82f6', fontWeight: '600' }}>💰 Prix</span>
+                          <span>{optimizationWeights.price}%</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={optimizationWeights.price}
+                          onChange={e => setOptimizationWeights(prev => ({ ...prev, price: parseInt(e.target.value) }))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ color: '#f59e0b', fontWeight: '600' }}>⚡ Delai</span>
+                          <span>{optimizationWeights.transit}%</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={optimizationWeights.transit}
+                          onChange={e => setOptimizationWeights(prev => ({ ...prev, transit: parseInt(e.target.value) }))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ color: '#10b981', fontWeight: '600' }}>⭐ Score fiabilite</span>
+                          <span>{optimizationWeights.score}%</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={optimizationWeights.score}
+                          onChange={e => setOptimizationWeights(prev => ({ ...prev, score: parseInt(e.target.value) }))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button style={buttonStyle} onClick={applyOptimization}>
+                        Appliquer l'optimisation
+                      </button>
+                      <button
+                        style={{ ...buttonStyle, background: 'rgba(255,255,255,0.1)' }}
+                        onClick={() => setOptimizationWeights({ price: 40, transit: 30, score: 30 })}
+                      >
+                        Reinitialiser (40/30/30)
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Legende scoring */}
-              <div style={cardStyle}>
-                <h4 style={{ marginTop: 0 }}>Comment fonctionne le scoring ?</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', fontSize: '13px' }}>
-                  <div>
-                    <div style={{ color: '#3b82f6', fontWeight: '600', marginBottom: '4px' }}>Prix (35%)</div>
-                    <div style={{ opacity: 0.7 }}>Plus les prix sont competitifs, plus le score est eleve</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#8b5cf6', fontWeight: '600', marginBottom: '4px' }}>Couverture (20%)</div>
-                    <div style={{ opacity: 0.7 }}>Plus le nombre de routes couvertes est eleve, meilleur est le score</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#f59e0b', fontWeight: '600', marginBottom: '4px' }}>Delai (25%)</div>
-                    <div style={{ opacity: 0.7 }}>Plus les delais de transit sont courts, plus le score est eleve</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#10b981', fontWeight: '600', marginBottom: '4px' }}>Fiabilite (20%)</div>
-                    <div style={{ opacity: 0.7 }}>Base sur le taux de ponctualite historique du transporteur</div>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </>
           )}
 
@@ -1015,7 +1645,7 @@ export default function PricingGridsPage() {
           {activeTab === 'plan' && (
             <>
               {/* Stats du plan */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', marginTop: '20px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '28px', marginBottom: '8px' }}>🗺️</div>
                   <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.totalRoutes}</div>
@@ -1030,6 +1660,11 @@ export default function PricingGridsPage() {
                   <div style={{ fontSize: '28px', marginBottom: '8px' }}>⏱️</div>
                   <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.avgTransit.toFixed(1)}j</div>
                   <div style={{ fontSize: '14px', opacity: 0.7 }}>Delai moyen</div>
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>⭐</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.avgScore}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.7 }}>Score moyen</div>
                 </div>
                 <div style={cardStyle}>
                   <div style={{ fontSize: '28px', marginBottom: '8px' }}>🚛</div>
@@ -1050,9 +1685,19 @@ export default function PricingGridsPage() {
                 <button style={{ ...buttonStyle, background: 'rgba(245,158,11,0.6)' }} onClick={() => autoSelectBestOffers('transit')}>
                   ⚡ Plus rapide
                 </button>
+                <button style={{ ...buttonStyle, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }} onClick={applyOptimization}>
+                  ⚖️ Equilibre ({optimizationWeights.price}/{optimizationWeights.transit}/{optimizationWeights.score})
+                </button>
                 <div style={{ flex: 1 }} />
                 <button style={{ ...buttonStyle, background: 'rgba(0,208,132,0.6)' }} onClick={exportPlan}>
                   📥 Exporter CSV
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: 'linear-gradient(135deg, #00D084 0%, #059669 100%)' }}
+                  onClick={() => setShowSavePlanModal(true)}
+                  disabled={planStats.totalRoutes === 0}
+                >
+                  🚀 Activer pour Auto-Dispatch
                 </button>
               </div>
 
@@ -1266,6 +1911,100 @@ export default function PricingGridsPage() {
                   Annuler
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Sauvegarder Plan pour Auto-Dispatch */}
+        {showSavePlanModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...cardStyle, width: '600px', maxWidth: '90%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0 }}>🚀 Activer le Plan pour Auto-Dispatch</h3>
+                <button onClick={() => setShowSavePlanModal(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>x</button>
+              </div>
+
+              <div style={{ background: 'rgba(0,208,132,0.2)', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  Ce plan sera utilise pour l'attribution automatique des commandes aux transporteurs.
+                  Chaque nouvelle commande sera automatiquement assignee au transporteur optimal en fonction de la route et des criteres de ce plan.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Routes couvertes</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.totalRoutes}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Transporteurs</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.carriersUsed}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Cout moyen</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{Math.round(planStats.totalCost / planStats.totalRoutes || 0)} EUR</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Score moyen</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700' }}>{planStats.avgScore}/100</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '8px' }}>Nom du plan *</label>
+                <input
+                  style={inputStyle}
+                  placeholder="Ex: Plan Transport Q1 2024"
+                  value={planName}
+                  onChange={e => setPlanName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '13px', marginBottom: '8px', fontWeight: '600' }}>Strategie d'optimisation appliquee:</div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
+                  <span style={{ color: '#3b82f6' }}>💰 Prix: {optimizationWeights.price}%</span>
+                  <span style={{ color: '#f59e0b' }}>⚡ Delai: {optimizationWeights.transit}%</span>
+                  <span style={{ color: '#10b981' }}>⭐ Score: {optimizationWeights.score}%</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  style={{ ...buttonStyle, background: 'linear-gradient(135deg, #00D084 0%, #059669 100%)' }}
+                  onClick={saveTransportPlan}
+                  disabled={loading || !planName.trim()}
+                >
+                  {loading ? 'Activation...' : 'Activer le Plan'}
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: 'rgba(255,255,255,0.1)' }}
+                  onClick={() => setShowSavePlanModal(false)}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plans sauvegardes */}
+        {savedPlans.length > 0 && activeTab === 'plan' && (
+          <div style={{ position: 'fixed', bottom: '20px', right: '20px', background: 'rgba(30,30,50,0.95)', backdropFilter: 'blur(10px)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', maxWidth: '300px', zIndex: 100 }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Plans Sauvegardes ({savedPlans.length})</h4>
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {savedPlans.slice(0, 5).map(plan => (
+                <div key={plan.id} style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '8px', fontSize: '12px' }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>{plan.name}</div>
+                  <div style={{ opacity: 0.7 }}>{plan.totalRoutes} routes | {plan.carriersUsed} transporteurs</div>
+                  <button
+                    style={{ ...buttonStyle, padding: '4px 8px', fontSize: '11px', marginTop: '6px' }}
+                    onClick={() => activatePlanForDispatch(plan)}
+                  >
+                    Reactiver
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
