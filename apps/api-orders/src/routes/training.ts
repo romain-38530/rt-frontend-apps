@@ -216,9 +216,16 @@ router.delete('/modules/:moduleId', async (req: Request, res: Response) => {
 // POST /training/seed - Initialiser les modules de base
 router.post('/seed', async (req: Request, res: Response) => {
   try {
+    const force = req.query.force === 'true';
     const existingCount = await TrainingModule.countDocuments();
-    if (existingCount > 0) {
+    if (existingCount > 0 && !force) {
       return res.json({ message: 'Modules déjà initialisés', count: existingCount });
+    }
+
+    // Si force=true, supprimer les modules existants
+    if (force && existingCount > 0) {
+      await TrainingModule.deleteMany({});
+      console.log('[Training] Deleted existing modules for force reseed');
     }
 
     const baseModules = [
