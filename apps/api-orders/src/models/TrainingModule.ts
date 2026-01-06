@@ -13,6 +13,7 @@ export interface ILesson {
   description?: string;
   contentType: ContentType;
   contentUrl?: string;
+  content?: string; // Mode opératoire / contenu détaillé de la leçon
   duration: number; // en minutes
   order: number;
 }
@@ -41,6 +42,7 @@ const LessonSchema = new Schema<ILesson>({
   description: String,
   contentType: { type: String, enum: ['video', 'document', 'quiz', 'interactive'], default: 'video' },
   contentUrl: String,
+  content: String, // Mode opératoire détaillé
   duration: { type: Number, required: true, default: 10 },
   order: { type: Number, required: true, default: 0 }
 }, { _id: false });
