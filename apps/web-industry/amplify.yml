@@ -53,6 +53,7 @@ frontend:
       NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'https://d1ea8wbaf6ws9i.cloudfront.net/api'
       NEXT_PUBLIC_CHATBOT_API_URL: 'https://de1913kh0ya48.cloudfront.net/api'
       NEXT_PUBLIC_ECMR_API: 'https://d28q05cx5hmg9q.cloudfront.net'
+      NEXT_PUBLIC_CARRIERS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
 
       # Build
       NODE_VERSION: '20'

@@ -60,8 +60,8 @@ export const API_CONFIG = {
   // TMS Sync API
   TMS_SYNC_API: process.env.NEXT_PUBLIC_TMS_SYNC_API_URL || 'https://d1yk7yneclf57m.cloudfront.net',
 
-  // Carriers API (Référencement Transporteurs - authz-eb)
-  CARRIERS_API: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://ddaywxps9n701.cloudfront.net',
+  // Carriers API (Référencement Transporteurs - subscriptions-contracts-eb)
+  CARRIERS_API: process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net',
 };
 
 // Helper to get auth headers

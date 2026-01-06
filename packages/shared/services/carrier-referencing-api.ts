@@ -4,8 +4,8 @@
  * Conforme au cahier des charges v4
  */
 
-// API de referencement transporteurs - pointe vers authz-eb
-const API_BASE_URL = process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://ddaywxps9n701.cloudfront.net/api';
+// API de referencement transporteurs - pointe vers subscriptions-contracts-eb
+const API_BASE_URL = process.env.NEXT_PUBLIC_CARRIERS_API_URL || 'https://d39uizi9hzozo8.cloudfront.net/api';
 
 // =============================================================================
 // TYPES - NIVEAUX DE REFERENCEMENT

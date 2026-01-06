@@ -51,6 +51,8 @@ frontend:
       NEXT_PUBLIC_PLANNING_API_URL: 'https://dpw23bg2dclr1.cloudfront.net'
       NEXT_PUBLIC_CHATBOT_API_URL: 'https://de1913kh0ya48.cloudfront.net'
       NEXT_PUBLIC_BILLING_API_URL: 'https://d1ciol606nbfs0.cloudfront.net/api'
+      NEXT_PUBLIC_CARRIERS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
+      NEXT_PUBLIC_SUBSCRIPTIONS_API_URL: 'https://d39uizi9hzozo8.cloudfront.net'
 
       # Build
       NODE_VERSION: '20'
