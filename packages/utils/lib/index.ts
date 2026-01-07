@@ -69,3 +69,13 @@ export { ScoringService, DEFAULT_WEIGHTS } from './services/scoring-service';
 
 // Logistician Service
 export { LogisticianService } from './services/logistician-service';
+
+// OpenStreetMap Service (Geocoding & Routing)
+export { OpenStreetMapService } from './services/openstreetmap-service';
+export type {
+  GeocodingResult,
+  ReverseGeocodingResult,
+  RouteResult,
+  RouteStep,
+  RouteOptions,
+} from './services/openstreetmap-service';

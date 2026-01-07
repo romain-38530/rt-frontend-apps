@@ -44,13 +44,14 @@ router.get('/levels', (req: Request, res: Response) => {
     },
     {
       id: 'premium',
-      name: 'PREMIUM - API Télématique',
-      description: 'Connexion directe TomTom/Vehizen pour données véhicule',
+      name: 'PREMIUM - OpenStreetMap',
+      description: 'Tracking avancé avec OpenStreetMap, Nominatim et OSRM',
       frequency: 'Toutes les 1-2 minutes',
-      price: 35,
+      price: 25,
       features: [
         'Données véhicule temps réel',
-        'Température (frigo)',
+        'Géocodage Nominatim',
+        'Routing OSRM optimisé',
         'Géofencing',
         'Alertes intelligentes',
         'Rapports détaillés'
@@ -94,7 +95,7 @@ router.post('/configure', async (req: Request, res: Response) => {
       success: true,
       trackingId: session.assignment?.trackingId,
       level,
-      provider: provider || (level === 'premium' ? 'tomtom' :
+      provider: provider || (level === 'premium' ? 'openstreetmap' :
                 level === 'intermediate' ? 'gps_smartphone' : 'email'),
       message: `Tracking ${level} activé`
     });

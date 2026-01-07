@@ -526,7 +526,7 @@ export interface AffretEventTrackingStart extends AffretEvent {
   payload: {
     trackingId: string;
     level: AffretTrackingLevel;
-    provider?: string; // 'tomtom', 'vehizen', 'gps_smartphone'
+    provider?: string; // 'openstreetmap', 'vehizen', 'gps_smartphone'
   };
 }
 
@@ -853,7 +853,7 @@ export type AffretTrackingLevel = 'basic' | 'intermediate' | 'premium';
 export interface TrackingConfig {
   orderId: string;
   level: AffretTrackingLevel;
-  provider?: 'email' | 'gps_smartphone' | 'tomtom' | 'vehizen' | 'other';
+  provider?: 'email' | 'gps_smartphone' | 'openstreetmap' | 'vehizen' | 'other';
   updateFrequency?: number; // minutes
   alerts?: {
     delay: boolean;

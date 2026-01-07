@@ -48,7 +48,10 @@ interface MapViewProps {
   // Mode (statique ou interactif)
   mode?: 'static' | 'interactive';
 
-  // Clé API Google Maps (optionnel)
+  // Provider de carte (openstreetmap par défaut)
+  provider?: 'openstreetmap' | 'google';
+
+  // Clé API Google Maps (optionnel, utilisé seulement si provider='google')
   apiKey?: string;
 }
 
@@ -77,12 +80,16 @@ export const MapView: React.FC<MapViewProps> = ({
   zoom = 13,
   height = '500px',
   width = '100%',
-  showControls = true,
+  showControls: _showControls = true,
   showLegend = true,
-  onClick,
+  onClick: _onClick,
   mode = 'interactive',
+  provider = 'openstreetmap',
   apiKey,
 }) => {
+  // Reserved for future use
+  void _showControls;
+  void _onClick;
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [center, setCenter] = useState<GeoLocation | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
@@ -101,10 +108,37 @@ export const MapView: React.FC<MapViewProps> = ({
     }
   }, [currentPosition, markers, autoCenter]);
 
-  // Générer l'URL pour Google Maps Static API
+  // Générer l'URL pour la carte statique (OpenStreetMap ou Google Maps)
   const getStaticMapUrl = () => {
     if (!center) return '';
 
+    // OpenStreetMap Static Map via StaticMap.io (service gratuit)
+    if (provider === 'openstreetmap') {
+      // Utiliser OpenStreetMap Static Maps API
+      const baseUrl = 'https://staticmap.openstreetmap.de/staticmap.php';
+      const markerParams = markers.map((marker) => {
+        return `${marker.position.longitude},${marker.position.latitude},red`;
+      });
+
+      if (currentPosition) {
+        markerParams.push(`${currentPosition.longitude},${currentPosition.latitude},blue`);
+      }
+
+      const params = new URLSearchParams({
+        center: `${center.longitude},${center.latitude}`,
+        zoom: zoom.toString(),
+        size: '800x600',
+        maptype: 'mapnik',
+      });
+
+      if (markerParams.length > 0) {
+        params.append('markers', markerParams.join('|'));
+      }
+
+      return `${baseUrl}?${params.toString()}`;
+    }
+
+    // Google Maps Static API (fallback)
     const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap';
     const params = new URLSearchParams({
       center: `${center.latitude},${center.longitude}`,
@@ -255,7 +289,7 @@ export const MapView: React.FC<MapViewProps> = ({
         {positionHistory.length > 1 && (
           <polyline
             points={positionHistory
-              .map((pos, i) => {
+              .map((pos) => {
                 // Convertir lat/lng en coordonnées SVG (simplifié)
                 const x = ((pos.longitude + 180) / 360) * 800;
                 const y = ((90 - pos.latitude) / 180) * 600;
@@ -447,7 +481,7 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
       )}
 
-      {/* Message pour la carte interactive complète */}
+      {/* Attribution OpenStreetMap */}
       <div
         style={{
           position: 'absolute',
@@ -460,7 +494,7 @@ export const MapView: React.FC<MapViewProps> = ({
           color: '#6b7280',
         }}
       >
-        💡 Carte simplifiée - Intégration Google Maps/Leaflet à venir
+        🗺️ Données © OpenStreetMap contributors
       </div>
     </div>
   );

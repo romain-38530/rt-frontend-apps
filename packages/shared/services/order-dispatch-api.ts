@@ -320,8 +320,8 @@ export const TRACKING_PRICING: Record<TrackingLevel, TrackingPricing> = {
   },
   premium: {
     level: 'premium',
-    name: 'Premium - API TomTom',
-    description: 'Telematique haute frequence avec prediction IA',
+    name: 'Premium - OpenStreetMap',
+    description: 'Telematique haute frequence avec Nominatim + OSRM',
     pricingType: 'per_transport',
     pricePerTransport: 4,
     features: {

@@ -92,7 +92,7 @@ router.post('/', async (req: Request, res: Response) => {
       sessionId,
       assignment.trackingId || '',
       trackingLevel,
-      trackingLevel === 'premium' ? 'tomtom' :
+      trackingLevel === 'premium' ? 'openstreetmap' :
         trackingLevel === 'intermediate' ? 'gps_smartphone' : 'email',
       session.organizationId
     );

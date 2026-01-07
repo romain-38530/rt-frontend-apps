@@ -1,5 +1,5 @@
 /**
- * Page Tracking GPS - Portail Logistician
+ * Page Tracking GPS - Portail Logisticien
  * Integration complete Tracking API (9 endpoints)
  *
  * Endpoints:
@@ -8,9 +8,9 @@
  * - GET /tracking/:orderId/locations - Historique des positions
  * - GET /tracking/:orderId/current - Position actuelle
  * - POST /tracking/geofence-event - Evenement de geofencing
- * - GET /tracking/tomtom/:orderId/eta - Calculer ETA avec TomTom
- * - GET /tracking/tomtom/:orderId/route - Obtenir itineraire optimise
- * - POST /tracking/tomtom/:orderId/replan - Replanifier l'itineraire
+ * - GET /tracking/osm/:orderId/eta - Calculer ETA avec OpenStreetMap/OSRM
+ * - GET /tracking/osm/:orderId/route - Obtenir itineraire optimise
+ * - POST /tracking/osm/:orderId/replan - Replanifier l'itineraire
  * - PUT /orders/:id/status - Mettre a jour le statut
  */
 
@@ -31,7 +31,7 @@ interface Location {
   heading: number;
   altitude: number;
   timestamp: string;
-  source: 'gps' | 'manual' | 'tomtom';
+  source: 'gps' | 'manual' | 'openstreetmap';
 }
 
 interface GeofenceEvent {
@@ -250,7 +250,7 @@ export default function TrackingPage() {
     }
   };
 
-  // Calculer ETA avec TomTom
+  // Calculer ETA avec OpenStreetMap/OSRM
   const calculateETA = async () => {
     if (!etaForm.orderId || !etaForm.destinationLat || !etaForm.destinationLon) {
       setError('orderId et coordonnees de destination sont requis');
@@ -261,10 +261,10 @@ export default function TrackingPage() {
     setError(null);
     try {
       const result = await apiCall(
-        `/tracking/tomtom/${etaForm.orderId}/eta?destinationLat=${etaForm.destinationLat}&destinationLon=${etaForm.destinationLon}`
+        `/tracking/osm/${etaForm.orderId}/eta?destinationLat=${etaForm.destinationLat}&destinationLon=${etaForm.destinationLon}`
       );
       setEta(result.data);
-      setSuccess('ETA calcule avec TomTom');
+      setSuccess('ETA calcule avec OpenStreetMap/OSRM');
     } catch (err: any) {
       setError(err.message);
       setEta(null);
@@ -468,7 +468,7 @@ export default function TrackingPage() {
 
                 {/* Calculer ETA */}
                 <div style={cardStyle}>
-                  <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Calculer ETA (TomTom)</h2>
+                  <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Calculer ETA (OpenStreetMap)</h2>
                   <input
                     style={inputStyle}
                     placeholder="ID Commande"

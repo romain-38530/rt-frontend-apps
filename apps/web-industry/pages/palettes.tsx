@@ -191,6 +191,7 @@ export default function PalettesCircularPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
 
   // Form state for recovery request
   const [newRequest, setNewRequest] = useState({
@@ -229,6 +230,28 @@ export default function PalettesCircularPage() {
     if (!isAuthenticated()) { router.push('/login'); return; }
     // Load all data via dashboard endpoint
     loadDashboard();
+  }, [mounted]);
+
+  // Obtenir la géolocalisation de l'utilisateur pour calcul des distances routières
+  useEffect(() => {
+    if (!mounted) return;
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          console.log('[Palettes] Position utilisateur:', position.coords.latitude, position.coords.longitude);
+        },
+        (err) => {
+          console.log('[Palettes] Géolocalisation non disponible:', err.message);
+          // Position par défaut: Paris
+          setUserLocation({ latitude: 48.8566, longitude: 2.3522 });
+        },
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    }
   }, [mounted]);
 
   // API Helper
@@ -1521,11 +1544,20 @@ export default function PalettesCircularPage() {
           {activeTab === 'map' && (
             <div>
               <h2 style={{ marginBottom: '24px' }}>🗺️ Carte des Sites</h2>
+              <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>
+                Les distances routières sont calculées automatiquement via OpenStreetMap/OSRM.
+              </p>
               <SitesMap
                 sites={mapSites}
                 height={500}
                 showFilters={true}
                 showLegend={true}
+                enableRoadDistances={true}
+                showRoadDistances={true}
+                userLocation={userLocation}
+                onRoadDistancesCalculated={(enrichedSites: any[]) => {
+                  console.log('[Palettes] Distances routières calculées:', enrichedSites.length);
+                }}
               />
             </div>
           )}

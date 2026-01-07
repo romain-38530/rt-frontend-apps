@@ -1,9 +1,10 @@
 /**
  * SitesMap - Carte interactive des sites de restitution de palettes
  * Affiche les sites avec scoring, filtres et sélection
+ * Intègre OpenStreetMap/OSRM pour le calcul des distances routières
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 
 export interface PaletteSite {
   siteId: string;
@@ -19,11 +20,51 @@ export interface PaletteSite {
     };
   };
   priority: 'INTERNAL' | 'NETWORK' | 'EXTERNAL';
-  distance?: number;
+  distance?: number; // Distance à vol d'oiseau (km)
+  roadDistance?: number; // Distance routière OSRM (km)
+  roadDuration?: number; // Durée trajet OSRM (minutes)
   matchingScore?: number;
   quotaRemaining?: number;
   isOpen?: boolean;
   openingHours?: string;
+}
+
+// Service OSRM pour calcul de distance routière
+const OSRM_BASE_URL = 'https://router.project-osrm.org';
+
+interface OSRMRouteResponse {
+  code: string;
+  routes?: Array<{
+    distance: number; // metres
+    duration: number; // seconds
+  }>;
+}
+
+async function calculateRoadDistance(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number }
+): Promise<{ distanceKm: number; durationMinutes: number } | null> {
+  try {
+    const coordinates = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
+    const response = await fetch(
+      `${OSRM_BASE_URL}/route/v1/driving/${coordinates}?overview=false`
+    );
+
+    if (!response.ok) return null;
+
+    const data: OSRMRouteResponse = await response.json();
+
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      return null;
+    }
+
+    return {
+      distanceKm: Math.round(data.routes[0].distance / 100) / 10,
+      durationMinutes: Math.round(data.routes[0].duration / 60),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export interface SitesMapProps {
@@ -39,14 +80,17 @@ export interface SitesMapProps {
   // Callback de sélection
   onSelectSite?: (site: PaletteSite) => void;
 
+  // Callback quand les distances routières sont calculées
+  onRoadDistancesCalculated?: (sitesWithDistances: PaletteSite[]) => void;
+
+  // Activer le calcul des distances routières OSRM
+  enableRoadDistances?: boolean;
+
   // Largeur
   width?: number | string;
 
   // Hauteur
   height?: number | string;
-
-  // Zoom initial
-  zoom?: number;
 
   // Style
   style?: React.CSSProperties;
@@ -56,6 +100,9 @@ export interface SitesMapProps {
 
   // Afficher la légende
   showLegend?: boolean;
+
+  // Afficher les distances routières au lieu de vol d'oiseau
+  showRoadDistances?: boolean;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -75,17 +122,62 @@ export const SitesMap: React.FC<SitesMapProps> = ({
   userLocation,
   selectedSiteId,
   onSelectSite,
+  onRoadDistancesCalculated,
+  enableRoadDistances = false,
   width = '100%',
   height = 500,
-  zoom = 10,
   style,
   showFilters = true,
   showLegend = true,
+  showRoadDistances = false,
 }) => {
   const [hoveredSite, setHoveredSite] = useState<PaletteSite | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [openOnlyFilter, setOpenOnlyFilter] = useState(false);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [roadDistances, setRoadDistances] = useState<Map<string, { distanceKm: number; durationMinutes: number }>>(new Map());
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+
+  // Calculer les distances routières avec OSRM
+  useEffect(() => {
+    if (!enableRoadDistances || !userLocation || sites.length === 0) return;
+
+    const calculateAllDistances = async () => {
+      setIsCalculatingDistances(true);
+      const newDistances = new Map<string, { distanceKm: number; durationMinutes: number }>();
+
+      // Limiter à 10 sites pour éviter de surcharger l'API OSRM
+      const sitesToCalculate = sites.slice(0, 10);
+
+      for (const site of sitesToCalculate) {
+        const result = await calculateRoadDistance(
+          { lat: userLocation.latitude, lng: userLocation.longitude },
+          { lat: site.address.coordinates.latitude, lng: site.address.coordinates.longitude }
+        );
+
+        if (result) {
+          newDistances.set(site.siteId, result);
+        }
+
+        // Pause de 100ms entre les requêtes pour respecter les limites OSRM
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      setRoadDistances(newDistances);
+      setIsCalculatingDistances(false);
+
+      // Callback avec les sites enrichis des distances routières
+      if (onRoadDistancesCalculated) {
+        const enrichedSites = sites.map(site => ({
+          ...site,
+          roadDistance: newDistances.get(site.siteId)?.distanceKm,
+          roadDuration: newDistances.get(site.siteId)?.durationMinutes,
+        }));
+        onRoadDistancesCalculated(enrichedSites);
+      }
+    };
+
+    calculateAllDistances();
+  }, [enableRoadDistances, userLocation, sites, onRoadDistancesCalculated]);
 
   // Filtrer les sites
   const filteredSites = useMemo(() => {
@@ -397,10 +489,24 @@ export const SitesMap: React.FC<SitesMapProps> = ({
             {hoveredSite.address.city} ({hoveredSite.address.postalCode})
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-            {hoveredSite.distance !== undefined && (
+            {/* Distance routière OSRM */}
+            {showRoadDistances && roadDistances.has(hoveredSite.siteId) && (
+              <div>
+                <span style={{ opacity: 0.6 }}>Route:</span>{' '}
+                <strong style={{ color: '#667eea' }}>
+                  {roadDistances.get(hoveredSite.siteId)?.distanceKm} km
+                </strong>
+                <span style={{ fontSize: '10px', color: '#999', marginLeft: '4px' }}>
+                  (~{roadDistances.get(hoveredSite.siteId)?.durationMinutes} min)
+                </span>
+              </div>
+            )}
+            {/* Distance vol d'oiseau (fallback) */}
+            {hoveredSite.distance !== undefined && (!showRoadDistances || !roadDistances.has(hoveredSite.siteId)) && (
               <div>
                 <span style={{ opacity: 0.6 }}>Distance:</span>{' '}
                 <strong>{hoveredSite.distance} km</strong>
+                <span style={{ fontSize: '10px', color: '#999', marginLeft: '4px' }}>(vol d'oiseau)</span>
               </div>
             )}
             {hoveredSite.quotaRemaining !== undefined && (
@@ -443,7 +549,7 @@ export const SitesMap: React.FC<SitesMapProps> = ({
         </div>
       )}
 
-      {/* Compteur */}
+      {/* Compteur et indicateur de calcul */}
       <div style={{
         position: 'absolute',
         bottom: '12px',
@@ -454,9 +560,33 @@ export const SitesMap: React.FC<SitesMapProps> = ({
         fontSize: '12px',
         fontWeight: '600',
         boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
       }}>
         {filteredSites.length} site{filteredSites.length > 1 ? 's' : ''} affiché{filteredSites.length > 1 ? 's' : ''}
+        {isCalculatingDistances && (
+          <span style={{ color: '#667eea', fontSize: '11px' }}>
+            (calcul routes...)
+          </span>
+        )}
       </div>
+
+      {/* Attribution OpenStreetMap/OSRM */}
+      {enableRoadDistances && (
+        <div style={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
+          background: 'rgba(255,255,255,0.9)',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '10px',
+          color: '#6b7280',
+        }}>
+          Routes © OSRM / OpenStreetMap
+        </div>
+      )}
     </div>
   );
 };

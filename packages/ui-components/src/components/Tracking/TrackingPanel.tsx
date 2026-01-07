@@ -26,7 +26,7 @@ interface TrackingPanelProps {
 const TRACKING_LEVEL_LABELS: Record<TrackingLevel, { label: string; icon: string; color: string }> = {
   basic: { label: 'Email de base', icon: '📧', color: '#6b7280' },
   gps: { label: 'GPS Smartphone', icon: '📱', color: '#3b82f6' },
-  premium: { label: 'TomTom Premium', icon: '🛰️', color: '#8b5cf6' },
+  premium: { label: 'OpenStreetMap Premium', icon: '🗺️', color: '#8b5cf6' },
 };
 
 const TRAFFIC_LABELS: Record<TrafficInfo['level'], { label: string; icon: string; color: string }> = {
