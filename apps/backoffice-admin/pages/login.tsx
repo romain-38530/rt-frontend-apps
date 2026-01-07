@@ -14,7 +14,10 @@ export default function Login() {
       const res = await fetch(`${AUTHZ_URL}/auth/admin/login`, { method: 'POST', headers: { 'content-type':'application/json' }, body: JSON.stringify({ email, adminKey }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Login échoué');
-      localStorage.setItem('admin_jwt', json.token);
+      localStorage.setItem('admin_jwt', json.token || json.accessToken);
+      if (json.refreshToken) {
+        localStorage.setItem('admin_refresh_token', json.refreshToken);
+      }
       location.href = '/orgs';
     } catch (e: any) { setError(e.message || 'Erreur réseau'); }
     finally { setLoading(false); }
