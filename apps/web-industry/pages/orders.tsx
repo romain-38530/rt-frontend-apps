@@ -9,6 +9,7 @@ import { isAuthenticated } from '../lib/auth';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import { CreateOrderForm, OrdersList, useToast, AutoPlanningModal } from '@rt/ui-components';
 import { OrdersService } from '@rt/utils';
+import { affretIAApi } from '../lib/affretia-api';
 import type {
   Order,
   CreateOrderInput,
@@ -165,16 +166,40 @@ export default function OrdersPage() {
     setShowPlanningModal(true);
   };
 
-  // Lancer Affret.IA directement (sans passer par la chaîne de dispatch)
-  const handleLaunchDirectAffretIA = () => {
+// Lancer Affret.IA directement (sans passer par la chaine de dispatch)
+  const handleLaunchDirectAffretIA = async () => {
     if (selectedOrders.size === 0) {
-      toast.error('Sélectionnez au moins une commande pour Affret.IA');
+      toast.error('Selectionnez au moins une commande pour Affret.IA');
       return;
     }
-    // Envoyer directement vers Affret.IA
-    const ordersToSend = orders.filter(o => selectedOrders.has(o.id));
-    sessionStorage.setItem('affretia_orders', JSON.stringify(ordersToSend));
-    router.push('/affret-ia?mode=direct');
+
+    setIsLoading(true);
+    const orderIds = Array.from(selectedOrders);
+
+    try {
+      toast.success(`Lancement Affret.IA pour ${orderIds.length} commande(s)...`);
+
+      const result = await affretIAApi.launchAutonomousSearchBatch(
+        orderIds,
+        'Recherche automatique depuis page commandes'
+      );
+
+      if (result.success) {
+        toast.success(`Recherche lancee: ${result.successCount} commande(s)`);
+      } else {
+        toast.success(`${result.successCount} lancee(s), ${result.failedCount} echec(s)`);
+      }
+
+      const ordersToSend = orders.filter(o => selectedOrders.has(o.id));
+      sessionStorage.setItem('affretia_orders', JSON.stringify(ordersToSend));
+      sessionStorage.setItem('affretia_results', JSON.stringify(result.results));
+
+      router.push('/affret-ia?mode=direct');
+    } catch (err: any) {
+      toast.error(`Erreur Affret.IA: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Valider une commande avec un transporteur
