@@ -166,22 +166,24 @@ export default function MesPropositionsPage() {
   };
 
   // Répondre à une contre-offre
-  const handleCounterOfferResponse = async (accept: boolean) => {
-    if (!selectedProposal) return;
+  const handleCounterOfferResponse = async (proposal: Proposal, accept: boolean) => {
+    if (!proposal) return;
 
     try {
       if (accept) {
-        await affretIaApi.confirmAttribution(selectedProposal.id);
+        await affretIaApi.confirmAttribution(proposal.id);
+        toast.success('Contre-offre acceptée !');
       } else {
-        await affretIaApi.withdrawProposal(selectedProposal.id);
+        await affretIaApi.withdrawProposal(proposal.id);
+        toast.success('Contre-offre refusée');
       }
 
-      toast.success(accept ? 'Contre-offre acceptée !' : 'Contre-offre refusée');
       setSelectedProposal(null);
       setCounterResponse(null);
       loadProposals();
     } catch (err) {
       console.error('Error responding to counter offer:', err);
+      toast.error('Erreur lors de la réponse à la contre-offre');
     }
   };
 
@@ -505,10 +507,7 @@ export default function MesPropositionsPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
                           <button
-                            onClick={() => {
-                              setSelectedProposal(proposal);
-                              handleCounterOfferResponse(true);
-                            }}
+                            onClick={() => handleCounterOfferResponse(proposal, true)}
                             style={{
                               flex: 1,
                               padding: '12px',
@@ -524,10 +523,7 @@ export default function MesPropositionsPage() {
                             Accepter
                           </button>
                           <button
-                            onClick={() => {
-                              setSelectedProposal(proposal);
-                              handleCounterOfferResponse(false);
-                            }}
+                            onClick={() => handleCounterOfferResponse(proposal, false)}
                             style={{
                               flex: 1,
                               padding: '12px',
