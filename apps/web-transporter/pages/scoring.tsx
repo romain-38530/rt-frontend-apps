@@ -96,11 +96,15 @@ export default function ScoringPage() {
   // Utiliser API_CONFIG.SCORING_API au lieu de l'URL hardcodee
   const scoringApiUrl = API_CONFIG.SCORING_API + '/api/v1';
 
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'calculate' | 'history' | 'search' | 'by-industrial'>('leaderboard');
+  const [activeTab, setActiveTab] = useState<'my-score' | 'leaderboard' | 'calculate' | 'history' | 'search' | 'by-industrial'>('my-score');
   const [leaderboard, setLeaderboard] = useState<CarrierAggregateScore[]>([]);
   const [scoreHistory, setScoreHistory] = useState<TransportScore[]>([]);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierAggregateScore | null>(null);
   const [orderScore, setOrderScore] = useState<TransportScore | null>(null);
+
+  // Mon score (transporteur connecte)
+  const [myScore, setMyScore] = useState<CarrierAggregateScore | null>(null);
+  const [myScoreHistory, setMyScoreHistory] = useState<TransportScore[]>([]);
 
   // KPI par industriel
   const [industrialPartners, setIndustrialPartners] = useState<IndustrialPartner[]>([]);
@@ -161,6 +165,32 @@ export default function ScoringPage() {
     return data;
   };
 
+  // Charger mon score (transporteur connecte) - API ONLY
+  const loadMyScore = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const carrierId = getCarrierId();
+      if (!carrierId) {
+        setError('Impossible de recuperer votre ID transporteur.');
+        return;
+      }
+      const result = await apiCall(`/carriers/${carrierId}/score`);
+      setMyScore(result.data);
+
+      // Charger aussi l'historique
+      const historyResult = await apiCall(`/carriers/${carrierId}/score-history?limit=10`);
+      setMyScoreHistory(historyResult.data || []);
+    } catch (err: any) {
+      console.error('Erreur chargement mon score:', err);
+      // Pas d'erreur affichee si pas de score (normal pour un nouveau transporteur)
+      setMyScore(null);
+      setMyScoreHistory([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Charger le leaderboard - API ONLY
   const loadLeaderboard = async () => {
     setIsLoading(true);
@@ -191,18 +221,24 @@ export default function ScoringPage() {
   };
 
   // Charger les KPI par industriel - API ONLY
+  // Note: Le backend scoring-api ne supporte pas encore le filtrage par industrialId
+  // Pour l'instant, on charge le score global du transporteur
   const loadScoresByIndustrial = async (industrialId: string) => {
     if (!industrialId) return;
     setIsLoading(true);
     setError(null);
     try {
       const carrierId = getCarrierId();
-      // Endpoint pour obtenir le score du transporteur filtre par industriel
-      const result = await apiCall(`/scoring/carrier/${carrierId}?industrialId=${industrialId}`);
+      if (!carrierId) {
+        setError('Impossible de recuperer votre ID transporteur.');
+        return;
+      }
+      // Utiliser le bon endpoint: /carriers/:id/score
+      const result = await apiCall(`/carriers/${carrierId}/score`);
       setIndustrialScores(result.data);
     } catch (err: any) {
       console.error('Erreur KPI par industriel:', err);
-      setError('Impossible de charger les KPI pour cet industriel.');
+      setError('Impossible de charger les KPI. Verifiez que vous avez des scores enregistres.');
       setIndustrialScores(null);
     } finally {
       setIsLoading(false);
@@ -310,6 +346,7 @@ export default function ScoringPage() {
       router.push('/login');
       return;
     }
+    loadMyScore();
     loadLeaderboard();
     loadIndustrialPartners();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -430,6 +467,9 @@ export default function ScoringPage() {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button style={tabStyle(activeTab === 'my-score')} onClick={() => setActiveTab('my-score')}>
+              Mon Score
+            </button>
             <button style={tabStyle(activeTab === 'leaderboard')} onClick={() => setActiveTab('leaderboard')}>
               Classement
             </button>
@@ -462,6 +502,136 @@ export default function ScoringPage() {
 
         {/* Content */}
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+
+          {/* Tab: Mon Score */}
+          {activeTab === 'my-score' && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Mon Score de Performance</h2>
+                <button onClick={loadMyScore} style={buttonStyle} disabled={isLoading}>
+                  {isLoading ? 'Chargement...' : 'Rafraichir'}
+                </button>
+              </div>
+
+              {myScore ? (
+                <div>
+                  {/* Score global */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                    <div style={{ textAlign: 'center', padding: '32px', backgroundColor: '#f0f9ff', borderRadius: '16px', border: '2px solid #667eea' }}>
+                      <div style={{ fontSize: '64px', fontWeight: '800', color: getScoreColor(myScore.averageScores?.overall || 0) }}>
+                        {myScore.averageScores?.overall || 0}
+                      </div>
+                      <div style={{ fontSize: '16px', color: '#374151', fontWeight: '600', marginTop: '8px' }}>Score Global</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>/100</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '32px', backgroundColor: '#f9fafb', borderRadius: '16px' }}>
+                      <div style={{ fontSize: '48px', fontWeight: '800', color: '#374151' }}>
+                        {myScore.stats?.totalScored || 0}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Transports Notes</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '32px', backgroundColor: '#f9fafb', borderRadius: '16px' }}>
+                      <div style={{ fontSize: '36px', fontWeight: '700', color: getTrendIcon(myScore.trend?.direction || 'stable').color }}>
+                        {getTrendIcon(myScore.trend?.direction || 'stable').icon}
+                        {myScore.trend?.change ? ` ${myScore.trend.change > 0 ? '+' : ''}${myScore.trend.change}` : ''}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Tendance 30j</div>
+                    </div>
+                    {myScore.rank && (
+                      <div style={{ textAlign: 'center', padding: '32px', backgroundColor: '#fef3c7', borderRadius: '16px' }}>
+                        <div style={{ fontSize: '48px', fontWeight: '800', color: '#d97706' }}>
+                          #{myScore.rank}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Classement</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Detail des criteres */}
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Detail des Criteres</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+                    {myScore.averageScores && Object.entries(myScore.averageScores).filter(([k]) => k !== 'overall').map(([key, value]) => {
+                      const labels: Record<string, string> = {
+                        punctualityPickup: 'Ponctualite Enlevement',
+                        punctualityDelivery: 'Ponctualite Livraison',
+                        appointmentRespect: 'Respect RDV',
+                        trackingReactivity: 'Reactivite Tracking',
+                        podDelay: 'Delai POD',
+                        incidentsManaged: 'Gestion Incidents',
+                        delaysJustified: 'Retards Justifies'
+                      };
+                      return (
+                        <div key={key} style={{
+                          textAlign: 'center',
+                          padding: '16px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '12px',
+                          border: `2px solid ${getScoreColor(value as number)}30`
+                        }}>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: getScoreColor(value as number) }}>
+                            {value as number}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>{labels[key] || key}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Historique recent */}
+                  {myScoreHistory.length > 0 && (
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Mes 10 Derniers Transports Notes</h3>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>Date</th>
+                              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>Commande</th>
+                              <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>Score</th>
+                              <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>Ponct.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {myScoreHistory.map((score) => (
+                              <tr key={score._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                <td style={{ padding: '10px', fontSize: '13px' }}>
+                                  {new Date(score.scoredAt).toLocaleDateString('fr-FR')}
+                                </td>
+                                <td style={{ padding: '10px', fontWeight: '600', fontSize: '13px' }}>{score.orderId}</td>
+                                <td style={{ padding: '10px', textAlign: 'center' }}>
+                                  <span style={{
+                                    padding: '4px 10px',
+                                    backgroundColor: getScoreColor(score.finalScore),
+                                    color: 'white',
+                                    borderRadius: '12px',
+                                    fontWeight: '700',
+                                    fontSize: '12px'
+                                  }}>
+                                    {score.finalScore}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'center', fontSize: '13px', color: getScoreColor(score.punctualityDelivery || 0) }}>
+                                  {score.punctualityDelivery || '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>S</div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Aucun score disponible</div>
+                  <div style={{ fontSize: '14px' }}>
+                    Vos scores de performance apparaitront ici une fois que des transports auront ete notes par vos partenaires industriels.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tab: Leaderboard */}
           {activeTab === 'leaderboard' && (
