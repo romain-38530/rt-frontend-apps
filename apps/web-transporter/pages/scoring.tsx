@@ -312,13 +312,15 @@ export default function ScoringPage() {
     }
     loadLeaderboard();
     loadIndustrialPartners();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   // Charger KPI quand un industriel est selectionne
   useEffect(() => {
     if (selectedIndustrial) {
       loadScoresByIndustrial(selectedIndustrial);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIndustrial]);
 
   // Helper pour couleur de score
