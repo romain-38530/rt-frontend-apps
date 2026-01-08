@@ -1507,6 +1507,27 @@ export const carriersApi = {
     return res.json();
   },
 
+  /** Accepter une invitation de référencement */
+  acceptInvitation: async (invitationId: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/invitations/${invitationId}/accept`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  /** Refuser une invitation de référencement */
+  declineInvitation: async (invitationId: string, reason?: string) => {
+    const carrierId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.CARRIERS_API}/api/carriers/${carrierId}/invitations/${invitationId}/decline`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return res.json();
+  },
+
   // === DOCUMENTS DE CONFORMITÉ AVEC S3 + OCR ===
 
   /** Liste de mes documents de conformité */

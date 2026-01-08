@@ -177,11 +177,34 @@ export default function ReferencementPage() {
 
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
-      // await carriersApi.acceptInvitation(invitationId);
-      toast.success('Invitation acceptée !');
-      loadData();
-    } catch (err) {
-      toast.error('Erreur lors de l\'acceptation');
+      const result = await carriersApi.acceptInvitation(invitationId);
+      if (result.success || result.status === 'accepted') {
+        toast.success('Invitation acceptee ! Vous etes maintenant reference.');
+        loadData();
+      } else {
+        throw new Error(result.error || 'Erreur lors de l\'acceptation');
+      }
+    } catch (err: any) {
+      console.error('Error accepting invitation:', err);
+      toast.error(err.message || 'Erreur lors de l\'acceptation');
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!confirm('Etes-vous sur de vouloir refuser cette invitation ?')) {
+      return;
+    }
+    try {
+      const result = await carriersApi.declineInvitation(invitationId);
+      if (result.success || result.status === 'declined') {
+        toast.success('Invitation refusee');
+        loadData();
+      } else {
+        throw new Error(result.error || 'Erreur lors du refus');
+      }
+    } catch (err: any) {
+      console.error('Error declining invitation:', err);
+      toast.error(err.message || 'Erreur lors du refus');
     }
   };
 
@@ -389,6 +412,7 @@ export default function ReferencementPage() {
                             Accepter
                           </button>
                           <button
+                            onClick={() => handleDeclineInvitation(inv.id)}
                             style={{
                               padding: '10px 20px',
                               borderRadius: '8px',
