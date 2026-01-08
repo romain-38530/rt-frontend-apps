@@ -42,7 +42,7 @@ export default function IndustryPage() {
     'Plans de transport consolidés avec scoring transporteur',
     'Chaîne de dispatch automatisée du devis à la livraison',
     'e-CMR et documents légaux conformes eIDAS',
-    'Gestion d'équipe avec rôles et permissions',
+    "Gestion d'équipe avec rôles et permissions",
     'Interconnexion univers Industriel ↔ Transporteur',
     'API REST complète pour intégration ERP/WMS',
     'Support client dédié et formation incluse'
@@ -70,7 +70,7 @@ export default function IndustryPage() {
         'AFFRET.IA recherche autonome',
         'Plan de transport consolidé',
         'Auto-dispatch intelligent',
-        'Jusqu'à 5 membres d'équipe',
+        "Jusqu'à 5 membres d'équipe",
         'e-CMR et documents légaux',
         'Support prioritaire'
       ]

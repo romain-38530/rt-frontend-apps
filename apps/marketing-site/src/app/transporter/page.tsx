@@ -39,7 +39,7 @@ export default function TransporterPage() {
 
   const benefits = [
     'Accès direct aux opportunités des industriels via AFFRET.IA',
-    'Scoring automatique visible par les donneurs d'ordre',
+    "Scoring automatique visible par les donneurs d'ordre",
     'Vigilance documents avec alertes automatiques',
     'Grilles tarifaires connectées au plan de transport consolidé',
     'Propositions en un clic sur les demandes entrantes',

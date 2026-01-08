@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, Phone, MapPin, Send, CheckCircle, Building, User, MessageSquare, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_ADMIN_URL || 'https://api-admin.symphonia-controltower.com';
 
-export default function ContactPage() {
+function ContactForm() {
   const searchParams = useSearchParams();
   const defaultSubject = searchParams.get('subject') || '';
   const defaultPortal = searchParams.get('portal') || '';
@@ -409,5 +409,13 @@ export default function ContactPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center"><p>Chargement...</p></div>}>
+      <ContactForm />
+    </Suspense>
   );
 }
