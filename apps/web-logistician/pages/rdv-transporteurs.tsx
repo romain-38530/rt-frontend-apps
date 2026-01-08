@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { isAuthenticated, getUser, getToken } from '../lib/auth';
+import { isAuthenticated, getUser, getAuthToken } from '../lib/auth';
 
 interface RdvRequest {
   _id: string;
@@ -62,7 +62,7 @@ export default function RdvTransporteursPage() {
   const loadRdvRequests = async () => {
     try {
       setLoading(true);
-      const token = getToken();
+      const token = getAuthToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr'}/api/rdv/delegated`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -187,7 +187,7 @@ export default function RdvTransporteursPage() {
     if (!selectedRdv || !confirmDate || !confirmTime) return;
     try {
       setSaving(true);
-      const token = getToken();
+      const token = getAuthToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr'}/api/rdv/${selectedRdv._id}/confirm`, {
         method: 'PUT',
         headers: {
@@ -218,7 +218,7 @@ export default function RdvTransporteursPage() {
     if (!selectedRdv) return;
     try {
       setSaving(true);
-      const token = getToken();
+      const token = getAuthToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr'}/api/rdv/${selectedRdv._id}/reject`, {
         method: 'PUT',
         headers: {
@@ -247,7 +247,7 @@ export default function RdvTransporteursPage() {
 
   const handleMarkComplete = async (rdv: RdvRequest) => {
     try {
-      const token = getToken();
+      const token = getAuthToken();
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.rt-technologie.fr'}/api/rdv/${rdv._id}/complete`, {
         method: 'PUT',
         headers: {

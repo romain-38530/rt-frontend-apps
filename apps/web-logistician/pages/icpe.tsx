@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
-import { isAuthenticated, getToken } from '../lib/auth';
+import { isAuthenticated, getAuthToken } from '../lib/auth';
 import { toast, Toaster } from 'react-hot-toast';
 
 // Types
@@ -128,7 +128,7 @@ export default function ICPEPage() {
     try {
       const response = await fetch(`${API_URL}/api/icpe/warehouses`, {
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
         },
       });
       if (response.ok) {
@@ -146,7 +146,7 @@ export default function ICPEPage() {
     try {
       const response = await fetch(`${API_URL}/api/icpe/rubriques`, {
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
         },
       });
       if (response.ok) {
@@ -170,7 +170,7 @@ export default function ICPEPage() {
       const response = await fetch(`${API_URL}/api/icpe/warehouses`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -212,7 +212,7 @@ export default function ICPEPage() {
       const response = await fetch(`${API_URL}/api/icpe/warehouses/${selectedWarehouse.warehouseId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function ICPEPage() {
       const response = await fetch(`${API_URL}/api/icpe/warehouses/${selectedWarehouse.warehouseId}/rubriques`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -285,7 +285,7 @@ export default function ICPEPage() {
       const response = await fetch(`${API_URL}/api/icpe/warehouses/${selectedWarehouse.warehouseId}/volumes`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -327,7 +327,7 @@ export default function ICPEPage() {
       const response = await fetch(`${API_URL}/api/icpe/warehouses/${warehouseId}/rubriques/${rubriqueCode}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${getToken()}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
         },
       });
 
