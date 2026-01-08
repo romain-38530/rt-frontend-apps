@@ -30,8 +30,14 @@ export default function AffretiaPage() {
     if (body) options.body = JSON.stringify(body);
     const fullUrl = apiUrl + '/api/v1' + endpoint;
     const response = await fetch(fullUrl, options);
+    if (!response.ok) throw new Error('API Error: ' + response.status);
     const data = await response.json();
-    if (!data.success) throw new Error(data.error || 'API Error');
+    // Handle both formats: {success, data} and direct data objects
+    if (data.success === false) throw new Error(data.error || 'API Error');
+    // Wrap response in standard format if not already wrapped
+    if (data.success === undefined) {
+      return { success: true, data };
+    }
     return data;
   }, [apiUrl]);
 
@@ -76,12 +82,12 @@ export default function AffretiaPage() {
     loadSessions();
   }, [mounted]);
 
-  const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data?.sessions || data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const triggerAffretIA = async () => { if (!triggerForm.orderId) { setError('Order ID requis'); return; } try { setLoading(true); const data = await apiCall('/affretia/trigger', 'POST', { orderId: triggerForm.orderId, reason: triggerForm.reason || 'Declenchement manuel', triggerType: 'manual', organizationId: 'org-demo' }); setSuccessMsg('Session ' + data.data.sessionId + ' creee'); setTriggerForm({ orderId: '', reason: '' }); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const loadSessionDetails = async (sessionId: string) => { try { setLoading(true); const [sessionData, proposalsData] = await Promise.all([apiCall('/affretia/session/' + sessionId), apiCall('/affretia/proposals/' + sessionId)]); setSelectedSession(sessionData.data); setProposals(proposalsData.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const analyzeOrder = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/analyze', 'POST', { sessionId }); setSuccessMsg('Analyse: complexite ' + data.data.complexity + ', prix ' + data.data.estimatedPrice + 'EUR'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const broadcastToCarriers = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/broadcast', 'POST', { sessionId, channels: ['email', 'bourse', 'push'] }); setSuccessMsg('Diffusion: ' + data.data.recipientsCount + ' destinataires'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const loadBourseOffers = async () => { try { setLoading(true); const data = await apiCall('/affretia/bourse'); setBourseOffers(data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
+  const loadBourseOffers = async () => { try { setLoading(true); const data = await apiCall('/affretia/bourse'); setBourseOffers(data.data?.offers || data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const acceptProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/accept', 'PUT', { userId: 'user-demo', reason: 'Acceptation manuelle' }); setSuccessMsg('Proposition acceptee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const rejectProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/reject', 'PUT', { userId: 'user-demo', reason: 'Rejet manuel' }); setSuccessMsg('Proposition rejetee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
   const negotiateProposal = async () => { if (!negotiateForm.proposalId || !negotiateForm.counterPrice) { setError('Proposition et prix requis'); return; } try { setLoading(true); await apiCall('/affretia/proposals/' + negotiateForm.proposalId + '/negotiate', 'POST', { counterPrice: parseFloat(negotiateForm.counterPrice), message: 'Contre-proposition', userId: 'user-demo' }); setSuccessMsg('Negociation lancee'); setNegotiateForm({ proposalId: '', counterPrice: '' }); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
