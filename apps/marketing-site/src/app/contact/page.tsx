@@ -1,52 +1,92 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle, Building, User, MessageSquare } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Mail, Phone, MapPin, Send, CheckCircle, Building, User, MessageSquare, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 
+const API_URL = process.env.NEXT_PUBLIC_API_ADMIN_URL || 'https://api-admin.symphonia-controltower.com';
+
 export default function ContactPage() {
+  const searchParams = useSearchParams();
+  const defaultSubject = searchParams.get('subject') || '';
+  const defaultPortal = searchParams.get('portal') || '';
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     company: '',
-    subject: '',
+    position: '',
+    subject: defaultSubject || '',
+    portalType: defaultPortal || '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
-    // Simulation d'envoi
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-
-    // Reset après 3 secondes
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        company: '',
-        subject: '',
-        message: ''
+    try {
+      const response = await fetch(`${API_URL}/api/v1/public/demo-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          companyName: formData.company,
+          position: formData.position || undefined,
+          portalType: formData.portalType || undefined,
+          message: formData.message,
+          source: `contact-page-${formData.subject || 'general'}`
+        }),
       });
-    }, 3000);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Une erreur est survenue');
+      }
+
+      setIsSubmitted(true);
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          company: '',
+          position: '',
+          subject: '',
+          portalType: '',
+          message: ''
+        });
+      }, 5000);
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue lors de l\'envoi du formulaire');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -56,7 +96,7 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl font-extrabold mb-6">Contactez-nous</h1>
           <p className="text-xl text-indigo-100 max-w-3xl mx-auto">
-            Notre équipe est à votre écoute pour répondre à toutes vos questions sur SYMPHONI.A
+            Notre equipe est a votre ecoute pour repondre a toutes vos questions sur SYMPHONI.A
           </p>
         </div>
       </section>
@@ -88,7 +128,7 @@ export default function ContactPage() {
                       <Phone className="text-white" size={24} />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Téléphone</h3>
+                      <h3 className="font-semibold text-gray-900 mb-1">Telephone</h3>
                       <a href="tel:+33476332378" className="text-indigo-600 hover:text-indigo-700">
                         +33 4 76 33 23 78
                       </a>
@@ -118,7 +158,7 @@ export default function ContactPage() {
                     </div>
                     <div className="flex justify-between">
                       <span>Samedi - Dimanche</span>
-                      <span className="font-medium">Fermé</span>
+                      <span className="font-medium">Ferme</span>
                     </div>
                   </div>
                 </div>
@@ -127,13 +167,13 @@ export default function ContactPage() {
               <div className="mt-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
                 <h3 className="text-xl font-bold mb-4">Besoin d'aide rapidement ?</h3>
                 <p className="text-indigo-100 mb-6">
-                  Consultez notre FAQ ou démarrez directement avec SYMPHONI.A
+                  Consultez notre FAQ ou demarrez directement avec SYMPHONI.A
                 </p>
                 <Link
                   href="/onboarding"
                   className="block w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-center hover:shadow-lg transition-all"
                 >
-                  Démarrer maintenant
+                  Demarrer maintenant
                 </Link>
               </div>
             </div>
@@ -146,20 +186,26 @@ export default function ContactPage() {
                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <CheckCircle className="text-green-600" size={48} />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Message envoyé avec succès !</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Demande envoyee avec succes !</h3>
                     <p className="text-gray-600">
-                      Nous avons bien reçu votre message et nous vous répondrons dans les plus brefs délais.
+                      Nous avons bien recu votre demande et nous vous recontacterons dans les plus brefs delais.
                     </p>
                   </div>
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">Envoyez-nous un message</h2>
 
+                    {error && (
+                      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                        {error}
+                      </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
                           <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Prénom *
+                            Prenom *
                           </label>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -218,7 +264,7 @@ export default function ContactPage() {
 
                         <div>
                           <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Téléphone
+                            Telephone
                           </label>
                           <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -229,49 +275,93 @@ export default function ContactPage() {
                               value={formData.phone}
                               onChange={handleChange}
                               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                              placeholder="+33 1 23 45 67 89"
+                              placeholder="+33 4 76 33 23 78"
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div>
-                        <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
-                          Entreprise
-                        </label>
-                        <div className="relative">
-                          <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                          <input
-                            type="text"
-                            id="company"
-                            name="company"
-                            value={formData.company}
-                            onChange={handleChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="Nom de votre entreprise"
-                          />
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Entreprise *
+                          </label>
+                          <div className="relative">
+                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                            <input
+                              type="text"
+                              id="company"
+                              name="company"
+                              value={formData.company}
+                              onChange={handleChange}
+                              required
+                              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              placeholder="Nom de votre entreprise"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="position" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Fonction
+                          </label>
+                          <div className="relative">
+                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                            <input
+                              type="text"
+                              id="position"
+                              name="position"
+                              value={formData.position}
+                              onChange={handleChange}
+                              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              placeholder="Directeur Logistique"
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      <div>
-                        <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
-                          Sujet *
-                        </label>
-                        <select
-                          id="subject"
-                          name="subject"
-                          value={formData.subject}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        >
-                          <option value="">Sélectionnez un sujet</option>
-                          <option value="demo">Demande de démo</option>
-                          <option value="pricing">Question sur les tarifs</option>
-                          <option value="support">Support technique</option>
-                          <option value="partnership">Partenariat</option>
-                          <option value="other">Autre</option>
-                        </select>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Sujet *
+                          </label>
+                          <select
+                            id="subject"
+                            name="subject"
+                            value={formData.subject}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="">Selectionnez un sujet</option>
+                            <option value="demo">Demande de demo</option>
+                            <option value="pricing">Question sur les tarifs</option>
+                            <option value="support">Support technique</option>
+                            <option value="partnership">Partenariat</option>
+                            <option value="other">Autre</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label htmlFor="portalType" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Portail interesse
+                          </label>
+                          <select
+                            id="portalType"
+                            name="portalType"
+                            value={formData.portalType}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="">Selectionnez un portail</option>
+                            <option value="industry">Industrie</option>
+                            <option value="transporter">Transporteur</option>
+                            <option value="logistician">Logisticien</option>
+                            <option value="supplier">Fournisseur</option>
+                            <option value="forwarder">Transitaire</option>
+                            <option value="recipient">Destinataire</option>
+                          </select>
+                        </div>
                       </div>
 
                       <div>
@@ -288,7 +378,7 @@ export default function ContactPage() {
                             required
                             rows={6}
                             className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                            placeholder="Décrivez votre demande..."
+                            placeholder="Decrivez votre demande..."
                           />
                         </div>
                       </div>

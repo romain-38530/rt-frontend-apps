@@ -334,10 +334,10 @@ export default function TransporterPage() {
               <ArrowRight size={20} />
             </Link>
             <Link
-              href="/contact"
+              href="/contact?subject=demo&portal=transporter"
               className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition-all"
             >
-              Demander une démo
+              Demander une demo
             </Link>
           </div>
         </div>

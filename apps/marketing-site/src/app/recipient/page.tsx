@@ -280,10 +280,10 @@ export default function RecipientPage() {
               <ArrowRight size={20} />
             </Link>
             <Link
-              href="/contact"
+              href="/contact?subject=demo&portal=recipient"
               className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition-all"
             >
-              Nous contacter
+              Demander une demo
             </Link>
           </div>
         </div>

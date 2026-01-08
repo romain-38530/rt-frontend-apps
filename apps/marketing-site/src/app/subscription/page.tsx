@@ -399,10 +399,10 @@ export default function SubscriptionPage() {
               <ArrowRight className="ml-3" size={24} />
             </Link>
             <Link
-              href="/contact"
+              href="/contact?subject=demo"
               className="px-10 py-5 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition-all inline-flex items-center justify-center"
             >
-              Demander une démo
+              Demander une demo
             </Link>
           </div>
         </div>

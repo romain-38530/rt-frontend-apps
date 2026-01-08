@@ -39,6 +39,7 @@ import healthRoutes from './routes/health';
 import notificationsRoutes from './routes/notifications';
 import gdprRoutes from './routes/gdpr';
 import subusersRoutes from './routes/subusers';
+import demoRequestRoutes from './routes/demo-request';
 
 // Background services
 import ScrapingServiceInstance from './services/scraping-service';
@@ -154,6 +155,7 @@ app.use('/api/v1/admin/crm', crmRoutes);
 app.use('/api/v1/commercial', commercialPortalRoutes);
 app.use('/api/v1/admin/manager', managerRoutes);
 app.use('/api/v1/installation', publicInstallationRoutes);
+app.use('/api/v1/public', demoRequestRoutes); // Public demo request endpoint
 app.use('/api/v1/admin/transport-scraping', authenticateAdmin, transportScrapingRoutes);
 app.use('/api/v1/admin/notifications', notificationsRoutes);
 app.use('/api/v1/admin/gdpr', gdprRoutes);
