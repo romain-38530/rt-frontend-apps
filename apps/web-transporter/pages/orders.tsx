@@ -3,10 +3,10 @@
  * Intégration complète avec l'API Orders
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { isAuthenticated } from '../lib/auth';
+import { isAuthenticated, getUser } from '../lib/auth';
 import { CreateOrderForm, OrdersList, useToast } from '@rt/ui-components';
 import { OrdersService } from '@rt/utils';
 import type {
@@ -19,6 +19,9 @@ import type {
 export default function OrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  // Référence pour stocker le carrierId du transporteur connecté
+  const carrierIdRef = useRef<string | null>(null);
 
   // État de la page
   const [view, setView] = useState<'list' | 'create'>('list');
@@ -36,13 +39,17 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger les commandes
+  // Charger les commandes (uniquement celles assignées au transporteur connecté)
   const loadOrders = async (newFilters?: OrderFilters) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const filtersToUse = newFilters || filters;
+      // Toujours filtrer par carrierId pour n'afficher que les commandes assignées
+      const filtersToUse: OrderFilters = {
+        ...(newFilters || filters),
+        carrierId: carrierIdRef.current || undefined,
+      };
       const result: PaginatedOrders = await OrdersService.getOrders(filtersToUse);
 
       setOrders(result.data);
@@ -128,11 +135,20 @@ export default function OrdersPage() {
     loadOrders(newFilters);
   };
 
-  // Vérifier l'authentification et charger les commandes
+  // Vérifier l'authentification et charger les commandes du transporteur
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
       return;
+    }
+
+    // Récupérer le carrierId de l'utilisateur connecté
+    const user = getUser();
+    const carrierId = user?.carrierId || user?.companyId || user?.id;
+    carrierIdRef.current = carrierId || null;
+
+    if (!carrierId) {
+      console.warn('No carrierId found for user, orders may not be filtered correctly');
     }
 
     loadOrders();
@@ -205,7 +221,7 @@ export default function OrdersPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '32px' }}>📦</span>
               <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>
-                Gestion des commandes
+                Mes commandes assignées
               </h1>
             </div>
           </div>
