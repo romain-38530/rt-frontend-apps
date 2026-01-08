@@ -61,7 +61,7 @@ export default function MentionsLegalesPage() {
             </div>
             <div className="space-y-3 text-gray-700">
               <p><strong>Email :</strong> <a href="mailto:contact@symphonia.com" className="text-indigo-600 hover:text-indigo-700">contact@symphonia.com</a></p>
-              <p><strong>Téléphone :</strong> <a href="tel:+33123456789" className="text-indigo-600 hover:text-indigo-700">+33 1 23 45 67 89</a></p>
+              <p><strong>Téléphone :</strong> <a href="tel:+33476332378" className="text-indigo-600 hover:text-indigo-700">+33 4 76 33 23 78</a></p>
               <p><strong>Adresse postale :</strong> 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER, France</p>
             </div>
           </div>
