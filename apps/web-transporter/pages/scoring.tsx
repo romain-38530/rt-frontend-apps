@@ -14,9 +14,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { isAuthenticated, getAuthToken } from '../lib/auth';
-import { carriersApi } from '../lib/api';
+import { carriersApi, API_CONFIG } from '../lib/api';
 
 // Types
+interface IndustrialPartner {
+  industrialId: string;
+  industrialName: string;
+  status: string;
+}
 interface TransportScore {
   _id: string;
   orderId: string;
@@ -72,15 +77,35 @@ interface ScoreCriteria {
   delaysJustified: number;
 }
 
+// Helper pour obtenir le carrierId
+const getCarrierId = (): string => {
+  if (typeof window === 'undefined') return '';
+  const user = localStorage.getItem('user');
+  if (user) {
+    try {
+      return JSON.parse(user).carrierId || JSON.parse(user).id || '';
+    } catch {
+      return '';
+    }
+  }
+  return '';
+};
+
 export default function ScoringPage() {
   const router = useRouter();
-  const scoringApiUrl = process.env.NEXT_PUBLIC_SCORING_API_URL || 'https://d1uyscmpcwc65a.cloudfront.net/api/v1';
+  // Utiliser API_CONFIG.SCORING_API au lieu de l'URL hardcodee
+  const scoringApiUrl = API_CONFIG.SCORING_API + '/api/v1';
 
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'calculate' | 'history' | 'search'>('leaderboard');
+  const [activeTab, setActiveTab] = useState<'leaderboard' | 'calculate' | 'history' | 'search' | 'by-industrial'>('leaderboard');
   const [leaderboard, setLeaderboard] = useState<CarrierAggregateScore[]>([]);
   const [scoreHistory, setScoreHistory] = useState<TransportScore[]>([]);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierAggregateScore | null>(null);
   const [orderScore, setOrderScore] = useState<TransportScore | null>(null);
+
+  // KPI par industriel
+  const [industrialPartners, setIndustrialPartners] = useState<IndustrialPartner[]>([]);
+  const [selectedIndustrial, setSelectedIndustrial] = useState<string>('');
+  const [industrialScores, setIndustrialScores] = useState<CarrierAggregateScore | null>(null);
 
   const [searchCarrierId, setSearchCarrierId] = useState('');
   const [searchOrderId, setSearchOrderId] = useState('');
@@ -136,7 +161,7 @@ export default function ScoringPage() {
     return data;
   };
 
-  // Charger le leaderboard
+  // Charger le leaderboard - API ONLY
   const loadLeaderboard = async () => {
     setIsLoading(true);
     setError(null);
@@ -144,7 +169,41 @@ export default function ScoringPage() {
       const result = await apiCall('/scoring/leaderboard?limit=50&minTransports=1');
       setLeaderboard(result.data || []);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erreur API leaderboard:', err);
+      setError('Impossible de charger le classement. Verifiez que le service Scoring est operationnel.');
+      setLeaderboard([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Charger les industriels partenaires (inter-module avec carriersApi) - API ONLY
+  const loadIndustrialPartners = async () => {
+    try {
+      const result = await carriersApi.getMyReferencings();
+      if (result.data || result.referencings) {
+        setIndustrialPartners(result.data || result.referencings || []);
+      }
+    } catch (err: any) {
+      console.error('Erreur chargement industriels:', err);
+      setIndustrialPartners([]);
+    }
+  };
+
+  // Charger les KPI par industriel - API ONLY
+  const loadScoresByIndustrial = async (industrialId: string) => {
+    if (!industrialId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const carrierId = getCarrierId();
+      // Endpoint pour obtenir le score du transporteur filtre par industriel
+      const result = await apiCall(`/scoring/carrier/${carrierId}?industrialId=${industrialId}`);
+      setIndustrialScores(result.data);
+    } catch (err: any) {
+      console.error('Erreur KPI par industriel:', err);
+      setError('Impossible de charger les KPI pour cet industriel.');
+      setIndustrialScores(null);
     } finally {
       setIsLoading(false);
     }
@@ -252,7 +311,15 @@ export default function ScoringPage() {
       return;
     }
     loadLeaderboard();
+    loadIndustrialPartners();
   }, []);
+
+  // Charger KPI quand un industriel est selectionne
+  useEffect(() => {
+    if (selectedIndustrial) {
+      loadScoresByIndustrial(selectedIndustrial);
+    }
+  }, [selectedIndustrial]);
 
   // Helper pour couleur de score
   const getScoreColor = (score: number) => {
@@ -360,9 +427,12 @@ export default function ScoringPage() {
               <span style={{ fontSize: '24px' }}>T</span> Scoring Transporteurs IA
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button style={tabStyle(activeTab === 'leaderboard')} onClick={() => setActiveTab('leaderboard')}>
               Classement
+            </button>
+            <button style={tabStyle(activeTab === 'by-industrial')} onClick={() => setActiveTab('by-industrial')}>
+              KPI par Industriel
             </button>
             <button style={tabStyle(activeTab === 'calculate')} onClick={() => setActiveTab('calculate')}>
               Calculer Score
@@ -796,6 +866,130 @@ export default function ScoringPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: KPI par Industriel */}
+          {activeTab === 'by-industrial' && (
+            <div style={cardStyle}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '24px' }}>KPI par Industriel Partenaire</h2>
+
+              {/* Selection industriel */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  Selectionnez un industriel partenaire
+                </label>
+                <select
+                  style={{
+                    width: '100%',
+                    maxWidth: '400px',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: 'white'
+                  }}
+                  value={selectedIndustrial}
+                  onChange={(e) => setSelectedIndustrial(e.target.value)}
+                >
+                  <option value="">-- Choisir un industriel --</option>
+                  {industrialPartners.map((partner) => (
+                    <option key={partner.industrialId} value={partner.industrialId}>
+                      {partner.industrialName}
+                    </option>
+                  ))}
+                </select>
+                {industrialPartners.length === 0 && (
+                  <div style={{ marginTop: '12px', color: '#6b7280', fontSize: '14px' }}>
+                    Aucun industriel partenaire trouve. Verifiez vos referencements.
+                  </div>
+                )}
+              </div>
+
+              {/* Affichage des KPI */}
+              {selectedIndustrial && industrialScores && (
+                <div>
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: '#f0f9ff',
+                    borderRadius: '8px',
+                    marginBottom: '24px',
+                    borderLeft: '4px solid #667eea'
+                  }}>
+                    <div style={{ fontSize: '14px', color: '#6b7280' }}>Industriel selectionne</div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e40af' }}>
+                      {industrialPartners.find(p => p.industrialId === selectedIndustrial)?.industrialName}
+                    </div>
+                  </div>
+
+                  {/* Score global */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ textAlign: 'center', padding: '24px', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '48px', fontWeight: '800', color: getScoreColor(industrialScores.averageScores?.overall || 0) }}>
+                        {industrialScores.averageScores?.overall || 0}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Score Global</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '24px', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '48px', fontWeight: '800', color: '#374151' }}>
+                        {industrialScores.stats?.totalScored || 0}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Transports Notes</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '24px', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: getTrendIcon(industrialScores.trend?.direction || 'stable').color }}>
+                        {getTrendIcon(industrialScores.trend?.direction || 'stable').icon}
+                        {industrialScores.trend?.change ? ` (${industrialScores.trend.change > 0 ? '+' : ''}${industrialScores.trend.change})` : ''}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>Tendance</div>
+                    </div>
+                  </div>
+
+                  {/* Details des criteres */}
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Detail des Criteres de Performance</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                    {industrialScores.averageScores && Object.entries(industrialScores.averageScores).filter(([k]) => k !== 'overall').map(([key, value]) => {
+                      const labels: Record<string, string> = {
+                        punctualityPickup: 'Ponctualite Enlevement',
+                        punctualityDelivery: 'Ponctualite Livraison',
+                        appointmentRespect: 'Respect RDV',
+                        trackingReactivity: 'Reactivite Tracking',
+                        podDelay: 'Delai POD',
+                        incidentsManaged: 'Gestion Incidents',
+                        delaysJustified: 'Retards Justifies'
+                      };
+                      return (
+                        <div key={key} style={{
+                          textAlign: 'center',
+                          padding: '16px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px',
+                          border: `2px solid ${getScoreColor(value as number)}20`
+                        }}>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: getScoreColor(value as number) }}>
+                            {value as number}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>{labels[key] || key}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {selectedIndustrial && !industrialScores && !isLoading && (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>?</div>
+                  <div>Aucun score disponible pour cet industriel</div>
+                </div>
+              )}
+
+              {!selectedIndustrial && (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>I</div>
+                  <div>Selectionnez un industriel pour voir vos KPI specifiques</div>
                 </div>
               )}
             </div>
