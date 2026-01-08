@@ -40,6 +40,37 @@ export default function AffretiaPage() {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated()) { router.push('/login'); return; }
+    // Check for direct mode from orders page
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    if (mode === 'direct') {
+      // Load orders from sessionStorage (set by orders page)
+      const storedOrders = sessionStorage.getItem('affretia_orders');
+      const storedResults = sessionStorage.getItem('affretia_results');
+      if (storedOrders) {
+        try {
+          const orders = JSON.parse(storedOrders);
+          if (orders.length > 0) {
+            const orderIds = orders.map((o: any) => o.id || o.orderId).join(', ');
+            setTriggerForm({ orderId: orderIds, reason: 'Recherche autonome depuis page commandes' });
+            setSuccessMsg(`${orders.length} commande(s) selectionnee(s) pour AFFRET.IA`);
+          }
+        } catch (e) { console.error('Error parsing stored orders', e); }
+      }
+      if (storedResults) {
+        try {
+          const results = JSON.parse(storedResults);
+          // Show results info
+          const successCount = results.filter((r: any) => r.success).length;
+          if (successCount > 0) {
+            setSuccessMsg(`Recherche autonome lancee: ${successCount} session(s) creee(s)`);
+          }
+        } catch (e) { console.error('Error parsing stored results', e); }
+      }
+      // Clear sessionStorage after reading
+      sessionStorage.removeItem('affretia_orders');
+      sessionStorage.removeItem('affretia_results');
+    }
     // Load initial data
     loadStats();
     loadSessions();
