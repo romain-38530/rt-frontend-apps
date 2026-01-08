@@ -294,12 +294,9 @@ importers:
 
   apps/api-billing:
     dependencies:
-      '@rt/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@rt/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
+      body-parser:
+        specifier: ^1.20.2
+        version: 1.20.3
       compression:
         specifier: ^1.7.4
         version: 1.8.1
