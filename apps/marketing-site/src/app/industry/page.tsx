@@ -38,11 +38,13 @@ export default function IndustryPage() {
   ];
 
   const benefits = [
-    'Réduction des coûts de transport de 15 à 30%',
-    'Gain de temps de 60% sur la gestion administrative',
-    'Visibilité complète sur tous vos flux logistiques',
-    'Conformité réglementaire garantie',
-    'Intégration avec vos outils existants (ERP, WMS)',
+    'Recherche automatique de transporteurs avec AFFRET.IA',
+    'Plans de transport consolidés avec scoring transporteur',
+    'Chaîne de dispatch automatisée du devis à la livraison',
+    'e-CMR et documents légaux conformes eIDAS',
+    'Gestion d'équipe avec rôles et permissions',
+    'Interconnexion univers Industriel ↔ Transporteur',
+    'API REST complète pour intégration ERP/WMS',
     'Support client dédié et formation incluse'
   ];
 
@@ -65,11 +67,12 @@ export default function IndustryPage() {
       description: 'Pour les industriels actifs',
       features: [
         'Expéditions illimitées',
-        'Vigilance et alertes avancées',
-        'Affret.IA inclus',
-        'Intégrations ERP',
-        'Support prioritaire',
-        'Rapports personnalisés'
+        'AFFRET.IA recherche autonome',
+        'Plan de transport consolidé',
+        'Auto-dispatch intelligent',
+        'Jusqu'à 5 membres d'équipe',
+        'e-CMR et documents légaux',
+        'Support prioritaire'
       ]
     },
     {
@@ -78,11 +81,12 @@ export default function IndustryPage() {
       description: 'Solution complète',
       features: [
         'Tout Pro inclus',
-        'Multi-sites et multi-utilisateurs',
-        'API complète',
-        'SLA garanti',
-        'Account manager dédié',
-        'Formation sur site'
+        'Membres illimités',
+        'Multi-sites',
+        'API REST complète',
+        'Interconnexions transporteurs',
+        'SLA garanti 99.9%',
+        'Account manager dédié'
       ]
     }
   ];

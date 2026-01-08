@@ -51,7 +51,7 @@ export default function HomePage() {
 
   const stats = [
     { value: '6', label: 'Portails métier' },
-    { value: '38+', label: 'Endpoints IA' },
+    { value: '50+', label: 'Endpoints API' },
     { value: '100%', label: 'Conforme RGPD' },
     { value: '27', label: 'Pays UE couverts' }
   ];

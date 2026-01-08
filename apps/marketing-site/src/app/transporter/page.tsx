@@ -38,12 +38,14 @@ export default function TransporterPage() {
   ];
 
   const benefits = [
-    'Augmentation de 25% de la productivité de votre flotte',
-    'Réduction de 20% de la consommation de carburant',
-    'Optimisation automatique de vos tournées',
-    'Communication simplifiée avec vos chauffeurs',
-    'Facturation automatisée et rapports détaillés',
-    'Conformité réglementaire garantie (e-CMR, temps de conduite)'
+    'Accès direct aux opportunités des industriels via AFFRET.IA',
+    'Scoring automatique visible par les donneurs d'ordre',
+    'Vigilance documents avec alertes automatiques',
+    'Grilles tarifaires connectées au plan de transport consolidé',
+    'Propositions en un clic sur les demandes entrantes',
+    'Dashboard B2P avec KPIs et analytics temps réel',
+    'e-CMR et documents conformes eIDAS',
+    'Interconnexion univers Transporteur ↔ Industriel'
   ];
 
   const pricingTiers = [
@@ -66,10 +68,11 @@ export default function TransporterPage() {
       description: 'Pour transporteurs établis',
       features: [
         'Véhicules illimités',
-        'Optimisation des routes IA',
-        'Gestion multi-chauffeurs',
-        'Analytics avancés',
-        'Intégrations TMS',
+        'Grilles tarifaires multi-zones',
+        'Scoring et réputation',
+        'Propositions AFFRET.IA',
+        'Vigilance documents',
+        'Dashboard B2P complet',
         'Support prioritaire'
       ]
     },
@@ -101,7 +104,7 @@ export default function TransporterPage() {
             </div>
             <div>
               <h1 className="text-5xl font-extrabold">Portail Transporteur</h1>
-              <p className="text-xl text-teal-100 mt-2">Gestion des transports et des livraisons</p>
+              <p className="text-xl text-teal-100 mt-2">Dashboard B2P, scoring, grilles tarifaires et AFFRET.IA</p>
             </div>
           </div>
 
