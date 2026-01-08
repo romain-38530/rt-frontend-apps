@@ -73,6 +73,9 @@ const transporterPlans = [
 
 // Options additionnelles
 const additionalOptions = [
+  { id: 'tmsSync', name: 'Connexion TMS', price: 149, description: 'Synchronisation bidirectionnelle avec votre TMS existant', category: 'pro' },
+  { id: 'modulesIndustrie', name: 'Modules Industrie', price: 499, description: 'Acces complet aux fonctions donneur d\'ordres (commandes, planning, KPI, scoring)', category: 'pro', requires: 'tmsSync' },
+  { id: 'affretIA', name: 'AFFRET.IA', price: 200, description: 'Affretement intelligent par IA (Bourse, Matching, Vigilance)', category: 'pro', requires: 'modulesIndustrie' },
   { id: 'eCmr', name: 'e-CMR', price: 49, description: 'Lettre de voiture electronique' },
   { id: 'geofencing', name: 'Geofencing', price: 29, description: 'Alertes zones geographiques' },
   { id: 'ocrDocuments', name: 'OCR Documents', price: 39, description: 'Scan et extraction automatique' },
@@ -141,10 +144,41 @@ export default function UpgradePage() {
   };
 
   const toggleOption = (optionId: string) => {
-    setSelectedOptions(prev => ({
-      ...prev,
-      [optionId]: !prev[optionId]
-    }));
+    const option = additionalOptions.find(o => o.id === optionId);
+
+    setSelectedOptions(prev => {
+      const newState = { ...prev };
+      const isSelecting = !prev[optionId];
+
+      if (isSelecting) {
+        // Si on selectionne une option qui a des prerequis, activer les prerequis
+        newState[optionId] = true;
+        if (option?.requires) {
+          newState[option.requires] = true;
+          // Gerer les dependances en cascade
+          const parentOption = additionalOptions.find(o => o.id === option.requires);
+          if (parentOption?.requires) {
+            newState[parentOption.requires] = true;
+          }
+        }
+      } else {
+        // Si on deselectionne, desactiver aussi les options dependantes
+        newState[optionId] = false;
+        additionalOptions.forEach(opt => {
+          if (opt.requires === optionId) {
+            newState[opt.id] = false;
+            // Cascade vers les sous-dependances
+            additionalOptions.forEach(subOpt => {
+              if (subOpt.requires === opt.id) {
+                newState[subOpt.id] = false;
+              }
+            });
+          }
+        });
+      }
+
+      return newState;
+    });
   };
 
   const calculateTotal = () => {
@@ -567,6 +601,121 @@ export default function UpgradePage() {
               marginBottom: '32px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}>
+              {/* Pack Pro - Fonctions Industriel */}
+              <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <h3 style={{
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    margin: 0
+                  }}>
+                    Pack Pro - Devenez aussi donneur d'ordres
+                  </h3>
+                  <span style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                    color: 'white',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: '700'
+                  }}>
+                    NOUVEAU
+                  </span>
+                </div>
+                <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+                  Accedez aux fonctionnalites Industrie en plus de vos outils Transporteur. Total pack complet: 848€/mois
+                </p>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {additionalOptions.filter(o => o.category === 'pro').map((option) => {
+                    const isSelected = selectedOptions[option.id];
+                    const hasRequires = option.requires;
+                    const requiresMet = !hasRequires || selectedOptions[option.requires];
+
+                    return (
+                      <div
+                        key={option.id}
+                        onClick={() => toggleOption(option.id)}
+                        style={{
+                          padding: '20px',
+                          borderRadius: '16px',
+                          border: isSelected ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+                          background: isSelected ? 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)' : 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          opacity: !requiresMet && !isSelected ? 0.6 : 1,
+                          position: 'relative'
+                        }}
+                      >
+                        {hasRequires && !requiresMet && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            left: '16px',
+                            background: '#fef3c7',
+                            color: '#92400e',
+                            padding: '2px 8px',
+                            borderRadius: '8px',
+                            fontSize: '10px',
+                            fontWeight: '600'
+                          }}>
+                            Necessite: {additionalOptions.find(o => o.id === option.requires)?.name}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                              {option.name}
+                            </h4>
+                            <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: '1.5' }}>
+                              {option.description}
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right', marginLeft: '16px' }}>
+                            <span style={{ fontSize: '24px', fontWeight: '800', color: '#8b5cf6' }}>
+                              {option.price}€
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>
+                              /mois HT
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{
+                          marginTop: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '6px',
+                            border: isSelected ? 'none' : '2px solid #d1d5db',
+                            background: isSelected ? '#8b5cf6' : 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}>
+                            {isSelected && '✓'}
+                          </div>
+                          <span style={{ fontSize: '13px', color: isSelected ? '#8b5cf6' : '#64748b', fontWeight: '500' }}>
+                            {isSelected ? 'Selectionne' : 'Ajouter'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Options standard */}
               <h3 style={{
                 fontSize: '20px',
                 fontWeight: '700',
@@ -581,7 +730,7 @@ export default function UpgradePage() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '16px'
               }}>
-                {additionalOptions.map((option) => {
+                {additionalOptions.filter(o => !o.category).map((option) => {
                   const isSelected = selectedOptions[option.id];
                   return (
                     <div

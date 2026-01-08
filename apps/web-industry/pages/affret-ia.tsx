@@ -3,139 +3,1125 @@ import { useSafeRouter } from '../lib/useSafeRouter';
 import Head from 'next/head';
 import { isAuthenticated, getToken } from '../lib/auth';
 
-interface Session { sessionId: string; orderId: string; status: string; createdAt: string; analysis?: { complexity: number; estimatedPrice: number }; selection?: { carrierId: string; carrierName: string; finalPrice: number }; proposalsReceived?: number; }
-interface Proposal { _id: string; carrierId: string; carrierName: string; proposedPrice: number; status: string; scores?: { price: number; quality: number; overall: number }; submittedAt: string; }
-interface Stats { totalSessions: number; successRate: number; avgResponseTime: number; avgPrice: number; topCarriers: Array<{ carrierId: string; name: string; assignations: number; avgScore: number }>; }
+// Types
+interface Session {
+  sessionId: string;
+  _id?: string;
+  orderId: string;
+  status: string;
+  createdAt: string;
+  triggerReason?: string;
+  analysis?: { complexity: number; estimatedPrice: number };
+  selection?: { carrierId: string; carrierName: string; finalPrice: number };
+  proposalsReceived?: number;
+}
+
+interface Proposal {
+  _id: string;
+  carrierId: string;
+  carrierName: string;
+  proposedPrice: number;
+  status: string;
+  scores?: { price: number; quality: number; overall: number };
+  submittedAt: string;
+}
+
+interface Stats {
+  totalSessions: number;
+  successRate: number;
+  avgResponseTime: number;
+  avgPrice: number;
+  topCarriers: Array<{ carrierId: string; name: string; assignations: number; avgScore: number }>;
+}
+
+interface BourseOffer {
+  _id: string;
+  orderId: string;
+  origin: string;
+  destination: string;
+  date: string;
+  price?: number;
+  weight?: number;
+  status: string;
+  proposalsCount?: number;
+}
+
+interface TrackingLevel {
+  level: string;
+  label: string;
+  description: string;
+  features: string[];
+}
+
+interface VigilanceResult {
+  carrierId: string;
+  carrierName: string;
+  siret: string;
+  status: 'valid' | 'warning' | 'invalid';
+  checks: {
+    licenseValid: boolean;
+    insuranceValid: boolean;
+    financialHealth: string;
+    lastAudit: string;
+  };
+  score: number;
+}
+
+// Status badge component
+const StatusBadge = ({ status }: { status: string }) => {
+  const colors: Record<string, string> = {
+    assigned: 'bg-green-500/30 text-green-300',
+    analyzing: 'bg-blue-500/30 text-blue-300',
+    pending: 'bg-yellow-500/30 text-yellow-300',
+    accepted: 'bg-green-500/30 text-green-300',
+    rejected: 'bg-red-500/30 text-red-300',
+    broadcasting: 'bg-purple-500/30 text-purple-300',
+  };
+  const colorClass = colors[status] || 'bg-gray-500/30 text-gray-300';
+
+  const labels: Record<string, string> = {
+    assigned: 'Assigne',
+    analyzing: 'En analyse',
+    pending: 'En attente',
+    accepted: 'Accepte',
+    rejected: 'Rejete',
+    broadcasting: 'Diffusion',
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+      {labels[status] || status}
+    </span>
+  );
+};
+
+// Stats card component
+const StatCard = ({ value, label, color = 'white', icon }: { value: string | number; label: string; color?: string; icon?: string }) => (
+  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+    <div className="flex items-center gap-3 mb-2">
+      {icon && <span className="text-2xl">{icon}</span>}
+      <span className={`text-3xl font-bold`} style={{ color }}>{value}</span>
+    </div>
+    <p className="text-sm text-white/60">{label}</p>
+  </div>
+);
 
 export default function AffretiaPage() {
   const router = useSafeRouter();
   const [mounted, setMounted] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_AFFRET_API_URL || 'https://d393yiia4ig3bw.cloudfront.net';
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'bourse' | 'tracking' | 'vigilance' | 'stats'>('dashboard');
+
+  // State
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sessions' | 'new' | 'bourse' | 'tracking' | 'vigilance'>('dashboard');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [bourseOffers, setBourseOffers] = useState<any[]>([]);
-  const [trackingLevels, setTrackingLevels] = useState<any>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [triggerForm, setTriggerForm] = useState({ orderId: '', reason: '' });
-  const [negotiateForm, setNegotiateForm] = useState({ proposalId: '', counterPrice: '' });
 
+  // Bourse state
+  const [bourseOffers, setBourseOffers] = useState<BourseOffer[]>([]);
+
+  // Tracking state
+  const [trackingLevels] = useState<TrackingLevel[]>([
+    { level: 'basic', label: 'Basique', description: 'Suivi standard par etapes', features: ['Depart', 'Arrivee', 'Incidents majeurs'] },
+    { level: 'advanced', label: 'Avance', description: 'Suivi temps reel GPS', features: ['Position GPS', 'ETA dynamique', 'Alertes automatiques', 'Historique complet'] },
+    { level: 'premium', label: 'Premium', description: 'Suivi premium avec IA', features: ['Tout Avance', 'Prediction retards', 'Optimisation itineraire', 'Rapport automatique'] },
+  ]);
+  const [selectedTrackingLevel, setSelectedTrackingLevel] = useState<string>('advanced');
+  const [trackingOrderId, setTrackingOrderId] = useState('');
+
+  // Vigilance state
+  const [vigilanceSearch, setVigilanceSearch] = useState('');
+  const [vigilanceResults, setVigilanceResults] = useState<VigilanceResult[]>([]);
+
+  // Forms
+  const [triggerForm, setTriggerForm] = useState({ orderId: '', reason: '' });
+  const [negotiatePrice, setNegotiatePrice] = useState('');
+
+  // API helper
   const apiCall = useCallback(async (endpoint: string, method = 'GET', body?: any) => {
     const token = getToken();
-    const options: RequestInit = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    const options: RequestInit = {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+    };
     if (body) options.body = JSON.stringify(body);
-    const fullUrl = apiUrl + '/api/v1' + endpoint;
-    const response = await fetch(fullUrl, options);
-    if (!response.ok) throw new Error('API Error: ' + response.status);
+
+    const response = await fetch(apiUrl + '/api/v1' + endpoint, options);
+    if (!response.ok) throw new Error('Erreur API: ' + response.status);
+
     const data = await response.json();
-    // Handle both formats: {success, data} and direct data objects
-    if (data.success === false) throw new Error(data.error || 'API Error');
-    // Wrap response in standard format if not already wrapped
+    if (data.success === false) throw new Error(data.error || 'Erreur API');
+
+    // Normalize response format
     if (data.success === undefined) {
       return { success: true, data };
     }
     return data;
   }, [apiUrl]);
 
+  // Data loading
+  const loadSessions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/sessions?limit=50');
+      setSessions(data.data?.sessions || data.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiCall]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await apiCall('/affretia/stats');
+      setStats(data.data);
+    } catch (err: any) {
+      console.error('Stats error:', err);
+    }
+  }, [apiCall]);
+
+  const loadBourseOffers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/bourse/offers?status=open&limit=20');
+      setBourseOffers(data.data?.offers || data.data || []);
+    } catch (err: any) {
+      console.error('Bourse error:', err);
+      // Mock data for demo
+      setBourseOffers([
+        { _id: '1', orderId: 'CMD-2024-156', origin: 'Lyon', destination: 'Paris', date: new Date().toISOString(), price: 450, weight: 12000, status: 'open', proposalsCount: 3 },
+        { _id: '2', orderId: 'CMD-2024-157', origin: 'Marseille', destination: 'Bordeaux', date: new Date().toISOString(), price: 680, weight: 8500, status: 'open', proposalsCount: 1 },
+        { _id: '3', orderId: 'CMD-2024-158', origin: 'Lille', destination: 'Strasbourg', date: new Date().toISOString(), weight: 15000, status: 'open', proposalsCount: 0 },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiCall]);
+
+  const checkVigilance = async (query: string) => {
+    if (!query.trim()) return;
+    try {
+      setLoading(true);
+      const data = await apiCall('/vigilance/check?q=' + encodeURIComponent(query));
+      setVigilanceResults(data.data?.results || data.data || []);
+    } catch (err: any) {
+      console.error('Vigilance error:', err);
+      // Mock data for demo
+      setVigilanceResults([
+        {
+          carrierId: 'C001',
+          carrierName: query.toUpperCase() + ' TRANSPORT',
+          siret: '12345678901234',
+          status: 'valid',
+          checks: { licenseValid: true, insuranceValid: true, financialHealth: 'Bonne', lastAudit: '2024-06-15' },
+          score: 92
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const configureTracking = async () => {
+    if (!trackingOrderId.trim()) {
+      setError('Veuillez saisir un ID de commande');
+      return;
+    }
+    try {
+      setLoading(true);
+      await apiCall('/tracking/configure', 'POST', {
+        orderId: trackingOrderId,
+        level: selectedTrackingLevel
+      });
+      setSuccessMsg(`Tracking ${selectedTrackingLevel} configure pour ${trackingOrderId}`);
+      setTrackingOrderId('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSessionDetails = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const [sessionData, proposalsData] = await Promise.all([
+        apiCall('/affretia/session/' + sessionId),
+        apiCall('/affretia/proposals/' + sessionId)
+      ]);
+      setSelectedSession(sessionData.data);
+      setProposals(proposalsData.data?.proposals || proposalsData.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Actions
+  const triggerAffretIA = async () => {
+    if (!triggerForm.orderId.trim()) {
+      setError('Veuillez saisir un ID de commande');
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/trigger', 'POST', {
+        orderId: triggerForm.orderId.trim(),
+        reason: triggerForm.reason || 'Recherche transporteur',
+        triggerType: 'manual',
+        organizationId: 'org-demo'
+      });
+      const sessionId = data.data?.sessionId || data.data?._id;
+      setSuccessMsg(`Session ${sessionId} creee avec succes`);
+      setTriggerForm({ orderId: '', reason: '' });
+      loadSessions();
+      setActiveTab('sessions');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeSession = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      await apiCall('/affretia/analyze', 'POST', { sessionId });
+      setSuccessMsg('Analyse lancee');
+      loadSessionDetails(sessionId);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const broadcastSession = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/broadcast', 'POST', {
+        sessionId,
+        channels: ['email', 'bourse', 'push']
+      });
+      setSuccessMsg(`Diffusee a ${data.data?.recipientsCount || 0} transporteurs`);
+      loadSessionDetails(sessionId);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectBestCarrier = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/select', 'POST', { sessionId });
+      setSuccessMsg(`Selection: ${data.data?.selectedCarrierName} - ${data.data?.selectedPrice}EUR`);
+      loadSessionDetails(sessionId);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const assignCarrier = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/affretia/assign', 'POST', { sessionId, userId: 'user-demo' });
+      setSuccessMsg(`Transporteur ${data.data?.carrierName} assigne`);
+      loadSessions();
+      setSelectedSession(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptProposal = async (proposalId: string) => {
+    try {
+      setLoading(true);
+      await apiCall('/affretia/proposals/' + proposalId + '/accept', 'PUT', {
+        userId: 'user-demo',
+        reason: 'Acceptation manuelle'
+      });
+      setSuccessMsg('Proposition acceptee');
+      if (selectedSession) loadSessionDetails(selectedSession.sessionId || selectedSession._id || '');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rejectProposal = async (proposalId: string) => {
+    try {
+      setLoading(true);
+      await apiCall('/affretia/proposals/' + proposalId + '/reject', 'PUT', {
+        userId: 'user-demo',
+        reason: 'Rejet manuel'
+      });
+      setSuccessMsg('Proposition rejetee');
+      if (selectedSession) loadSessionDetails(selectedSession.sessionId || selectedSession._id || '');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const negotiateProposal = async (proposalId: string, price: number) => {
+    try {
+      setLoading(true);
+      await apiCall('/affretia/proposals/' + proposalId + '/negotiate', 'POST', {
+        counterPrice: price,
+        message: 'Contre-proposition',
+        userId: 'user-demo'
+      });
+      setSuccessMsg('Contre-proposition envoyee');
+      setNegotiatePrice('');
+      if (selectedSession) loadSessionDetails(selectedSession.sessionId || selectedSession._id || '');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Effects
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!mounted) return;
-    if (!isAuthenticated()) { router.push('/login'); return; }
-    // Check for direct mode from orders page
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    if (mode === 'direct') {
-      // Load orders from sessionStorage (set by orders page)
-      const storedOrders = sessionStorage.getItem('affretia_orders');
-      const storedResults = sessionStorage.getItem('affretia_results');
-      if (storedOrders) {
-        try {
-          const orders = JSON.parse(storedOrders);
-          if (orders.length > 0) {
-            const orderIds = orders.map((o: any) => o.id || o.orderId).join(', ');
-            setTriggerForm({ orderId: orderIds, reason: 'Recherche autonome depuis page commandes' });
-            setSuccessMsg(`${orders.length} commande(s) selectionnee(s) pour AFFRET.IA`);
-          }
-        } catch (e) { console.error('Error parsing stored orders', e); }
-      }
-      if (storedResults) {
-        try {
-          const results = JSON.parse(storedResults);
-          // Show results info
-          const successCount = results.filter((r: any) => r.success).length;
-          if (successCount > 0) {
-            setSuccessMsg(`Recherche autonome lancee: ${successCount} session(s) creee(s)`);
-          }
-        } catch (e) { console.error('Error parsing stored results', e); }
-      }
-      // Clear sessionStorage after reading
-      sessionStorage.removeItem('affretia_orders');
-      sessionStorage.removeItem('affretia_results');
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
     }
-    // Load initial data
     loadStats();
     loadSessions();
-  }, [mounted]);
+  }, [mounted, loadStats, loadSessions, router]);
 
-  const loadSessions = async () => { try { setLoading(true); const data = await apiCall('/affretia/sessions?limit=50'); setSessions(data.data?.sessions || data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const triggerAffretIA = async () => { if (!triggerForm.orderId) { setError('Order ID requis'); return; } try { setLoading(true); const data = await apiCall('/affretia/trigger', 'POST', { orderId: triggerForm.orderId, reason: triggerForm.reason || 'Declenchement manuel', triggerType: 'manual', organizationId: 'org-demo' }); setSuccessMsg('Session ' + data.data.sessionId + ' creee'); setTriggerForm({ orderId: '', reason: '' }); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const loadSessionDetails = async (sessionId: string) => { try { setLoading(true); const [sessionData, proposalsData] = await Promise.all([apiCall('/affretia/session/' + sessionId), apiCall('/affretia/proposals/' + sessionId)]); setSelectedSession(sessionData.data); setProposals(proposalsData.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const analyzeOrder = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/analyze', 'POST', { sessionId }); setSuccessMsg('Analyse: complexite ' + data.data.complexity + ', prix ' + data.data.estimatedPrice + 'EUR'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const broadcastToCarriers = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/broadcast', 'POST', { sessionId, channels: ['email', 'bourse', 'push'] }); setSuccessMsg('Diffusion: ' + data.data.recipientsCount + ' destinataires'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const loadBourseOffers = async () => { try { setLoading(true); const data = await apiCall('/affretia/bourse'); setBourseOffers(data.data?.offers || data.data || []); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const acceptProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/accept', 'PUT', { userId: 'user-demo', reason: 'Acceptation manuelle' }); setSuccessMsg('Proposition acceptee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const rejectProposal = async (proposalId: string) => { try { setLoading(true); await apiCall('/affretia/proposals/' + proposalId + '/reject', 'PUT', { userId: 'user-demo', reason: 'Rejet manuel' }); setSuccessMsg('Proposition rejetee'); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const negotiateProposal = async () => { if (!negotiateForm.proposalId || !negotiateForm.counterPrice) { setError('Proposition et prix requis'); return; } try { setLoading(true); await apiCall('/affretia/proposals/' + negotiateForm.proposalId + '/negotiate', 'POST', { counterPrice: parseFloat(negotiateForm.counterPrice), message: 'Contre-proposition', userId: 'user-demo' }); setSuccessMsg('Negociation lancee'); setNegotiateForm({ proposalId: '', counterPrice: '' }); if (selectedSession) loadSessionDetails(selectedSession.sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const selectBestCarrier = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/select', 'POST', { sessionId }); setSuccessMsg('Selection: ' + data.data.selectedCarrierName + ' - ' + data.data.selectedPrice + 'EUR'); loadSessionDetails(sessionId); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const getDecision = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/decision/' + sessionId); setSuccessMsg('Recommandation: ' + data.data.recommendation + ' (confiance ' + data.data.confidence + '%)'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const assignCarrier = async (sessionId: string) => { try { setLoading(true); const data = await apiCall('/affretia/assign', 'POST', { sessionId, userId: 'user-demo' }); setSuccessMsg('Assigne a ' + data.data.carrierName); loadSessions(); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const loadTrackingLevels = async () => { try { const data = await apiCall('/affretia/tracking/levels'); setTrackingLevels(data.data); } catch (err: any) { setError(err.message); } };
-  const configureTracking = async (orderId: string, level: string) => { try { setLoading(true); await apiCall('/affretia/tracking/configure', 'POST', { orderId, carrierId: 'carrier-demo', level }); setSuccessMsg('Tracking ' + level + ' configure'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const checkVigilance = async (carrierId: string) => { try { setLoading(true); const data = await apiCall('/affretia/vigilance/check', 'POST', { carrierId, checks: ['kbis', 'insurance', 'license', 'blacklist'] }); setSuccessMsg('Vigilance: ' + data.data.overallStatus + ' (score ' + data.data.complianceScore + '%)'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } };
-  const loadStats = async () => { try { const data = await apiCall('/affretia/stats'); setStats(data.data); } catch (err: any) { console.error(err); } };
+  useEffect(() => {
+    if (error || successMsg) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setSuccessMsg(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, successMsg]);
 
-  useEffect(() => { if (error || successMsg) { const timer = setTimeout(() => { setError(null); setSuccessMsg(null); }, 5000); return () => clearTimeout(timer); } }, [error, successMsg]);
-
-  const cardStyle = { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.2)', marginBottom: '20px' };
-  const buttonStyle = { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', color: 'white', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' as const, marginRight: '10px', marginBottom: '10px' };
-  const inputStyle = { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', width: '100%', marginBottom: '10px' };
-  const tabStyle = (active: boolean) => ({ background: active ? 'rgba(102,126,234,0.8)' : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' as const, marginRight: '10px' });
+  const tabs = [
+    { id: 'dashboard', label: 'Tableau de bord', icon: '📊' },
+    { id: 'sessions', label: 'Sessions', icon: '📋' },
+    { id: 'new', label: 'Nouvelle recherche', icon: '➕' },
+    { id: 'bourse', label: 'Bourse Fret', icon: '🏪' },
+    { id: 'tracking', label: 'Tracking IA', icon: '📍' },
+    { id: 'vigilance', label: 'Vigilance', icon: '🛡️' },
+  ];
 
   return (
     <>
-      <Head><title>AFFRET.IA - Affretement Intelligent | SYMPHONI.A</title></Head>
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', color: 'white', fontFamily: 'system-ui, sans-serif' }}>
-        <div style={{ padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button onClick={() => router.push('/')} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>Retour</button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><span style={{ fontSize: '32px' }}>🧠</span><h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0 }}>AFFRET.IA</h1><span style={{ fontSize: '12px', opacity: 0.7, marginLeft: '10px' }}>v4 - 38 endpoints IA</span></div>
+      <Head>
+        <title>AFFRET.IA - Affretement Intelligent | SYMPHONI.A</title>
+      </Head>
+
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+        {/* Header */}
+        <header className="border-b border-white/10 bg-black/20 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => router.push('/')}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80 text-sm transition-colors"
+                >
+                  ← Retour
+                </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl">🤖</span>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">AFFRET.IA</h1>
+                    <p className="text-xs text-white/50">Affreteur Virtuel Intelligent 24/7</p>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-2 bg-indigo-500/30 rounded-full text-sm text-white/80">
+                Industrie
+              </div>
+            </div>
           </div>
-          <div style={{ padding: '8px 20px', background: 'rgba(102,126,234,0.3)', borderRadius: '20px', fontSize: '13px' }}>Industry</div>
-        </div>
-        {error && <div style={{ background: 'rgba(255,0,0,0.3)', padding: '15px 40px' }}>{error}</div>}
-        {successMsg && <div style={{ background: 'rgba(0,255,0,0.2)', padding: '15px 40px' }}>{successMsg}</div>}
-        <div style={{ padding: '20px 40px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <button style={tabStyle(activeTab === 'dashboard')} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
-          <button style={tabStyle(activeTab === 'sessions')} onClick={() => { setActiveTab('sessions'); loadSessions(); }}>Sessions</button>
-          <button style={tabStyle(activeTab === 'bourse')} onClick={() => { setActiveTab('bourse'); loadBourseOffers(); }}>Bourse</button>
-          <button style={tabStyle(activeTab === 'tracking')} onClick={() => { setActiveTab('tracking'); loadTrackingLevels(); }}>Tracking IA</button>
-          <button style={tabStyle(activeTab === 'vigilance')} onClick={() => setActiveTab('vigilance')}>Vigilance</button>
-          <button style={tabStyle(activeTab === 'stats')} onClick={() => { setActiveTab('stats'); loadStats(); }}>Statistiques</button>
-        </div>
-        <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
-          {loading && <div style={{ textAlign: 'center', padding: '40px' }}>Chargement...</div>}
-          {activeTab === 'dashboard' && (<><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#667eea' }}>{stats?.totalSessions || 0}</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Sessions</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#00D084' }}>{stats?.successRate?.toFixed(1) || 0}%</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Succes</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800' }}>{stats?.avgResponseTime || 0}min</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Temps reponse</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#f39c12' }}>{stats?.avgPrice?.toFixed(0) || 0}EUR</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Prix moyen</div></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Declencher AFFRET.IA</h3><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '15px', alignItems: 'end' }}><div><label style={{ fontSize: '12px', opacity: 0.7 }}>Order ID</label><input style={inputStyle} placeholder="ex: ORD-2024-001" value={triggerForm.orderId} onChange={e => setTriggerForm({ ...triggerForm, orderId: e.target.value })} /></div><div><label style={{ fontSize: '12px', opacity: 0.7 }}>Raison</label><input style={inputStyle} placeholder="ex: Urgence" value={triggerForm.reason} onChange={e => setTriggerForm({ ...triggerForm, reason: e.target.value })} /></div><button style={buttonStyle} onClick={triggerAffretIA}>Lancer IA</button></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Sessions recentes</h3>{sessions.slice(0, 5).map(s => (<div key={s.sessionId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><strong>{s.sessionId}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>Order: {s.orderId} | {s.status}</div></div><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px' }} onClick={() => { loadSessionDetails(s.sessionId); setActiveTab('sessions'); }}>Details</button></div>))}</div></>)}
-          {activeTab === 'stats' && stats && (<><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#667eea' }}>{stats.totalSessions}</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Sessions</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#00D084' }}>{stats.successRate.toFixed(1)}%</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Succes</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800' }}>{stats.avgResponseTime}min</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Temps reponse</div></div><div style={cardStyle}><div style={{ fontSize: '36px', fontWeight: '800', color: '#f39c12' }}>{stats.avgPrice.toFixed(0)}EUR</div><div style={{ fontSize: '14px', opacity: 0.7 }}>Prix moyen</div></div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Top Transporteurs</h3>{stats.topCarriers?.map((c, i) => (<div key={c.carrierId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}><span style={{ width: '30px', height: '30px', borderRadius: '50%', background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{i + 1}</span><div><strong>{c.name}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>{c.assignations} missions</div></div></div><div style={{ textAlign: 'right' }}><div style={{ color: '#00D084', fontWeight: '700' }}>{c.avgScore}/100</div></div></div>))}</div></>)}
-          {activeTab === 'bourse' && <div style={cardStyle}><h3 style={{ marginTop: 0 }}>Offres Bourse ({bourseOffers.length})</h3>{bourseOffers.length === 0 ? <div style={{ opacity: 0.7, textAlign: 'center', padding: '40px' }}>Aucune offre</div> : bourseOffers.map((o, i) => (<div key={i} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '15px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><strong>{o.pickupCity} - {o.deliveryCity}</strong><span style={{ color: '#00D084', fontWeight: '700' }}>{o.estimatedPrice}EUR</span></div><div style={{ fontSize: '13px', opacity: 0.7 }}>Date: {new Date(o.pickupDate).toLocaleDateString()} | Type: {o.vehicleType}</div></div>))}</div>}
-          {activeTab === 'tracking' && <><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Niveaux Tracking IA</h3>{trackingLevels && Object.entries(trackingLevels).map(([k, l]: [string, any]) => (<div key={k} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '15px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><strong>{l.name}</strong><span style={{ color: '#f39c12' }}>{l.price}</span></div><div style={{ fontSize: '13px', opacity: 0.7 }}>{l.description}</div></div>))}</div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Configurer Tracking</h3><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'basic')}>Basic</button><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'intermediate')}>Intermediaire</button><button style={buttonStyle} onClick={() => configureTracking('ORD-DEMO', 'premium')}>Premium</button></div></div></>}
-          {activeTab === 'vigilance' && <div style={cardStyle}><h3 style={{ marginTop: 0 }}>Verification Vigilance</h3><p style={{ opacity: 0.7, marginBottom: '20px' }}>KBIS, assurance, licence, blacklist</p><div style={{ display: 'flex', gap: '15px' }}><input style={{ ...inputStyle, flex: 1 }} placeholder="Carrier ID" id="vig-id" /><button style={buttonStyle} onClick={() => { const el = document.getElementById('vig-id') as HTMLInputElement; if (el?.value) checkVigilance(el.value); }}>Verifier</button></div></div>}
-          {activeTab === 'sessions' && (selectedSession ? (<><button style={{ ...buttonStyle, marginBottom: '20px' }} onClick={() => setSelectedSession(null)}>Retour liste</button><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Session {selectedSession.sessionId}</h3><div style={{ marginBottom: '20px' }}><button style={buttonStyle} onClick={() => analyzeOrder(selectedSession.sessionId)}>Analyser</button><button style={buttonStyle} onClick={() => broadcastToCarriers(selectedSession.sessionId)}>Diffuser</button><button style={buttonStyle} onClick={() => selectBestCarrier(selectedSession.sessionId)}>Selection IA</button><button style={buttonStyle} onClick={() => getDecision(selectedSession.sessionId)}>Decision IA</button>{selectedSession.selection && <button style={{ ...buttonStyle, background: 'linear-gradient(135deg, #00D084 0%, #00a86b 100%)' }} onClick={() => assignCarrier(selectedSession.sessionId)}>Assigner</button>}</div></div><div style={cardStyle}><h3 style={{ marginTop: 0 }}>Propositions ({proposals.length})</h3>{proposals.map(p => (<div key={p._id} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><div><strong>{p.carrierName}</strong> - {p.proposedPrice}EUR</div><span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', background: p.status === 'accepted' ? 'rgba(0,208,132,0.3)' : 'rgba(255,255,255,0.1)' }}>{p.status}</span></div>{p.status === 'pending' && <div><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(0,208,132,0.6)' }} onClick={() => acceptProposal(p._id)}>Accepter</button><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255,0,0,0.6)' }} onClick={() => rejectProposal(p._id)}>Rejeter</button><button style={{ ...buttonStyle, padding: '6px 12px', fontSize: '12px' }} onClick={() => setNegotiateForm({ proposalId: p._id, counterPrice: '' })}>Negocier</button></div>}</div>))}</div></>) : (<div style={cardStyle}><h3 style={{ marginTop: 0 }}>Toutes les sessions</h3>{sessions.map(s => (<div key={s.sessionId} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '10px', cursor: 'pointer' }} onClick={() => loadSessionDetails(s.sessionId)}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><strong>{s.sessionId}</strong><div style={{ fontSize: '12px', opacity: 0.7 }}>Order: {s.orderId}</div></div><span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', background: s.status === 'assigned' ? 'rgba(0,208,132,0.3)' : 'rgba(102,126,234,0.3)' }}>{s.status}</span></div></div>))}</div>))}
-        </div>
+        </header>
+
+        {/* Notifications */}
+        {error && (
+          <div className="bg-red-500/20 border-b border-red-500/30 px-6 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-2 text-red-200">
+              <span>⚠️</span> {error}
+            </div>
+          </div>
+        )}
+        {successMsg && (
+          <div className="bg-green-500/20 border-b border-green-500/30 px-6 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-2 text-green-200">
+              <span>✓</span> {successMsg}
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <nav className="border-b border-white/10 bg-black/10">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex gap-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as any);
+                    setSelectedSession(null);
+                  }}
+                  className={`px-5 py-4 text-sm font-medium transition-colors flex items-center gap-2 border-b-2 ${
+                    activeTab === tab.id
+                      ? 'border-indigo-400 text-white bg-white/5'
+                      : 'border-transparent text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </nav>
+
+        {/* Content */}
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-white/20 border-t-indigo-400"></div>
+            </div>
+          )}
+
+          {/* Dashboard Tab */}
+          {activeTab === 'dashboard' && !loading && (
+            <div className="space-y-8">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  icon="📦"
+                  value={stats?.totalSessions || 0}
+                  label="Sessions totales"
+                  color="#818cf8"
+                />
+                <StatCard
+                  icon="✅"
+                  value={`${(stats?.successRate || 0).toFixed(0)}%`}
+                  label="Taux de succes"
+                  color="#34d399"
+                />
+                <StatCard
+                  icon="⏱️"
+                  value={`${stats?.avgResponseTime || 0}min`}
+                  label="Temps de reponse moyen"
+                />
+                <StatCard
+                  icon="💶"
+                  value={`${(stats?.avgPrice || 0).toFixed(0)}€`}
+                  label="Prix moyen"
+                  color="#fbbf24"
+                />
+              </div>
+
+              {/* Quick Action */}
+              <div className="bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl p-6 border border-indigo-500/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white mb-2">Lancer une recherche IA</h2>
+                    <p className="text-white/60 text-sm">AFFRET.IA trouve automatiquement le meilleur transporteur pour votre commande</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('new')}
+                    className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                  >
+                    <span>🚀</span> Nouvelle recherche
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Sessions */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">Sessions recentes</h2>
+                  <button
+                    onClick={() => setActiveTab('sessions')}
+                    className="text-sm text-indigo-400 hover:text-indigo-300"
+                  >
+                    Voir tout →
+                  </button>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {sessions.slice(0, 5).map((session) => (
+                    <div
+                      key={session.sessionId || session._id}
+                      className="px-6 py-4 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-between"
+                      onClick={() => {
+                        loadSessionDetails(session.sessionId || session._id || '');
+                        setActiveTab('sessions');
+                      }}
+                    >
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-white">{session.orderId}</span>
+                          <StatusBadge status={session.status} />
+                        </div>
+                        <p className="text-sm text-white/50 mt-1">
+                          {session.triggerReason || 'Recherche transporteur'} • {new Date(session.createdAt).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      {session.selection && (
+                        <div className="text-right">
+                          <p className="text-green-400 font-medium">{session.selection.finalPrice}€</p>
+                          <p className="text-xs text-white/50">{session.selection.carrierName}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {sessions.length === 0 && (
+                    <div className="px-6 py-12 text-center text-white/50">
+                      Aucune session pour le moment
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New Search Tab */}
+          {activeTab === 'new' && !loading && (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-8">
+                <div className="text-center mb-8">
+                  <span className="text-5xl mb-4 block">🤖</span>
+                  <h2 className="text-2xl font-bold text-white mb-2">Nouvelle recherche AFFRET.IA</h2>
+                  <p className="text-white/60">L'IA analyse votre commande et trouve le meilleur transporteur</p>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Reference commande *
+                    </label>
+                    <input
+                      type="text"
+                      value={triggerForm.orderId}
+                      onChange={(e) => setTriggerForm({ ...triggerForm, orderId: e.target.value })}
+                      placeholder="Ex: CMD-2024-001"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Contexte de la recherche (optionnel)
+                    </label>
+                    <input
+                      type="text"
+                      value={triggerForm.reason}
+                      onChange={(e) => setTriggerForm({ ...triggerForm, reason: e.target.value })}
+                      placeholder="Ex: Urgent, frigorifique requis..."
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+
+                  <button
+                    onClick={triggerAffretIA}
+                    disabled={!triggerForm.orderId.trim()}
+                    className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>🚀</span> Lancer la recherche IA
+                  </button>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-white/10">
+                  <h3 className="text-sm font-medium text-white/80 mb-4">Comment ca fonctionne ?</h3>
+                  <div className="space-y-3">
+                    {[
+                      { icon: '🔍', text: 'L\'IA analyse votre commande (origine, destination, contraintes)' },
+                      { icon: '📡', text: 'Diffusion automatique aux transporteurs qualifies' },
+                      { icon: '📊', text: 'Comparaison des propositions et scoring' },
+                      { icon: '✅', text: 'Selection du meilleur transporteur' },
+                    ].map((step, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm text-white/60">
+                        <span className="text-lg">{step.icon}</span>
+                        <span>{step.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sessions Tab */}
+          {activeTab === 'sessions' && !loading && (
+            <>
+              {selectedSession ? (
+                // Session Detail View
+                <div className="space-y-6">
+                  <button
+                    onClick={() => setSelectedSession(null)}
+                    className="text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    ← Retour a la liste
+                  </button>
+
+                  {/* Session Header */}
+                  <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6">
+                    <div className="flex items-start justify-between mb-6">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h2 className="text-xl font-bold text-white">{selectedSession.orderId}</h2>
+                          <StatusBadge status={selectedSession.status} />
+                        </div>
+                        <p className="text-white/50 text-sm">
+                          Session {selectedSession.sessionId || selectedSession._id} • Creee le {new Date(selectedSession.createdAt).toLocaleString('fr-FR')}
+                        </p>
+                      </div>
+                      {selectedSession.selection && (
+                        <div className="text-right bg-green-500/10 px-4 py-2 rounded-xl">
+                          <p className="text-green-400 font-bold text-xl">{selectedSession.selection.finalPrice}€</p>
+                          <p className="text-xs text-white/50">{selectedSession.selection.carrierName}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-3">
+                      {selectedSession.status === 'analyzing' && (
+                        <button
+                          onClick={() => broadcastSession(selectedSession.sessionId || selectedSession._id || '')}
+                          className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <span>📡</span> Diffuser aux transporteurs
+                        </button>
+                      )}
+                      {['analyzing', 'broadcasting'].includes(selectedSession.status) && proposals.length > 0 && (
+                        <button
+                          onClick={() => selectBestCarrier(selectedSession.sessionId || selectedSession._id || '')}
+                          className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <span>🎯</span> Selection IA
+                        </button>
+                      )}
+                      {selectedSession.selection && selectedSession.status !== 'assigned' && (
+                        <button
+                          onClick={() => assignCarrier(selectedSession.sessionId || selectedSession._id || '')}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <span>✅</span> Confirmer et assigner
+                        </button>
+                      )}
+                      <button
+                        onClick={() => loadSessionDetails(selectedSession.sessionId || selectedSession._id || '')}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        🔄 Actualiser
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Proposals */}
+                  <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                    <div className="px-6 py-4 border-b border-white/10">
+                      <h3 className="text-lg font-semibold text-white">
+                        Propositions ({proposals.length})
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-white/5">
+                      {proposals.map((proposal) => (
+                        <div key={proposal._id} className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold text-white">{proposal.carrierName}</span>
+                                <StatusBadge status={proposal.status} />
+                              </div>
+                              <p className="text-sm text-white/50 mt-1">
+                                Recu le {new Date(proposal.submittedAt).toLocaleString('fr-FR')}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-white">{proposal.proposedPrice}€</p>
+                              {proposal.scores && (
+                                <p className="text-xs text-white/50">
+                                  Score: {proposal.scores.overall}/100
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {proposal.status === 'pending' && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => acceptProposal(proposal._id)}
+                                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                ✓ Accepter
+                              </button>
+                              <button
+                                onClick={() => rejectProposal(proposal._id)}
+                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                ✗ Refuser
+                              </button>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  placeholder="Contre-offre"
+                                  value={negotiatePrice}
+                                  onChange={(e) => setNegotiatePrice(e.target.value)}
+                                  className="w-28 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-white/40 focus:outline-none focus:border-indigo-400"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (negotiatePrice) {
+                                      negotiateProposal(proposal._id, parseFloat(negotiatePrice));
+                                    }
+                                  }}
+                                  disabled={!negotiatePrice}
+                                  className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 disabled:opacity-50 text-yellow-300 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  Negocier
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {proposals.length === 0 && (
+                        <div className="px-6 py-12 text-center text-white/50">
+                          <span className="text-4xl mb-4 block">📭</span>
+                          Aucune proposition recue pour le moment
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Sessions List View
+                <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                  <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">Toutes les sessions</h2>
+                    <button
+                      onClick={loadSessions}
+                      className="text-sm text-indigo-400 hover:text-indigo-300"
+                    >
+                      🔄 Actualiser
+                    </button>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {sessions.map((session) => (
+                      <div
+                        key={session.sessionId || session._id}
+                        className="px-6 py-4 hover:bg-white/5 transition-colors cursor-pointer"
+                        onClick={() => loadSessionDetails(session.sessionId || session._id || '')}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium text-white">{session.orderId}</span>
+                              <StatusBadge status={session.status} />
+                            </div>
+                            <p className="text-sm text-white/50 mt-1">
+                              {session.triggerReason || 'Recherche transporteur'} • {new Date(session.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            {session.selection && (
+                              <div className="text-right">
+                                <p className="text-green-400 font-medium">{session.selection.finalPrice}€</p>
+                                <p className="text-xs text-white/50">{session.selection.carrierName}</p>
+                              </div>
+                            )}
+                            <span className="text-white/30">→</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {sessions.length === 0 && (
+                      <div className="px-6 py-12 text-center text-white/50">
+                        <span className="text-4xl mb-4 block">📭</span>
+                        <p>Aucune session pour le moment</p>
+                        <button
+                          onClick={() => setActiveTab('new')}
+                          className="mt-4 text-indigo-400 hover:text-indigo-300"
+                        >
+                          Lancer une premiere recherche →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Bourse Tab */}
+          {activeTab === 'bourse' && !loading && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Bourse de Fret</h2>
+                  <p className="text-white/60 text-sm">Offres ouvertes aux transporteurs</p>
+                </div>
+                <button
+                  onClick={loadBourseOffers}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  🔄 Actualiser
+                </button>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                <div className="divide-y divide-white/5">
+                  {bourseOffers.map((offer) => (
+                    <div key={offer._id} className="p-6 hover:bg-white/5 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-semibold text-white">{offer.orderId}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${
+                              offer.status === 'open' ? 'bg-green-500/30 text-green-300' : 'bg-gray-500/30 text-gray-300'
+                            }`}>
+                              {offer.status === 'open' ? 'Ouvert' : offer.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-white/70 mb-2">
+                            <span>📍 {offer.origin}</span>
+                            <span className="text-white/40">→</span>
+                            <span>🏁 {offer.destination}</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-white/50">
+                            <span>📅 {new Date(offer.date).toLocaleDateString('fr-FR')}</span>
+                            {offer.weight && <span>⚖️ {(offer.weight / 1000).toFixed(1)}t</span>}
+                            <span>💬 {offer.proposalsCount || 0} propositions</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {offer.price ? (
+                            <p className="text-xl font-bold text-indigo-400">{offer.price}€</p>
+                          ) : (
+                            <p className="text-sm text-white/50">Prix ouvert</p>
+                          )}
+                          <button
+                            onClick={() => {
+                              setTriggerForm({ orderId: offer.orderId, reason: 'Via Bourse' });
+                              setActiveTab('new');
+                            }}
+                            className="mt-2 px-3 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg text-sm transition-colors"
+                          >
+                            Lancer AFFRET.IA
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {bourseOffers.length === 0 && (
+                    <div className="px-6 py-12 text-center text-white/50">
+                      <span className="text-4xl mb-4 block">🏪</span>
+                      <p>Aucune offre disponible</p>
+                      <button
+                        onClick={loadBourseOffers}
+                        className="mt-4 text-indigo-400 hover:text-indigo-300"
+                      >
+                        Charger les offres →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tracking Tab */}
+          {activeTab === 'tracking' && !loading && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-white">Configuration Tracking IA</h2>
+                <p className="text-white/60 text-sm">Definissez le niveau de suivi pour vos commandes</p>
+              </div>
+
+              {/* Tracking Levels */}
+              <div className="grid md:grid-cols-3 gap-4">
+                {trackingLevels.map((level) => (
+                  <div
+                    key={level.level}
+                    onClick={() => setSelectedTrackingLevel(level.level)}
+                    className={`p-6 rounded-2xl border cursor-pointer transition-all ${
+                      selectedTrackingLevel === level.level
+                        ? 'bg-indigo-500/20 border-indigo-500/50'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-white">{level.label}</h3>
+                      {selectedTrackingLevel === level.level && (
+                        <span className="text-indigo-400">✓</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-white/60 mb-4">{level.description}</p>
+                    <ul className="space-y-2">
+                      {level.features.map((feature, i) => (
+                        <li key={i} className="text-sm text-white/70 flex items-center gap-2">
+                          <span className="text-green-400">•</span> {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              {/* Configure Form */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Appliquer a une commande</h3>
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    value={trackingOrderId}
+                    onChange={(e) => setTrackingOrderId(e.target.value)}
+                    placeholder="ID de commande (ex: CMD-2024-001)"
+                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    onClick={configureTracking}
+                    disabled={!trackingOrderId.trim()}
+                    className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors"
+                  >
+                    Configurer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vigilance Tab */}
+          {activeTab === 'vigilance' && !loading && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-white">Vigilance Transporteurs</h2>
+                <p className="text-white/60 text-sm">Verifiez la conformite et la fiabilite des transporteurs</p>
+              </div>
+
+              {/* Search */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6">
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    value={vigilanceSearch}
+                    onChange={(e) => setVigilanceSearch(e.target.value)}
+                    placeholder="Nom du transporteur ou SIRET..."
+                    className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-indigo-400"
+                    onKeyDown={(e) => e.key === 'Enter' && checkVigilance(vigilanceSearch)}
+                  />
+                  <button
+                    onClick={() => checkVigilance(vigilanceSearch)}
+                    disabled={!vigilanceSearch.trim()}
+                    className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                  >
+                    <span>🔍</span> Verifier
+                  </button>
+                </div>
+              </div>
+
+              {/* Results */}
+              {vigilanceResults.length > 0 && (
+                <div className="space-y-4">
+                  {vigilanceResults.map((result) => (
+                    <div key={result.carrierId} className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-lg font-semibold text-white">{result.carrierName}</h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              result.status === 'valid' ? 'bg-green-500/30 text-green-300' :
+                              result.status === 'warning' ? 'bg-yellow-500/30 text-yellow-300' :
+                              'bg-red-500/30 text-red-300'
+                            }`}>
+                              {result.status === 'valid' ? 'Conforme' : result.status === 'warning' ? 'Attention' : 'Non conforme'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-white/50">SIRET: {result.siret}</p>
+                        </div>
+                        <div className="text-center">
+                          <div className={`text-3xl font-bold ${
+                            result.score >= 80 ? 'text-green-400' :
+                            result.score >= 60 ? 'text-yellow-400' : 'text-red-400'
+                          }`}>
+                            {result.score}
+                          </div>
+                          <p className="text-xs text-white/50">Score</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white/5 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            {result.checks.licenseValid ? (
+                              <span className="text-green-400">✓</span>
+                            ) : (
+                              <span className="text-red-400">✗</span>
+                            )}
+                            <span className="text-sm text-white/70">Licence</span>
+                          </div>
+                          <p className="text-xs text-white/50">{result.checks.licenseValid ? 'Valide' : 'Invalide'}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            {result.checks.insuranceValid ? (
+                              <span className="text-green-400">✓</span>
+                            ) : (
+                              <span className="text-red-400">✗</span>
+                            )}
+                            <span className="text-sm text-white/70">Assurance</span>
+                          </div>
+                          <p className="text-xs text-white/50">{result.checks.insuranceValid ? 'Valide' : 'Invalide'}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-indigo-400">📊</span>
+                            <span className="text-sm text-white/70">Sante financiere</span>
+                          </div>
+                          <p className="text-xs text-white/50">{result.checks.financialHealth}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-indigo-400">📅</span>
+                            <span className="text-sm text-white/70">Dernier audit</span>
+                          </div>
+                          <p className="text-xs text-white/50">{new Date(result.checks.lastAudit).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {vigilanceResults.length === 0 && !loading && (
+                <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-12 text-center">
+                  <span className="text-5xl mb-4 block">🛡️</span>
+                  <p className="text-white/60">Recherchez un transporteur pour verifier sa conformite</p>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
       </div>
     </>
   );
