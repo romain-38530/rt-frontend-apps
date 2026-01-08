@@ -58,7 +58,9 @@ export default function MesAffectationsPage() {
   const loadRequests = useCallback(async () => {
     try {
       const user = getCurrentUser();
-      if (!user?.carrierId) {
+      // Le carrierId peut etre stocké sous différents noms selon la config backend
+      const carrierId = user?.carrierId || user?.companyId || user?.id || user?._id;
+      if (!carrierId) {
         setError('Identifiant transporteur non trouve');
         setIsLoading(false);
         return;
@@ -66,7 +68,7 @@ export default function MesAffectationsPage() {
 
       // Appeler l'API pour recuperer les commandes en attente de reponse
       const response = await fetch(
-        `${API_CONFIG.ORDERS_API}/api/orders/carrier/${user.carrierId}/pending-dispatch`,
+        `${API_CONFIG.ORDERS_API}/api/orders/carrier/${carrierId}/pending-dispatch`,
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -131,7 +133,8 @@ export default function MesAffectationsPage() {
   // Accepter une commande
   const handleAccept = async (orderId: string) => {
     const user = getCurrentUser();
-    if (!user?.carrierId) return;
+    const carrierId = user?.carrierId || user?.companyId || user?.id || user?._id;
+    if (!carrierId) return;
 
     setProcessing(orderId);
     try {
@@ -144,7 +147,7 @@ export default function MesAffectationsPage() {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
           body: JSON.stringify({
-            carrierId: user.carrierId,
+            carrierId: carrierId,
             response: 'accepted',
           }),
         }
@@ -171,7 +174,8 @@ export default function MesAffectationsPage() {
   // Refuser une commande
   const handleRefuse = async (orderId: string) => {
     const user = getCurrentUser();
-    if (!user?.carrierId) return;
+    const carrierId = user?.carrierId || user?.companyId || user?.id || user?._id;
+    if (!carrierId) return;
 
     const reason = selectedReason === 'other' ? customReason :
       REFUSAL_REASONS.find(r => r.id === selectedReason)?.label || selectedReason;
@@ -192,7 +196,7 @@ export default function MesAffectationsPage() {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
           body: JSON.stringify({
-            carrierId: user.carrierId,
+            carrierId: carrierId,
             response: 'refused',
             reason,
           }),
