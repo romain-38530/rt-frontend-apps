@@ -166,10 +166,10 @@ export default function OrdersPage() {
     setShowPlanningModal(true);
   };
 
-// Lancer Affret.IA directement (sans passer par la chaine de dispatch)
+  // Lancer Affret.IA directement (sans passer par la chaîne de dispatch)
   const handleLaunchDirectAffretIA = async () => {
     if (selectedOrders.size === 0) {
-      toast.error('Selectionnez au moins une commande pour Affret.IA');
+      toast.error('Sélectionnez au moins une commande pour Affret.IA');
       return;
     }
 
@@ -185,9 +185,9 @@ export default function OrdersPage() {
       );
 
       if (result.success) {
-        toast.success(`Recherche lancee: ${result.successCount} commande(s)`);
+        toast.success(`Recherche lancée: ${result.successCount} commande(s)`);
       } else {
-        toast.success(`${result.successCount} lancee(s), ${result.failedCount} echec(s)`);
+        toast.success(`${result.successCount} lancée(s), ${result.failedCount} échec(s)`);
       }
 
       const ordersToSend = orders.filter(o => selectedOrders.has(o.id));
