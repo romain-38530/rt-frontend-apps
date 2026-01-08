@@ -221,6 +221,156 @@ export default function OrderDetailPage() {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(price);
   };
 
+  // Générer et télécharger le récapitulatif PDF de la commande
+  const handleDownloadRecap = () => {
+    if (!order) return;
+
+    // Créer le contenu HTML du récapitulatif
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Récapitulatif Commande ${order.reference}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 20px; }
+    .logo { font-size: 28px; font-weight: bold; color: #667eea; }
+    .logo-sub { font-size: 12px; color: #666; font-style: italic; }
+    .doc-info { text-align: right; }
+    .doc-title { font-size: 22px; font-weight: bold; color: #333; }
+    .doc-ref { font-size: 14px; color: #666; margin-top: 5px; }
+    .section { margin-bottom: 25px; }
+    .section-title { font-size: 16px; font-weight: bold; color: #667eea; margin-bottom: 12px; padding-bottom: 5px; border-bottom: 1px solid #ddd; }
+    .row { display: flex; margin-bottom: 8px; }
+    .label { width: 180px; font-weight: 600; color: #555; }
+    .value { flex: 1; color: #333; }
+    .address-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea; }
+    .address-title { font-weight: bold; color: #667eea; margin-bottom: 8px; }
+    .price-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+    .price-label { font-size: 14px; opacity: 0.9; }
+    .price-value { font-size: 32px; font-weight: bold; margin-top: 5px; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .constraints { display: flex; flex-wrap: wrap; gap: 8px; }
+    .constraint { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-size: 12px; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">SYMPHONI.A</div>
+      <div class="logo-sub">Control Tower - Portail Transporteur</div>
+    </div>
+    <div class="doc-info">
+      <div class="doc-title">RÉCAPITULATIF DE COMMANDE</div>
+      <div class="doc-ref">Réf: ${order.reference}</div>
+      <div class="doc-ref">Date: ${new Date().toLocaleDateString('fr-FR')}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 Informations générales</div>
+    <div class="row"><div class="label">Référence commande:</div><div class="value"><strong>${order.reference}</strong></div></div>
+    <div class="row"><div class="label">Statut:</div><div class="value">${STATUS_LABELS[order.status]?.label || order.status}</div></div>
+    <div class="row"><div class="label">Date de création:</div><div class="value">${formatDate(order.createdAt)}</div></div>
+    ${(order as any).clientReference ? `<div class="row"><div class="label">Référence client:</div><div class="value">${(order as any).clientReference}</div></div>` : ''}
+  </div>
+
+  <div class="price-box">
+    <div class="price-label">MONTANT DE LA PRESTATION</div>
+    <div class="price-value">${formatPrice(order.finalPrice || order.estimatedPrice, order.currency)}</div>
+  </div>
+
+  <div class="grid">
+    <div class="address-box">
+      <div class="address-title">📍 POINT DE COLLECTE</div>
+      <div><strong>${order.pickupAddress.city}</strong></div>
+      <div>${order.pickupAddress.street}</div>
+      <div>${order.pickupAddress.postalCode} ${order.pickupAddress.city}</div>
+      ${order.pickupAddress.country ? `<div>${order.pickupAddress.country}</div>` : ''}
+      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+        <strong>Contact:</strong> ${order.pickupAddress.contactName || '-'}
+        ${order.pickupAddress.contactPhone ? `<br>📞 ${order.pickupAddress.contactPhone}` : ''}
+        ${order.pickupAddress.contactEmail ? `<br>✉️ ${order.pickupAddress.contactEmail}` : ''}
+      </div>
+      <div style="margin-top: 10px;"><strong>Date prévue:</strong> ${formatDate(order.dates.pickupDate)}</div>
+    </div>
+
+    <div class="address-box">
+      <div class="address-title">🎯 POINT DE LIVRAISON</div>
+      <div><strong>${order.deliveryAddress.city}</strong></div>
+      <div>${order.deliveryAddress.street}</div>
+      <div>${order.deliveryAddress.postalCode} ${order.deliveryAddress.city}</div>
+      ${order.deliveryAddress.country ? `<div>${order.deliveryAddress.country}</div>` : ''}
+      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+        <strong>Contact:</strong> ${order.deliveryAddress.contactName || '-'}
+        ${order.deliveryAddress.contactPhone ? `<br>📞 ${order.deliveryAddress.contactPhone}` : ''}
+        ${order.deliveryAddress.contactEmail ? `<br>✉️ ${order.deliveryAddress.contactEmail}` : ''}
+      </div>
+      <div style="margin-top: 10px;"><strong>Date prévue:</strong> ${formatDate(order.dates.deliveryDate)}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📦 Marchandise</div>
+    <div class="row"><div class="label">Description:</div><div class="value">${order.goods.description}</div></div>
+    <div class="row"><div class="label">Poids:</div><div class="value"><strong>${order.goods.weight} kg</strong></div></div>
+    ${order.goods.volume ? `<div class="row"><div class="label">Volume:</div><div class="value">${order.goods.volume} m³</div></div>` : ''}
+    <div class="row"><div class="label">Quantité:</div><div class="value">${order.goods.quantity}</div></div>
+    ${order.goods.palettes ? `<div class="row"><div class="label">Palettes:</div><div class="value">${order.goods.palettes}</div></div>` : ''}
+    ${(order.goods as any).loadingMeters ? `<div class="row"><div class="label">Mètres linéaires:</div><div class="value">${(order.goods as any).loadingMeters} ml</div></div>` : ''}
+  </div>
+
+  ${order.constraints && order.constraints.length > 0 ? `
+  <div class="section">
+    <div class="section-title">⚙️ Contraintes de transport</div>
+    <div class="constraints">
+      ${order.constraints.map(c => `<span class="constraint">${c.type}${c.value ? `: ${c.value}` : ''}</span>`).join('')}
+    </div>
+  </div>
+  ` : ''}
+
+  ${(order as any).assignedCarrier ? `
+  <div class="section">
+    <div class="section-title">🚛 Informations Transporteur</div>
+    <div class="row"><div class="label">Chauffeur:</div><div class="value">${(order as any).assignedCarrier.driverFirstName || ''} ${(order as any).assignedCarrier.driverLastName || ''}</div></div>
+    ${(order as any).assignedCarrier.driverPhone ? `<div class="row"><div class="label">Téléphone:</div><div class="value">${(order as any).assignedCarrier.driverPhone}</div></div>` : ''}
+    <div class="row"><div class="label">Plaque tracteur:</div><div class="value">${(order as any).assignedCarrier.tractorPlate || (order as any).assignedCarrier.vehiclePlate || '-'}</div></div>
+    ${(order as any).assignedCarrier.trailerPlate ? `<div class="row"><div class="label">Plaque remorque:</div><div class="value">${(order as any).assignedCarrier.trailerPlate}</div></div>` : ''}
+  </div>
+  ` : ''}
+
+  ${order.notes ? `
+  <div class="section">
+    <div class="section-title">📝 Notes</div>
+    <div style="background: #fff3cd; padding: 12px; border-radius: 8px; border-left: 4px solid #ffc107;">${order.notes}</div>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    Document généré le ${new Date().toLocaleString('fr-FR')} via SYMPHONI.A Control Tower<br>
+    Ce document fait foi pour la facturation de la prestation de transport.
+  </div>
+</body>
+</html>
+    `;
+
+    // Ouvrir dans une nouvelle fenêtre pour impression/PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      // Déclencher l'impression après chargement
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  };
+
   const cardStyle: React.CSSProperties = {
     padding: '24px',
     backgroundColor: 'white',
@@ -347,6 +497,26 @@ export default function OrderDetailPage() {
                   Créée le {formatDate(order.createdAt)}
                 </div>
               </div>
+
+              {/* Bouton Télécharger récapitulatif */}
+              <button
+                onClick={handleDownloadRecap}
+                style={{
+                  padding: '12px 20px',
+                  background: 'white',
+                  color: '#667eea',
+                  border: '2px solid #667eea',
+                  borderRadius: '8px',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                📄 Télécharger récapitulatif
+              </button>
 
               {/* Bouton Confirmer Livraison - visible si arrived_delivery ou in_transit */}
               {['arrived_delivery', 'in_transit', 'loaded'].includes(order.status) && (
