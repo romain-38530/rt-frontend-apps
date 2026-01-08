@@ -6,6 +6,7 @@ import exportRouter from './export';
 import tariffRouter from './tariff';
 import vigilanceRouter from './vigilance';
 import statsRouter from './stats';
+import demoRouter from './demo';
 
 export {
   prefacturationRouter,
@@ -15,5 +16,6 @@ export {
   exportRouter,
   tariffRouter,
   vigilanceRouter,
-  statsRouter
+  statsRouter,
+  demoRouter
 };

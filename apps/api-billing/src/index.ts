@@ -12,7 +12,8 @@ import {
   exportRouter,
   tariffRouter,
   vigilanceRouter,
-  statsRouter
+  statsRouter,
+  demoRouter
 } from './routes';
 
 dotenv.config();
@@ -51,6 +52,11 @@ app.use('/api/billing/export', exportRouter);
 app.use('/api/billing/tariffs', tariffRouter);
 app.use('/api/billing/vigilance', vigilanceRouter);
 app.use('/api/billing/stats', statsRouter);
+
+// Demo routes for frontend compatibility (web-industry/billing.tsx)
+app.use('/billing/demo', demoRouter);
+app.use('/billing/prefacturation', demoRouter);
+app.use('/billing/prefacturations', demoRouter);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: any) => {

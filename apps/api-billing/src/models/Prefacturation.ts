@@ -33,13 +33,17 @@ export interface IPrefacturation extends Document {
     id: string;
     name: string;
     siret: string;
+    email?: string;
   };
   client: {
     id: string;
     name: string;
     siret: string;
+    email?: string;
   };
   period: {
+    month: number;
+    year: number;
     start: Date;
     end: Date;
   };
@@ -53,13 +57,59 @@ export interface IPrefacturation extends Document {
     totalTTC: number;
     discrepancyAmount: number;
   };
-  status: 'draft' | 'pending_validation' | 'validated' | 'finalized' | 'invoiced';
+  status: 'draft' | 'pending' | 'sent_to_industrial' | 'validated_industrial' | 'invoice_uploaded' | 'invoice_accepted' | 'invoice_rejected' | 'payment_pending' | 'paid' | 'disputed';
   hasDiscrepancies: boolean;
   discrepanciesCount: number;
   blocks: Array<{
     type: string;
     reason: string;
   }>;
+  // Industrial validation
+  industrialValidation?: {
+    validatedAt: Date;
+    validatedBy: string;
+    comments?: string;
+  };
+  // Carrier invoice upload
+  carrierInvoice?: {
+    invoiceNumber: string;
+    invoiceDate: Date;
+    invoiceAmount: number;
+    documentId: string;
+    uploadedAt: Date;
+  };
+  // Invoice control (comparison)
+  invoiceControl?: {
+    preInvoiceAmount: number;
+    carrierInvoiceAmount: number;
+    difference: number;
+    differencePercent: number;
+    autoAccepted: boolean;
+  };
+  // Payment info
+  payment?: {
+    dueDate: Date;
+    paymentTermDays: number;
+    daysRemaining: number;
+    paidAt?: Date;
+    paidAmount?: number;
+    paymentReference?: string;
+    bankDetails?: {
+      bankName: string;
+      iban: string;
+      bic: string;
+      accountHolder: string;
+    };
+  };
+  // KPIs
+  kpis?: {
+    totalOrders: number;
+    onTimePickupRate: number;
+    onTimeDeliveryRate: number;
+    documentsCompleteRate: number;
+    incidentFreeRate: number;
+    averageWaitingHours: number;
+  };
   validationDate?: Date;
   finalizationDate?: Date;
   invoiceReference?: string;
@@ -101,14 +151,18 @@ const prefacturationSchema = new Schema({
   carrier: {
     id: { type: String, required: true },
     name: { type: String, required: true },
-    siret: String
+    siret: String,
+    email: String
   },
   client: {
     id: { type: String, required: true },
     name: { type: String, required: true },
-    siret: String
+    siret: String,
+    email: String
   },
   period: {
+    month: { type: Number, required: true },
+    year: { type: Number, required: true },
     start: { type: Date, required: true },
     end: { type: Date, required: true }
   },
@@ -124,7 +178,7 @@ const prefacturationSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'pending_validation', 'validated', 'finalized', 'invoiced'],
+    enum: ['draft', 'pending', 'sent_to_industrial', 'validated_industrial', 'invoice_uploaded', 'invoice_accepted', 'invoice_rejected', 'payment_pending', 'paid', 'disputed'],
     default: 'draft'
   },
   hasDiscrepancies: { type: Boolean, default: false },
@@ -133,6 +187,52 @@ const prefacturationSchema = new Schema({
     type: String,
     reason: String
   }],
+  // Industrial validation
+  industrialValidation: {
+    validatedAt: Date,
+    validatedBy: String,
+    comments: String
+  },
+  // Carrier invoice
+  carrierInvoice: {
+    invoiceNumber: String,
+    invoiceDate: Date,
+    invoiceAmount: Number,
+    documentId: String,
+    uploadedAt: Date
+  },
+  // Invoice control
+  invoiceControl: {
+    preInvoiceAmount: Number,
+    carrierInvoiceAmount: Number,
+    difference: Number,
+    differencePercent: Number,
+    autoAccepted: Boolean
+  },
+  // Payment
+  payment: {
+    dueDate: Date,
+    paymentTermDays: { type: Number, default: 30 },
+    daysRemaining: Number,
+    paidAt: Date,
+    paidAmount: Number,
+    paymentReference: String,
+    bankDetails: {
+      bankName: String,
+      iban: String,
+      bic: String,
+      accountHolder: String
+    }
+  },
+  // KPIs
+  kpis: {
+    totalOrders: Number,
+    onTimePickupRate: Number,
+    onTimeDeliveryRate: Number,
+    documentsCompleteRate: Number,
+    incidentFreeRate: Number,
+    averageWaitingHours: Number
+  },
   validationDate: Date,
   finalizationDate: Date,
   invoiceReference: String,

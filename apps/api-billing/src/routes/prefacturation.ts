@@ -173,7 +173,7 @@ router.post('/:id/finalize', async (req: Request, res: Response) => {
       });
     }
 
-    if (prefacturation.status === 'finalized' || prefacturation.status === 'invoiced') {
+    if (prefacturation.status === 'paid' || prefacturation.status === 'invoice_accepted') {
       return res.status(400).json({
         success: false,
         error: 'Prefacturation already finalized'
@@ -188,7 +188,7 @@ router.post('/:id/finalize', async (req: Request, res: Response) => {
       });
     }
 
-    prefacturation.status = 'finalized';
+    prefacturation.status = 'invoice_accepted';
     prefacturation.finalizationDate = new Date();
     prefacturation.invoiceReference = `INV-${Date.now()}-${prefacturation.carrier.id.substring(0, 6).toUpperCase()}`;
 
