@@ -71,7 +71,7 @@ export default function MesAffectationsPage() {
         `${API_CONFIG.ORDERS_API}/api/orders/carrier/${carrierId}/pending-dispatch`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
         }
       );
@@ -144,7 +144,7 @@ export default function MesAffectationsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
           body: JSON.stringify({
             carrierId: carrierId,
@@ -193,7 +193,7 @@ export default function MesAffectationsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
           body: JSON.stringify({
             carrierId: carrierId,

@@ -5,7 +5,7 @@ import { API_CONFIG } from './api';
 
 // Helper to get auth headers
 const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : '';
   return {
     'Authorization': `Bearer ${token || ''}`,
     'Content-Type': 'application/json'
