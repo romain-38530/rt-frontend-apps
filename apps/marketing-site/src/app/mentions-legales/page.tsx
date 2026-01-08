@@ -32,7 +32,7 @@ export default function MentionsLegalesPage() {
               <p><strong>Raison sociale :</strong> SYMPHONI.A SAS</p>
               <p><strong>Forme juridique :</strong> Société par Actions Simplifiée</p>
               <p><strong>Capital social :</strong> 100 000 €</p>
-              <p><strong>Siège social :</strong> 123 Avenue des Champs-Élysées, 75008 Paris, France</p>
+              <p><strong>Siège social :</strong> 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER, France</p>
               <p><strong>SIRET :</strong> 123 456 789 00012</p>
               <p><strong>RCS :</strong> Paris B 123 456 789</p>
               <p><strong>Numéro TVA intracommunautaire :</strong> FR 12 123456789</p>
@@ -62,7 +62,7 @@ export default function MentionsLegalesPage() {
             <div className="space-y-3 text-gray-700">
               <p><strong>Email :</strong> <a href="mailto:contact@symphonia.com" className="text-indigo-600 hover:text-indigo-700">contact@symphonia.com</a></p>
               <p><strong>Téléphone :</strong> <a href="tel:+33123456789" className="text-indigo-600 hover:text-indigo-700">+33 1 23 45 67 89</a></p>
-              <p><strong>Adresse postale :</strong> 123 Avenue des Champs-Élysées, 75008 Paris, France</p>
+              <p><strong>Adresse postale :</strong> 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER, France</p>
             </div>
           </div>
 
@@ -115,7 +115,7 @@ export default function MentionsLegalesPage() {
               </p>
               <ul className="list-disc list-inside ml-4">
                 <li>Par email : <a href="mailto:dpo@symphonia.com" className="text-indigo-600 hover:text-indigo-700">dpo@symphonia.com</a></li>
-                <li>Par courrier : SYMPHONI.A - DPO, 123 Avenue des Champs-Élysées, 75008 Paris</li>
+                <li>Par courrier : SYMPHONI.A - DPO, 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER</li>
               </ul>
               <p className="mt-4">
                 Pour plus d'informations, consultez notre{' '}

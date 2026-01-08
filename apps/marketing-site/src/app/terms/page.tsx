@@ -210,7 +210,7 @@ export default function TermsPage() {
                 <div className="bg-indigo-50 rounded-xl p-6 mt-4">
                   <p className="text-gray-900 font-semibold mb-2">SYMPHONI.A</p>
                   <p className="text-gray-700">Email : <a href="mailto:legal@symphonia.com" className="text-indigo-600 hover:text-indigo-700">legal@symphonia.com</a></p>
-                  <p className="text-gray-700">Adresse : 123 Avenue des Champs-Élysées, 75008 Paris, France</p>
+                  <p className="text-gray-700">Adresse : 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER, France</p>
                 </div>
               </div>
             </div>

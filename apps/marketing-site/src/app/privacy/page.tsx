@@ -164,7 +164,7 @@ export default function PrivacyPage() {
                 <div className="bg-indigo-50 rounded-xl p-6 mt-4">
                   <p className="text-gray-900 font-semibold mb-2">Délégué à la Protection des Données</p>
                   <p className="text-gray-700">Email : <a href="mailto:dpo@symphonia.com" className="text-indigo-600 hover:text-indigo-700">dpo@symphonia.com</a></p>
-                  <p className="text-gray-700">Adresse : SYMPHONI.A, 123 Avenue des Champs-Élysées, 75008 Paris</p>
+                  <p className="text-gray-700">Adresse : SYMPHONI.A, 25BIS RUE DU MOLARET, 38070 ST QUENTIN FALLAVIER</p>
                 </div>
               </div>
 

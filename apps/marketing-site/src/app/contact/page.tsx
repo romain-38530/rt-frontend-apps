@@ -102,8 +102,8 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1">Adresse</h3>
                       <p className="text-gray-600">
-                        123 Avenue des Champs-Élysées<br />
-                        75008 Paris, France
+                        25BIS RUE DU MOLARET<br />
+                        38070 ST QUENTIN FALLAVIER, France
                       </p>
                     </div>
                   </div>
