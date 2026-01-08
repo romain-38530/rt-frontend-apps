@@ -1,5 +1,5 @@
 /**
- * API Configuration for SYMPHONI.A Logistician Portal
+ * API Configuration for SYMPHONI.A Logistique Portal
  * Backend Services URLs (HTTPS via CloudFront)
  */
 

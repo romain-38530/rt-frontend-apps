@@ -1,5 +1,5 @@
 /**
- * Page de détail d'une commande - Portail Logistician
+ * Page de détail d'une commande - Portail Logistique
  * Affiche les informations complètes et la timeline d'événements
  */
 
@@ -153,7 +153,7 @@ export default function OrderDetailPage() {
   return (
     <>
       <Head>
-        <title>Commande {order.reference} - Logistician | SYMPHONI.A</title>
+        <title>Commande {order.reference} - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'system-ui, sans-serif' }}>

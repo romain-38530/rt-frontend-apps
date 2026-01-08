@@ -49,7 +49,7 @@ export default function EcmrPage() {
   return (
     <>
       <Head>
-        <title>e-CMR Digital - Logistician | SYMPHONI.A</title>
+        <title>e-CMR Digital - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{
@@ -110,7 +110,7 @@ export default function EcmrPage() {
             fontWeight: '700',
             border: '1px solid rgba(255,255,255,0.3)'
           }}>
-            📊 Logistician
+            📊 Logistique
           </div>
         </div>
 

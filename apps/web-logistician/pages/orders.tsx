@@ -1,5 +1,5 @@
 /**
- * Page de gestion des commandes - Portail Logistician
+ * Page de gestion des commandes - Portail Logistique
  * Intégration complète avec l'API Orders
  */
 
@@ -141,7 +141,7 @@ export default function OrdersPage() {
   return (
     <>
       <Head>
-        <title>Gestion des commandes - Logistician | SYMPHONI.A</title>
+        <title>Gestion des commandes - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div

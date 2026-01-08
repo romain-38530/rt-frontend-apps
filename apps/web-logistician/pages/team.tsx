@@ -249,7 +249,7 @@ export default function Team() {
   return (
     <>
       <Head>
-        <title>{t.teamMembers} - SYMPHONI.A Logistician</title>
+        <title>{t.teamMembers} - SYMPHONI.A Logistique</title>
       </Head>
 
       <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '40px 20px' }}>

@@ -323,7 +323,7 @@ export default function PlanningPage() {
   return (
     <>
       <Head>
-        <title>Planning Chargement & Livraison - Logistician | SYMPHONI.A</title>
+        <title>Planning Chargement & Livraison - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
@@ -368,7 +368,7 @@ export default function PlanningPage() {
             fontSize: '13px',
             fontWeight: '700',
           }}>
-            📊 Logistician
+            📊 Logistique
           </div>
         </div>
 

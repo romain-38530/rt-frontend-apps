@@ -158,7 +158,7 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>SYMPHONI.A - Logistician Portal</title>
+        <title>SYMPHONI.A - Portail Logistique</title>
       </Head>
 
       <div style={{
@@ -203,7 +203,7 @@ export default function HomePage() {
               textTransform: 'uppercase',
               border: '1px solid rgba(255,255,255,0.3)'
             }}>
-              📊 Logistician
+              📊 Logistique
             </div>
             <div style={{
               padding: '6px 16px',

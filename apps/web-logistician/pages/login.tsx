@@ -67,7 +67,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Connexion - SYMPHONI.A Logistician</title>
+        <title>Connexion - SYMPHONI.A Logistique</title>
       </Head>
 
       <div style={{

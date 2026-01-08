@@ -50,7 +50,7 @@ export default function StoragePage() {
   return (
     <>
       <Head>
-        <title>Storage Market - Logistician | SYMPHONI.A</title>
+        <title>Storage Market - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{
@@ -111,7 +111,7 @@ export default function StoragePage() {
             fontWeight: '700',
             border: '1px solid rgba(255,255,255,0.3)'
           }}>
-            📊 Logistician
+            📊 Logistique
           </div>
         </div>
 

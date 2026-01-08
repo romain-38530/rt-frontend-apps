@@ -59,7 +59,7 @@ export const translations = {
     ]
   },
   en: {
-    portal: 'Logistician Portal',
+    portal: 'Logistics Portal',
     tagline: 'AI that orchestrates your transport flows.',
     email: 'Email',
     password: 'Password',

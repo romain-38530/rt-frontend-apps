@@ -69,7 +69,7 @@ export default function NotificationsPage() {
   return (
     <>
       <Head>
-        <title>Notifications - Logistician | SYMPHONI.A</title>
+        <title>Notifications - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{
@@ -130,7 +130,7 @@ export default function NotificationsPage() {
             fontWeight: '700',
             border: '1px solid rgba(255,255,255,0.3)'
           }}>
-            📊 Logistician
+            📊 Logistique
           </div>
         </div>
 

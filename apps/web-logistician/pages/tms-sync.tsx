@@ -75,7 +75,7 @@ export default function TmssyncPage() {
   return (
     <>
       <Head>
-        <title>Synchronisation TMS - Logistician | SYMPHONI.A</title>
+        <title>Synchronisation TMS - Logistique | SYMPHONI.A</title>
       </Head>
 
       <div style={{
@@ -136,7 +136,7 @@ export default function TmssyncPage() {
             fontWeight: '700',
             border: '1px solid rgba(255,255,255,0.3)'
           }}>
-            📊 Logistician
+            📊 Logistique
           </div>
         </div>
 
