@@ -1330,14 +1330,21 @@ export interface PreInvoiceStats {
 export const preinvoicesApi = {
   /**
    * Liste des prefactures du transporteur
+   * Note: Backend uses transporterId (not carrierId)
    */
   list: async (filters?: { industrialId?: string; status?: string; month?: number; year?: number }) => {
-    const carrierId = getCarrierId();
-    const params = new URLSearchParams({ carrierId });
-    if (filters?.industrialId) params.append('industrialId', filters.industrialId);
+    const transporterId = getCarrierId();
+    const params = new URLSearchParams();
+    if (transporterId) params.append('transporterId', transporterId);
+    if (filters?.industrialId) params.append('clientId', filters.industrialId);
     if (filters?.status) params.append('status', filters.status);
-    if (filters?.month) params.append('month', filters.month.toString());
-    if (filters?.year) params.append('year', filters.year.toString());
+    // Convert month/year to date range for backend
+    if (filters?.month && filters?.year) {
+      const startDate = new Date(filters.year, filters.month - 1, 1).toISOString();
+      const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59).toISOString();
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+    }
 
     const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturations?${params}`, {
       headers: getAuthHeaders()
@@ -1347,10 +1354,11 @@ export const preinvoicesApi = {
 
   /**
    * Statistiques prefactures du transporteur
+   * Note: Backend uses transporterId (not carrierId)
    */
   getStats: async () => {
-    const carrierId = getCarrierId();
-    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/stats?carrierId=${carrierId}`, {
+    const transporterId = getCarrierId();
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/stats?transporterId=${transporterId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
