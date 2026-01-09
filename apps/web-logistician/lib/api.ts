@@ -371,23 +371,31 @@ export const ordersApi = {
 
 export const ecmrApi = {
   list: async (filters?: { status?: string; date?: string }) => {
-    const siteId = getSiteId();
-    const params = new URLSearchParams({ siteId, ...filters as any });
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr?${params}`, {
+    const params = new URLSearchParams(filters as any || {});
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   get: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}`, {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
+  create: async (data: any) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
   sign: async (id: string, signature: { type: 'warehouse' | 'sender' | 'recipient' | 'carrier'; signatureData: string; name: string }) => {
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/sign`, {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr/${id}/sign`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(signature)
@@ -396,7 +404,7 @@ export const ecmrApi = {
   },
 
   addReservation: async (id: string, reservation: { type: string; description: string; photo?: string }) => {
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/reservations`, {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr/${id}/reservations`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(reservation)
@@ -405,15 +413,14 @@ export const ecmrApi = {
   },
 
   downloadPdf: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/pdf`, {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr/${id}/pdf`, {
       headers: getAuthHeaders()
     });
     return res.blob();
   },
 
   getPendingSignatures: async () => {
-    const siteId = getSiteId();
-    const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/pending?siteId=${siteId}`, {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/ecmr?status=pending_sender&status=pending_carrier&status=pending_recipient`, {
       headers: getAuthHeaders()
     });
     return res.json();
