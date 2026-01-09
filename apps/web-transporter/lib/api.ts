@@ -1234,6 +1234,8 @@ export const tmsSyncApi = {
 
 // ============================================
 // PRE-INVOICES API - Prefacturation consolidee
+// Note: Backend uses /api/billing/prefacturations (not /api/v1/preinvoices)
+// Uses BILLING_API CloudFront distribution
 // ============================================
 
 export interface PreInvoiceLine {
@@ -1337,7 +1339,7 @@ export const preinvoicesApi = {
     if (filters?.month) params.append('month', filters.month.toString());
     if (filters?.year) params.append('year', filters.year.toString());
 
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices?${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturations?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1348,7 +1350,7 @@ export const preinvoicesApi = {
    */
   getStats: async () => {
     const carrierId = getCarrierId();
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/stats?carrierId=${carrierId}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/stats?carrierId=${carrierId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1358,7 +1360,7 @@ export const preinvoicesApi = {
    * Detail d'une prefacture
    */
   get: async (preInvoiceId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturation/${preInvoiceId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1368,7 +1370,7 @@ export const preinvoicesApi = {
    * Upload facture transporteur (pre-signed URL)
    */
   getInvoiceUploadUrl: async (preInvoiceId: string, data: { fileName: string; contentType: string }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice/upload-url`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturation/${preInvoiceId}/upload-url`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -1397,19 +1399,19 @@ export const preinvoicesApi = {
     invoiceNumber: string;
     invoiceAmount: number;
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/invoice/upload`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify({ ...data, prefacturationId: preInvoiceId })
     });
     return res.json();
   },
 
   /**
-   * Telecharger facture transporteur
+   * Telecharger facture transporteur PDF
    */
   getInvoiceDownloadUrl: async (preInvoiceId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/invoice/download-url`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturations/${preInvoiceId}/pdf`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1425,7 +1427,7 @@ export const preinvoicesApi = {
     amountDisputed?: number;
     documents?: string[];
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/dispute`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturation/${preInvoiceId}/dispute`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -1440,7 +1442,7 @@ export const preinvoicesApi = {
     comment?: string;
     acceptedAmount?: number;
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/validate`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturation/${preInvoiceId}/validate`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -1458,7 +1460,7 @@ export const preinvoicesApi = {
     if (filters?.month) params.append('month', filters.month.toString());
     if (filters?.year) params.append('year', filters.year.toString());
 
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/disputes?${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/discrepancies?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -1468,10 +1470,10 @@ export const preinvoicesApi = {
    * Repondre a une contestation (ajouter un message)
    */
   addDisputeMessage: async (preInvoiceId: string, data: { message: string; documents?: string[] }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/${preInvoiceId}/dispute/message`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/discrepancy/resolve`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify({ prefacturationId: preInvoiceId, ...data })
     });
     return res.json();
   },
@@ -1485,10 +1487,35 @@ export const preinvoicesApi = {
     if (filters?.month) params.append('month', filters.month.toString());
     if (filters?.year) params.append('year', filters.year.toString());
 
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/preinvoices/export?${params}`, {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturations/export?${params}`, {
       headers: getAuthHeaders()
     });
     return res.text();
+  },
+
+  /**
+   * Telecharger le PDF d'une prefacture
+   */
+  downloadPdf: async (preInvoiceId: string): Promise<Blob> => {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturations/${preInvoiceId}/pdf`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to download PDF: ${res.status}`);
+    }
+    return res.blob();
+  },
+
+  /**
+   * Marquer une prefacture comme payee
+   */
+  markPaid: async (preInvoiceId: string, data: { paymentReference?: string; paidAmount?: number }) => {
+    const res = await fetch(`${API_CONFIG.BILLING_API}/api/billing/prefacturation/${preInvoiceId}/mark-paid`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
   }
 };
 
