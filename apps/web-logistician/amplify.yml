@@ -11,7 +11,7 @@ frontend:
         - pnpm install --no-frozen-lockfile
     build:
       commands:
-        - echo "Building web-logistician portal..."
+        - echo "Building web-logistique portal..."
         - cd ../..
         - pnpm turbo run build --filter=web-logistician
   artifacts:
@@ -26,7 +26,7 @@ frontend:
   buildSpec:
     env:
       variables:
-        NEXT_PUBLIC_SITE_URL: 'https://logistician.symphonia-controltower.com'
+        NEXT_PUBLIC_SITE_URL: 'https://logistique.symphonia-controltower.com'
         NEXT_PUBLIC_PORTAL_TYPE: 'logistician'
         NEXT_PUBLIC_STORAGE_MARKET_API_URL: 'http://rt-storage-market-api-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
         NEXT_PUBLIC_API_URL: 'http://rt-api-gateway-prod.eba-placeholder.eu-west-3.elasticbeanstalk.com/api/v1'
