@@ -412,6 +412,108 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Actions rapides - Liens inter-modules */}
+              <div style={cardStyle}>
+                <h2 style={sectionTitleStyle}>🔗 Actions rapides</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <button
+                    onClick={() => router.push(`/tracking?orderId=${order.id}&orderRef=${order.reference}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>🛰️</span>
+                    <div>
+                      <div>Suivi en temps réel</div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>Demander l'ETA au transporteur</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => router.push(`/ecmr?orderId=${order.id}&orderRef=${order.reference}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>📄</span>
+                    <div>
+                      <div>e-CMR Digital</div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>Créer ou voir le CMR</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => router.push('/rdv-transporteurs')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>📅</span>
+                    <div>
+                      <div>RDV Transporteurs</div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>Gérer les créneaux horaires</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => router.push('/notifications')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'rgba(0,0,0,0.05)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '10px',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>🔔</span>
+                    <div>
+                      <div>Notifications</div>
+                      <div style={{ fontSize: '12px', opacity: 0.6 }}>Alertes et messages</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -56,6 +56,9 @@ export const API_CONFIG = {
 
   // TMS Sync API
   TMS_SYNC_API: process.env.NEXT_PUBLIC_TMS_SYNC_API_URL || 'https://d1yk7yneclf57m.cloudfront.net',
+
+  // Logistician API (Team, Capacity, Tracking ETA, Billing)
+  LOGISTICIAN_API: process.env.NEXT_PUBLIC_LOGISTICIAN_API_URL || 'http://rt-logistician-api-prod.eba-jm2vzrg3.eu-west-3.elasticbeanstalk.com',
 };
 
 // Helper to get auth headers
@@ -864,6 +867,110 @@ export const tmsSyncApi = {
     const siteId = getSiteId();
     const res = await fetch(`${API_CONFIG.TMS_SYNC_API}/api/v1/tms/errors?siteId=${siteId}`, {
       headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// VIGILANCE API - Vérification transporteurs
+// ============================================
+
+export const vigilanceApi = {
+  // Vérifier un transporteur (URSSAF, Kbis, assurance)
+  checkCarrier: async (siret: string) => {
+    const res = await fetch(`${API_CONFIG.VIGILANCE_API}/api/v1/vigilance/carrier/${siret}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Obtenir le statut vigilance d'un transporteur
+  getCarrierStatus: async (carrierId: string) => {
+    const res = await fetch(`${API_CONFIG.VIGILANCE_API}/api/v1/vigilance/carrier/${carrierId}/status`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Liste des transporteurs avec alertes
+  getAlerts: async () => {
+    const res = await fetch(`${API_CONFIG.VIGILANCE_API}/api/v1/vigilance/alerts`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Documents expirés
+  getExpiredDocuments: async () => {
+    const res = await fetch(`${API_CONFIG.VIGILANCE_API}/api/v1/vigilance/expired-documents`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Demander vérification URSSAF
+  requestUrssafCheck: async (carrierId: string) => {
+    const res = await fetch(`${API_CONFIG.VIGILANCE_API}/api/v1/vigilance/carrier/${carrierId}/urssaf-check`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  }
+};
+
+// ============================================
+// LOGISTICIAN API - ETA Tracking, Team, etc.
+// ============================================
+
+export const logisticianApi = {
+  // Demander ETA à un transporteur par email
+  requestEta: async (logisticianId: string, rdvId: string) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/logisticians/${logisticianId}/tracking/request-eta/${rdvId}`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Obtenir les RDV du jour
+  getRdvByDate: async (date: string) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/rdv/by-date?date=${date}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Gestion équipe
+  getTeam: async (logisticianId: string) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/logisticians/${logisticianId}/team`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  inviteTeamMember: async (logisticianId: string, data: { email: string; role: string; name: string }) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/logisticians/${logisticianId}/team/invite`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  // Capacité
+  getCapacity: async (logisticianId: string, date: string) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/logisticians/${logisticianId}/capacity?date=${date}`, {
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  updateCapacity: async (logisticianId: string, data: { date: string; slots: any[] }) => {
+    const res = await fetch(`${API_CONFIG.LOGISTICIAN_API}/api/logisticians/${logisticianId}/capacity`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
     });
     return res.json();
   }

@@ -43,119 +43,38 @@ export default function DocumentsPage() {
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [view, setView] = useState<'pending' | 'all'>('pending');
 
-  // Charger les données
+  // Charger les donnees - API ONLY (pas de mock data)
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Appel API
-      const [docsData, ordersData] = await Promise.all([
+      // Charger documents et commandes en attente de documents en parallele
+      const [docsResult, pendingResult] = await Promise.all([
         documentsApi.list(),
-        ordersApi.list({ status: 'pending_documents' }),
+        ordersApi.getPendingDocuments()
       ]);
 
-      if (docsData.documents || Array.isArray(docsData)) {
-        setDocuments(docsData.documents || docsData);
-      }
-      if (ordersData.orders || Array.isArray(ordersData)) {
-        setPendingOrders(ordersData.orders || ordersData);
+      // Documents
+      if (docsResult.documents) {
+        setDocuments(docsResult.documents);
+      } else if (Array.isArray(docsResult)) {
+        setDocuments(docsResult);
+      } else if (docsResult.data) {
+        setDocuments(docsResult.data);
+      } else {
+        setDocuments([]);
       }
 
-      if (!docsData.documents && !Array.isArray(docsData)) {
-        throw new Error('Invalid API response');
+      // Commandes en attente de documents
+      if (Array.isArray(pendingResult)) {
+        setPendingOrders(pendingResult);
+      } else {
+        setPendingOrders([]);
       }
     } catch (err) {
-      console.error('Error loading documents from API:', err);
-      // Fallback mock data
-      const mockPendingOrders: OrderForUpload[] = [
-        {
-          id: 'ord-1',
-          reference: 'ORD-2024-0847',
-          route: 'Lyon → Paris',
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          missingDocs: ['pod'],
-        },
-        {
-          id: 'ord-2',
-          reference: 'ORD-2024-0842',
-          route: 'Marseille → Bordeaux',
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          missingDocs: ['cmr', 'pod'],
-        },
-        {
-          id: 'ord-3',
-          reference: 'ORD-2024-0835',
-          route: 'Lille → Toulouse',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          missingDocs: ['bl', 'cmr', 'pod'],
-        },
-      ];
-
-      const mockDocuments: TransportDocument[] = [
-        {
-          id: 'doc-1',
-          orderId: 'ord-10',
-          orderRef: 'ORD-2024-0820',
-          type: 'bl',
-          filename: 'BL-ORD-2024-0820.pdf',
-          url: '#',
-          size: 245000,
-          uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          validated: true,
-          ocrProcessed: true,
-          ocrConfidence: 95,
-          extractedData: {
-            documentNumber: 'BL-78954',
-            weight: '8500 kg',
-            pallets: 12,
-          },
-        },
-        {
-          id: 'doc-2',
-          orderId: 'ord-10',
-          orderRef: 'ORD-2024-0820',
-          type: 'cmr',
-          filename: 'CMR-ORD-2024-0820.pdf',
-          url: '#',
-          size: 312000,
-          uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          validated: true,
-          ocrProcessed: true,
-          ocrConfidence: 92,
-        },
-        {
-          id: 'doc-3',
-          orderId: 'ord-10',
-          orderRef: 'ORD-2024-0820',
-          type: 'pod',
-          filename: 'POD-ORD-2024-0820.jpg',
-          url: '#',
-          size: 1250000,
-          uploadedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-          validated: true,
-          ocrProcessed: true,
-          ocrConfidence: 88,
-          extractedData: {
-            receivedBy: 'Jean Dupont',
-            signature: true,
-          },
-        },
-        {
-          id: 'doc-4',
-          orderId: 'ord-11',
-          orderRef: 'ORD-2024-0815',
-          type: 'bl',
-          filename: 'BL-ORD-2024-0815.pdf',
-          url: '#',
-          size: 198000,
-          uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          validated: false,
-          ocrProcessed: true,
-          ocrConfidence: 72,
-        },
-      ];
-
-      setPendingOrders(mockPendingOrders);
-      setDocuments(mockDocuments);
+      console.error('Erreur chargement documents:', err);
+      toast.error('Impossible de charger les documents. Verifiez votre connexion.');
+      setDocuments([]);
+      setPendingOrders([]);
     } finally {
       setIsLoading(false);
     }

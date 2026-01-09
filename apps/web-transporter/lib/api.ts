@@ -246,27 +246,28 @@ export const planningApi = {
 
 // ============================================
 // ORDERS API - Commandes transport
+// Note: Backend uses /api/orders (not /api/v1/orders)
 // ============================================
 
 export const ordersApi = {
   list: async (filters?: { status?: string; date?: string }) => {
     const carrierId = getCarrierId();
     const params = new URLSearchParams({ carrierId, ...filters as any });
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders?${params}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   get: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   accept: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}/accept`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}/accept`, {
       method: 'POST',
       headers: getAuthHeaders()
     });
@@ -274,7 +275,7 @@ export const ordersApi = {
   },
 
   decline: async (id: string, reason: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}/decline`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}/decline`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ reason })
@@ -283,7 +284,7 @@ export const ordersApi = {
   },
 
   updateStatus: async (id: string, status: string, data?: any) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}/status`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}/status`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ status, ...data })
@@ -301,7 +302,7 @@ export const ordersApi = {
     vehicleType?: 'semi' | 'porteur' | 'fourgon' | 'VUL' | 'autre';
   }) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${id}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -324,22 +325,22 @@ export const ordersApi = {
     return res.json();
   },
 
-  // ===== NEW: Order Events =====
+  // Order Events
   getEvents: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/orders/${orderId}/events`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders/${orderId}/events`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
-  // ===== NEW: Documents with S3 =====
+  // Documents with S3
   getDocumentUploadUrl: async (orderId: string, data: {
     type: 'cmr' | 'bl' | 'pod' | 'invoice' | 'photo' | 'damage_report' | 'other';
     fileName: string;
     contentType: string;
   }) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/upload-url`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${orderId}/upload-url`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -375,7 +376,7 @@ export const ordersApi = {
     notes?: string;
   }) => {
     const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}/upload`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${orderId}/upload`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -391,14 +392,14 @@ export const ordersApi = {
   },
 
   getOrderDocuments: async (orderId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${orderId}`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${orderId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   getDocumentDownloadUrl: async (documentId: string) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/download-url`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${documentId}/download-url`, {
       headers: getAuthHeaders()
     });
     return res.json();
@@ -409,7 +410,7 @@ export const ordersApi = {
     signatureData: string;
     deviceInfo?: string;
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/documents/${documentId}/sign`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/documents/${documentId}/sign`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -417,7 +418,7 @@ export const ordersApi = {
     return res.json();
   },
 
-  // ===== NEW: Delivery Confirmation =====
+  // Delivery Confirmation
   confirmDelivery: async (orderId: string, data: {
     recipientName: string;
     signatureData: string;
@@ -430,7 +431,7 @@ export const ordersApi = {
       photos?: string[];
     }>;
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/${orderId}/confirm`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/delivery/${orderId}/confirm`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -452,7 +453,7 @@ export const ordersApi = {
     photos?: string[];
     location?: { latitude: number; longitude: number };
   }) => {
-    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/v1/delivery/${orderId}/issue`, {
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/delivery/${orderId}/issue`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -465,6 +466,39 @@ export const ordersApi = {
       })
     });
     return res.json();
+  },
+
+  // Get orders with pending documents (for Documents module)
+  getPendingDocuments: async () => {
+    const carrierId = getCarrierId();
+    // Get orders that are delivered but missing documents
+    const res = await fetch(`${API_CONFIG.ORDERS_API}/api/orders?carrierId=${carrierId}&status=delivered,completed`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+
+    // Filter orders that have missing documents
+    const orders = data.data || data.orders || [];
+    return orders.filter((order: any) => {
+      const docs = order.documentIds || [];
+      const hasPoD = docs.some((d: any) => d.type === 'pod');
+      const hasCmr = docs.some((d: any) => d.type === 'cmr');
+      return !hasPoD || !hasCmr;
+    }).map((order: any) => {
+      const docs = order.documentIds || [];
+      const missingDocs: string[] = [];
+      if (!docs.some((d: any) => d.type === 'pod')) missingDocs.push('pod');
+      if (!docs.some((d: any) => d.type === 'cmr')) missingDocs.push('cmr');
+      if (!docs.some((d: any) => d.type === 'bl')) missingDocs.push('bl');
+
+      return {
+        id: order._id || order.id,
+        reference: order.reference,
+        route: `${order.pickupAddress?.city || ''} → ${order.deliveryAddress?.city || ''}`,
+        date: order.dates?.deliveryDate || order.createdAt,
+        missingDocs
+      };
+    });
   }
 };
 
@@ -1046,32 +1080,36 @@ export const chatbotApi = {
 
 // ============================================
 // DOCUMENTS API - GED
+// Note: Backend uses /api/documents (not /api/v1/documents)
 // ============================================
 
 export const documentsApi = {
   list: async (filters?: { type?: string; orderId?: string }) => {
-    const params = new URLSearchParams(filters as any);
-    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/v1/documents?${params}`, {
+    const carrierId = getCarrierId();
+    const params = new URLSearchParams({ carrierId, ...filters as any });
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents?${params}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   get: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/v1/documents/${id}`, {
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents/${id}`, {
       headers: getAuthHeaders()
     });
     return res.json();
   },
 
   upload: async (file: File, metadata: { type: string; orderId?: string; description?: string }) => {
+    const carrierId = getCarrierId();
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', metadata.type);
+    formData.append('carrierId', carrierId);
     if (metadata.orderId) formData.append('orderId', metadata.orderId);
     if (metadata.description) formData.append('description', metadata.description);
 
-    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/v1/documents`, {
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${getAuthToken() || ''}`
@@ -1082,15 +1120,23 @@ export const documentsApi = {
   },
 
   download: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/v1/documents/${id}/download`, {
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents/${id}/download`, {
       headers: getAuthHeaders()
     });
     return res.blob();
   },
 
   delete: async (id: string) => {
-    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/v1/documents/${id}`, {
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return res.json();
+  },
+
+  // Get documents for a specific order (inter-module with Orders)
+  getByOrder: async (orderId: string) => {
+    const res = await fetch(`${API_CONFIG.DOCUMENTS_API}/api/documents?orderId=${orderId}`, {
       headers: getAuthHeaders()
     });
     return res.json();
