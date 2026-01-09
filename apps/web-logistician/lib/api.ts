@@ -386,7 +386,7 @@ export const ecmrApi = {
     return res.json();
   },
 
-  sign: async (id: string, signature: { type: 'warehouse' | 'sender' | 'recipient'; signatureData: string; name: string }) => {
+  sign: async (id: string, signature: { type: 'warehouse' | 'sender' | 'recipient' | 'carrier'; signatureData: string; name: string }) => {
     const res = await fetch(`${API_CONFIG.ECMR_API}/api/v1/ecmr/${id}/sign`, {
       method: 'POST',
       headers: getAuthHeaders(),
